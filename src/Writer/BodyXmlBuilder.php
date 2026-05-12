@@ -9,6 +9,7 @@ use Dskripchenko\PhpDocx\Element\HorizontalRule;
 use Dskripchenko\PhpDocx\Element\Hyperlink;
 use Dskripchenko\PhpDocx\Element\Image;
 use Dskripchenko\PhpDocx\Element\InlineElement;
+use Dskripchenko\PhpDocx\Element\Field;
 use Dskripchenko\PhpDocx\Element\LineBreak;
 use Dskripchenko\PhpDocx\Element\ListItem;
 use Dskripchenko\PhpDocx\Element\ListNode;
@@ -194,8 +195,23 @@ final class BodyXmlBuilder
             $el instanceof LineBreak => '<w:r><w:br/></w:r>',
             $el instanceof Hyperlink => $this->renderHyperlink($el),
             $el instanceof Image => $this->renderInlineImage($el),
+            $el instanceof Field => $this->renderField($el),
             default => '',
         };
+    }
+
+    /**
+     * `<w:fldSimple>` для field codes (PAGE/NUMPAGES/DATE/TIME/AUTHOR/TITLE).
+     * Word/Pages при открытии перевычисляет значение.
+     */
+    private function renderField(Field $f): string
+    {
+        $instr = XmlEscape::attr(' '.$f->instruction.' ');
+        $rPr = $this->renderRunProperties($f->style);
+        // Placeholder text — будет заменён реальным значением при рендере.
+        $placeholder = '<w:r>'.$rPr.'<w:t>0</w:t></w:r>';
+
+        return '<w:fldSimple w:instr="'.$instr.'">'.$placeholder.'</w:fldSimple>';
     }
 
     private function renderRun(Run $r): string

@@ -6,6 +6,7 @@ namespace Dskripchenko\PhpDocx\Html;
 
 use Dskripchenko\PhpDocx\Document;
 use Dskripchenko\PhpDocx\Element\BlockElement;
+use Dskripchenko\PhpDocx\Element\Field;
 use Dskripchenko\PhpDocx\Element\HorizontalRule;
 use Dskripchenko\PhpDocx\Element\Hyperlink;
 use Dskripchenko\PhpDocx\Element\Image;
@@ -281,6 +282,17 @@ final class Converter
             'a' => [new Hyperlink(
                 href: $node->getAttribute('href'),
                 children: $this->collectInline($node, $marked),
+            )],
+            // Custom-теги для field codes:
+            'page-number' => [Field::page($marked)],
+            'page-total' => [Field::pageTotal($marked)],
+            'current-date' => [Field::date(
+                $node->getAttribute('format') !== '' ? $node->getAttribute('format') : 'dd.MM.yyyy',
+                $marked,
+            )],
+            'current-time' => [Field::time(
+                $node->getAttribute('format') !== '' ? $node->getAttribute('format') : 'HH:mm',
+                $marked,
             )],
             // Mark-теги + неизвестные inline-теги (span и т.д.) — просто
             // прокидываем стиль в детей.
