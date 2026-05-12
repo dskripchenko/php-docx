@@ -10,6 +10,8 @@ use Dskripchenko\PhpDocx\Element\Hyperlink;
 use Dskripchenko\PhpDocx\Element\Image;
 use Dskripchenko\PhpDocx\Element\InlineElement;
 use Dskripchenko\PhpDocx\Element\LineBreak;
+use Dskripchenko\PhpDocx\Element\ListItem;
+use Dskripchenko\PhpDocx\Element\ListNode;
 use Dskripchenko\PhpDocx\Element\PageBreak;
 use Dskripchenko\PhpDocx\Element\Paragraph;
 use Dskripchenko\PhpDocx\Element\Run;
@@ -37,9 +39,17 @@ use Dskripchenko\PhpDocx\Style\VerticalAlign;
  */
 final class BodyXmlBuilder
 {
+    /** @var array<int, true> Set из использованных numId (для numbering.xml). */
+    private array $usedNumIds = [];
+
     public function __construct(
         private readonly RelationshipManager $rels = new RelationshipManager,
     ) {}
+
+    public function usesNumbering(): bool
+    {
+        return $this->usedNumIds !== [];
+    }
 
     /**
      * @param  list<BlockElement>  $blocks
@@ -67,8 +77,53 @@ final class BodyXmlBuilder
             $block instanceof PageBreak => $this->renderPageBreak(),
             $block instanceof HorizontalRule => $this->renderHr(),
             $block instanceof Image => $this->renderBlockImage($block),
+            $block instanceof ListNode => $this->renderListNode($block),
             default => '',
         };
+    }
+
+    // ──────────────────────────── Lists ──────────────────────────────────────
+
+    private function renderListNode(ListNode $list): string
+    {
+        $numId = $list->ordered
+            ? NumberingXmlBuilder::ORDERED_NUM_ID
+            : NumberingXmlBuilder::BULLET_NUM_ID;
+        $this->usedNumIds[$numId] = true;
+
+        $xml = '';
+        foreach ($list->items as $item) {
+            $xml .= $this->renderListItem($item, $numId, $list->levelStart);
+        }
+
+        return $xml;
+    }
+
+    private function renderListItem(ListItem $item, int $numId, int $level): string
+    {
+        $level = max(0, min(NumberingXmlBuilder::MAX_LEVELS - 1, $level));
+        $pPr = '<w:pPr><w:pStyle w:val="ListParagraph"/>'
+            .'<w:numPr><w:ilvl w:val="'.$level.'"/><w:numId w:val="'.$numId.'"/></w:numPr>'
+            .'</w:pPr>';
+
+        $children = '';
+        foreach ($item->children as $child) {
+            $children .= $this->renderInline($child);
+        }
+        $xml = '<w:p>'.$pPr.$children.'</w:p>';
+
+        // Nested list — рекурсивно, но с инкрементированным level.
+        if ($item->nestedList !== null) {
+            $nestedNumId = $item->nestedList->ordered
+                ? NumberingXmlBuilder::ORDERED_NUM_ID
+                : NumberingXmlBuilder::BULLET_NUM_ID;
+            $this->usedNumIds[$nestedNumId] = true;
+            foreach ($item->nestedList->items as $sub) {
+                $xml .= $this->renderListItem($sub, $nestedNumId, $level + 1);
+            }
+        }
+
+        return $xml;
     }
 
     // ──────────────────────────── Paragraph + Run ────────────────────────────

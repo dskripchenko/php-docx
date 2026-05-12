@@ -60,6 +60,13 @@ final class Word2007Writer
             $footerRId = $rels->registerHeaderFooter('footer1.xml', isHeader: false);
         }
 
+        // Numbering part (Phase 5b) — генерим только если ListNode использовался.
+        $numberingXml = null;
+        if ($builder->usesNumbering()) {
+            $numberingXml = (new NumberingXmlBuilder)->render();
+            $rels->registerNumbering();
+        }
+
         $tmpFile = tempnam(sys_get_temp_dir(), 'docx-');
         if ($tmpFile === false) {
             throw new DocxException('Не удалось создать temp-файл для DOCX.');
@@ -71,7 +78,12 @@ final class Word2007Writer
             throw new DocxException('Не удалось открыть ZipArchive для записи.');
         }
 
-        $zip->addFromString('[Content_Types].xml', $this->renderContentTypes($rels, hasHeader: $headerXml !== null, hasFooter: $footerXml !== null));
+        $zip->addFromString('[Content_Types].xml', $this->renderContentTypes(
+            $rels,
+            hasHeader: $headerXml !== null,
+            hasFooter: $footerXml !== null,
+            hasNumbering: $numberingXml !== null,
+        ));
         $zip->addFromString('_rels/.rels', $this->renderRootRels());
         $zip->addFromString('word/document.xml', $this->renderDocumentXml($section->pageSetup, $bodyXml, $headerRId, $footerRId));
         $zip->addFromString('word/_rels/document.xml.rels', $this->renderDocumentRels($rels));
@@ -81,6 +93,9 @@ final class Word2007Writer
         }
         if ($footerXml !== null) {
             $zip->addFromString('word/footer1.xml', $footerXml);
+        }
+        if ($numberingXml !== null) {
+            $zip->addFromString('word/numbering.xml', $numberingXml);
         }
 
         foreach ($rels->mediaFiles() as $path => $binary) {
@@ -140,8 +155,12 @@ final class Word2007Writer
             .'</'.$tag.'>';
     }
 
-    private function renderContentTypes(RelationshipManager $rels, bool $hasHeader = false, bool $hasFooter = false): string
-    {
+    private function renderContentTypes(
+        RelationshipManager $rels,
+        bool $hasHeader = false,
+        bool $hasFooter = false,
+        bool $hasNumbering = false,
+    ): string {
         $defaults = '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
             .'<Default Extension="xml" ContentType="application/xml"/>';
 
@@ -155,6 +174,9 @@ final class Word2007Writer
         }
         if ($hasFooter) {
             $overrides .= '<Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/>';
+        }
+        if ($hasNumbering) {
+            $overrides .= '<Override PartName="/word/numbering.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml"/>';
         }
 
         return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'

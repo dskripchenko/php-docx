@@ -12,6 +12,8 @@ use Dskripchenko\PhpDocx\Element\Image;
 use Dskripchenko\PhpDocx\Element\ImageFormat;
 use Dskripchenko\PhpDocx\Element\InlineElement;
 use Dskripchenko\PhpDocx\Element\LineBreak;
+use Dskripchenko\PhpDocx\Element\ListItem;
+use Dskripchenko\PhpDocx\Element\ListNode;
 use Dskripchenko\PhpDocx\Element\PageBreak;
 use Dskripchenko\PhpDocx\Element\Paragraph;
 use Dskripchenko\PhpDocx\Element\Run;
@@ -365,10 +367,7 @@ final class Converter
      */
     private function parseList(\DOMElement $node, RunStyle $runStyle, ParagraphStyle $paraStyle, bool $ordered): array
     {
-        // Phase 5b будет генерировать ListNode/ListItem. Пока — fallback
-        // на параграфы с bullet-символом (визуально похоже, без numbering.xml).
-        $blocks = [];
-        $i = 0;
+        $items = [];
         foreach ($node->childNodes as $child) {
             if (! $child instanceof \DOMElement) {
                 continue;
@@ -376,13 +375,49 @@ final class Converter
             if (strtolower($child->tagName) !== 'li') {
                 continue;
             }
-            $i++;
-            $bullet = $ordered ? "{$i}. " : '• ';
-            $inlines = [new Run($bullet, $runStyle), ...$this->collectInline($child, $runStyle)];
-            $blocks[] = new Paragraph($inlines, $paraStyle);
+            $items[] = $this->parseListItem($child, $runStyle);
+        }
+        if ($items === []) {
+            return [];
         }
 
-        return $blocks;
+        return [new ListNode($items, ordered: $ordered)];
+    }
+
+    private function parseListItem(\DOMElement $li, RunStyle $runStyle): ListItem
+    {
+        $inlines = [];
+        $nestedList = null;
+        foreach ($li->childNodes as $child) {
+            if ($child instanceof \DOMText) {
+                $text = $this->normalizeText($child->textContent);
+                if ($text !== '') {
+                    $inlines[] = new Run($text, $runStyle);
+                }
+
+                continue;
+            }
+            if (! $child instanceof \DOMElement) {
+                continue;
+            }
+            $tag = strtolower($child->tagName);
+            if ($tag === 'ul' || $tag === 'ol') {
+                // Nested list — берём первый encountered.
+                if ($nestedList === null) {
+                    $produced = $this->parseList($child, $runStyle, new ParagraphStyle, ordered: $tag === 'ol');
+                    if ($produced !== [] && $produced[0] instanceof ListNode) {
+                        $nestedList = $produced[0];
+                    }
+                }
+
+                continue;
+            }
+            foreach ($this->processInlineElement($child, $runStyle) as $i) {
+                $inlines[] = $i;
+            }
+        }
+
+        return new ListItem(children: $this->trimInline($inlines), nestedList: $nestedList);
     }
 
     private function parseInlineImage(\DOMElement $node): ?Image
