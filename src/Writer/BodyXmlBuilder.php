@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace Dskripchenko\PhpDocx\Writer;
 
 use Dskripchenko\PhpDocx\Element\BlockElement;
+use Dskripchenko\PhpDocx\Element\Bookmark;
+use Dskripchenko\PhpDocx\Element\Field;
 use Dskripchenko\PhpDocx\Element\HorizontalRule;
 use Dskripchenko\PhpDocx\Element\Hyperlink;
 use Dskripchenko\PhpDocx\Element\Image;
 use Dskripchenko\PhpDocx\Element\InlineElement;
-use Dskripchenko\PhpDocx\Element\Field;
 use Dskripchenko\PhpDocx\Element\LineBreak;
 use Dskripchenko\PhpDocx\Element\ListItem;
 use Dskripchenko\PhpDocx\Element\ListNode;
@@ -41,6 +42,9 @@ use Dskripchenko\PhpDocx\Style\VerticalAlign;
 final class BodyXmlBuilder
 {
     private bool $usesNumbering = false;
+
+    /** Counter для w:id у bookmark'ов (уникален в пределах документа). */
+    private int $bookmarkIdCounter = 0;
 
     public function __construct(
         private readonly RelationshipManager $rels = new RelationshipManager,
@@ -200,8 +204,26 @@ final class BodyXmlBuilder
             $el instanceof Hyperlink => $this->renderHyperlink($el),
             $el instanceof Image => $this->renderInlineImage($el),
             $el instanceof Field => $this->renderField($el),
+            $el instanceof Bookmark => $this->renderBookmark($el),
             default => '',
         };
+    }
+
+    /**
+     * `<w:bookmarkStart>` + content + `<w:bookmarkEnd>`. ID auto-allocated.
+     */
+    private function renderBookmark(Bookmark $b): string
+    {
+        $id = ++$this->bookmarkIdCounter;
+        $name = XmlEscape::attr($b->name);
+        $children = '';
+        foreach ($b->children as $child) {
+            $children .= $this->renderInline($child);
+        }
+
+        return '<w:bookmarkStart w:id="'.$id.'" w:name="'.$name.'"/>'
+            .$children
+            .'<w:bookmarkEnd w:id="'.$id.'"/>';
     }
 
     /**
@@ -277,11 +299,19 @@ final class BodyXmlBuilder
 
     private function renderHyperlink(Hyperlink $h): string
     {
-        $rId = $this->rels->registerHyperlink($h->href);
         $children = '';
         foreach ($h->children as $child) {
             $children .= $this->renderInline($child);
         }
+
+        if ($h->isInternal()) {
+            // Внутренняя ссылка на bookmark — без rId, только w:anchor.
+            $anchor = XmlEscape::attr((string) $h->anchor);
+
+            return '<w:hyperlink w:anchor="'.$anchor.'">'.$children.'</w:hyperlink>';
+        }
+
+        $rId = $this->rels->registerHyperlink((string) $h->href);
 
         return '<w:hyperlink r:id="'.$rId.'">'.$children.'</w:hyperlink>';
     }

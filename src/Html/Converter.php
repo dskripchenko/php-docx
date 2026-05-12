@@ -6,6 +6,7 @@ namespace Dskripchenko\PhpDocx\Html;
 
 use Dskripchenko\PhpDocx\Document;
 use Dskripchenko\PhpDocx\Element\BlockElement;
+use Dskripchenko\PhpDocx\Element\Bookmark;
 use Dskripchenko\PhpDocx\Element\Field;
 use Dskripchenko\PhpDocx\Element\HorizontalRule;
 use Dskripchenko\PhpDocx\Element\Hyperlink;
@@ -365,10 +366,7 @@ final class Converter
         return match ($tag) {
             'br' => [new LineBreak],
             'img' => $this->parseInlineImage($node) !== null ? [$this->parseInlineImage($node)] : [],
-            'a' => [new Hyperlink(
-                href: $node->getAttribute('href'),
-                children: $this->collectInline($node, $marked),
-            )],
+            'a' => $this->parseAnchor($node, $marked),
             // Custom-теги для field codes:
             'page-number' => [Field::page($marked)],
             'page-total' => [Field::pageTotal($marked)],
@@ -384,6 +382,65 @@ final class Converter
             // прокидываем стиль в детей.
             default => $this->collectInline($node, $marked),
         };
+    }
+
+    /**
+     * `<a>` бывает четырёх видов:
+     *  - <a href="https://...">  — внешняя ссылка (Hyperlink с href)
+     *  - <a href="#anchor">      — внутренняя (Hyperlink с anchor)
+     *  - <a id="anchor"> или <a name="anchor"> — bookmark-метка
+     *  - <a href="..." id="...">  — и то и другое (bookmark, обёрнутый в link)
+     *
+     * Bookmark-имя в OOXML: до 40 символов, начинается с буквы/`_`, без
+     * пробелов. Sanitize'им HTML id под этот регламент.
+     *
+     * @return list<InlineElement>
+     */
+    private function parseAnchor(\DOMElement $node, RunStyle $runStyle): array
+    {
+        $href = $node->getAttribute('href');
+        $id = $node->getAttribute('id');
+        $name = $node->getAttribute('name');
+        $bookmarkName = $id !== '' ? $id : ($name !== '' ? $name : null);
+        $children = $this->collectInline($node, $runStyle);
+
+        // Чистый bookmark — без href.
+        if ($href === '' && $bookmarkName !== null) {
+            return [new Bookmark($this->sanitizeBookmarkName($bookmarkName), $children)];
+        }
+
+        if ($href !== '' && str_starts_with($href, '#')) {
+            $anchor = $this->sanitizeBookmarkName(substr($href, 1));
+            $link = Hyperlink::internal($anchor, $children);
+
+            if ($bookmarkName !== null) {
+                return [new Bookmark($this->sanitizeBookmarkName($bookmarkName), [$link])];
+            }
+
+            return [$link];
+        }
+
+        if ($href !== '') {
+            $link = new Hyperlink(href: $href, children: $children);
+            if ($bookmarkName !== null) {
+                return [new Bookmark($this->sanitizeBookmarkName($bookmarkName), [$link])];
+            }
+
+            return [$link];
+        }
+
+        // <a> без href и без id/name — просто прокидываем стиль.
+        return $children;
+    }
+
+    private function sanitizeBookmarkName(string $raw): string
+    {
+        $clean = preg_replace('/[^A-Za-z0-9_]/', '_', $raw) ?? '_';
+        if ($clean === '' || ! preg_match('/^[A-Za-z_]/', $clean)) {
+            $clean = '_'.$clean;
+        }
+
+        return substr($clean, 0, 40);
     }
 
     /**
