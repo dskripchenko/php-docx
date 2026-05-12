@@ -6,23 +6,34 @@ namespace Dskripchenko\PhpDocx\Writer;
 
 use Dskripchenko\PhpDocx\Document;
 use Dskripchenko\PhpDocx\Exception\DocxException;
+use Dskripchenko\PhpDocx\Style\Orientation;
+use Dskripchenko\PhpDocx\Style\PageSetup;
 
 /**
- * Writer Document → DOCX (Word2007 format). Phase 1: skeleton with minimal
- * valid DOCX structure (empty document).
+ * Writer Document → DOCX (Word2007 format).
  *
- * Phase 2+:
- *   - body/header/footer XML rendering
- *   - image embedding + relationships
- *   - styles.xml для Heading1..6
- *   - numbering.xml для списков
+ * Pipeline:
+ *  1. BodyXmlBuilder рендерит section.body в XML, попутно регистрирует
+ *     image/hyperlink rels через RelationshipManager.
+ *  2. document.xml = <w:document>…<w:body>{rendered}</w:body><w:sectPr/></w:document>
+ *  3. Rels из RelationshipManager → word/_rels/document.xml.rels
+ *  4. Media файлы → word/media/imageN.ext
+ *  5. Расширения content-types для image extensions → [Content_Types].xml
  *
- * Output: raw bytes DOCX-файла (готов к file_put_contents / HTTP response).
+ * Phase 3: body content rendering (paragraphs/runs/tables/HR/PageBreak).
+ * Phase 4: image embedding (уже работает через RelationshipManager).
+ * Phase 5a: headers/footers + watermark.
+ * Phase 5b: lists + numbering.xml.
+ * Phase 5c: styles.xml + StyleRegistry.
  */
 final class Word2007Writer
 {
     public function write(Document $document): string
     {
+        $rels = new RelationshipManager;
+        $builder = new BodyXmlBuilder($rels);
+        $bodyXml = $builder->render($document->section->body);
+
         $tmpFile = tempnam(sys_get_temp_dir(), 'docx-');
         if ($tmpFile === false) {
             throw new DocxException('Не удалось создать temp-файл для DOCX.');
@@ -34,11 +45,14 @@ final class Word2007Writer
             throw new DocxException('Не удалось открыть ZipArchive для записи.');
         }
 
-        // Минимальные обязательные части OOXML-документа.
-        $zip->addFromString('[Content_Types].xml', $this->renderContentTypes());
+        $zip->addFromString('[Content_Types].xml', $this->renderContentTypes($rels));
         $zip->addFromString('_rels/.rels', $this->renderRootRels());
-        $zip->addFromString('word/document.xml', $this->renderDocumentXml($document));
-        $zip->addFromString('word/_rels/document.xml.rels', $this->renderDocumentRels());
+        $zip->addFromString('word/document.xml', $this->renderDocumentXml($document->section->pageSetup, $bodyXml));
+        $zip->addFromString('word/_rels/document.xml.rels', $this->renderDocumentRels($rels));
+
+        foreach ($rels->mediaFiles() as $path => $binary) {
+            $zip->addFromString($path, $binary);
+        }
 
         $zip->close();
 
@@ -48,77 +62,69 @@ final class Word2007Writer
         return $contents;
     }
 
-    /**
-     * `[Content_Types].xml` — MIME-карта частей пакета (OPC spec).
-     */
-    private function renderContentTypes(): string
+    private function renderContentTypes(RelationshipManager $rels): string
     {
-        return <<<XML
-            <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-            <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-                <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-                <Default Extension="xml" ContentType="application/xml"/>
-                <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
-            </Types>
-            XML;
+        $defaults = '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+            .'<Default Extension="xml" ContentType="application/xml"/>';
+
+        foreach ($rels->contentTypeExtensions() as $ext => $mime) {
+            $defaults .= '<Default Extension="'.XmlEscape::attr($ext).'" ContentType="'.XmlEscape::attr($mime).'"/>';
+        }
+
+        $overrides = '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>';
+
+        return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+            .'<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+            .$defaults
+            .$overrides
+            .'</Types>';
     }
 
-    /**
-     * `_rels/.rels` — root-relationships, указывает на word/document.xml.
-     */
     private function renderRootRels(): string
     {
-        return <<<XML
-            <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-            <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
-            </Relationships>
-            XML;
+        return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+            .'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+            .'<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>'
+            .'</Relationships>';
     }
 
-    /**
-     * `word/_rels/document.xml.rels` — relationships для document'а:
-     * на header/footer/image. Phase 1: пустой.
-     */
-    private function renderDocumentRels(): string
+    private function renderDocumentRels(RelationshipManager $rels): string
     {
-        return <<<XML
-            <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-            <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"/>
-            XML;
+        $xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+            .'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">';
+        foreach ($rels->relationships() as $r) {
+            $xml .= '<Relationship Id="'.$r['id'].'" Type="'.$r['type'].'" Target="'.XmlEscape::attr($r['target']).'"';
+            if (isset($r['targetMode'])) {
+                $xml .= ' TargetMode="'.$r['targetMode'].'"';
+            }
+            $xml .= '/>';
+        }
+        $xml .= '</Relationships>';
+
+        return $xml;
     }
 
-    /**
-     * `word/document.xml` — главный body документа. Phase 1: пустой <w:body>
-     * с минимальным <w:sectPr> для valid-document.
-     */
-    private function renderDocumentXml(Document $document): string
+    private function renderDocumentXml(PageSetup $ps, string $bodyXml): string
     {
-        $ps = $document->section->pageSetup;
-        [$w, $h] = match ($ps->orientation) {
-            \Dskripchenko\PhpDocx\Style\Orientation::Portrait =>
-                [$ps->paperSize->widthTwips(), $ps->paperSize->heightTwips()],
-            \Dskripchenko\PhpDocx\Style\Orientation::Landscape =>
-                [$ps->paperSize->heightTwips(), $ps->paperSize->widthTwips()],
-        };
+        [$w, $h] = $ps->orientation === Orientation::Portrait
+            ? [$ps->paperSize->widthTwips(), $ps->paperSize->heightTwips()]
+            : [$ps->paperSize->heightTwips(), $ps->paperSize->widthTwips()];
         $orient = $ps->orientation->value;
 
-        // TODO Phase 2: render body blocks via dedicated XML builder.
-        return <<<XML
-            <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-            <w:document
-                xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
-                xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
-                xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"
-            >
-                <w:body>
-                    <w:p/>
-                    <w:sectPr>
-                        <w:pgSz w:w="{$w}" w:h="{$h}" w:orient="{$orient}"/>
-                        <w:pgMar w:top="{$ps->marginTopTwips}" w:right="{$ps->marginRightTwips}" w:bottom="{$ps->marginBottomTwips}" w:left="{$ps->marginLeftTwips}" w:header="{$ps->headerOffsetTwips}" w:footer="{$ps->footerOffsetTwips}"/>
-                    </w:sectPr>
-                </w:body>
-            </w:document>
-            XML;
+        $sectPr = '<w:sectPr>'
+            .'<w:pgSz w:w="'.$w.'" w:h="'.$h.'" w:orient="'.$orient.'"/>'
+            .'<w:pgMar w:top="'.$ps->marginTopTwips.'" w:right="'.$ps->marginRightTwips.'" w:bottom="'.$ps->marginBottomTwips.'" w:left="'.$ps->marginLeftTwips.'" w:header="'.$ps->headerOffsetTwips.'" w:footer="'.$ps->footerOffsetTwips.'"/>'
+            .'</w:sectPr>';
+
+        return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+            .'<w:document'
+            .' xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"'
+            .' xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"'
+            .' xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"'
+            .' xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"'
+            .' xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"'
+            .'>'
+            .'<w:body>'.$bodyXml.$sectPr.'</w:body>'
+            .'</w:document>';
     }
 }
