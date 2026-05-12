@@ -36,4 +36,32 @@ final readonly class ParagraphStyle
             && ! $this->pageBreakAfter
             && $this->borders === null;
     }
+
+    /**
+     * Immutable-update: возвращает копию с overridden-полями.
+     * Параметры с дефолтом `null` остаются как у `$this`.
+     */
+    public function copy(
+        ?Alignment $alignment = null,
+        ?int $spaceBeforeTwips = null,
+        ?int $spaceAfterTwips = null,
+        ?int $indentLeftTwips = null,
+        ?int $indentRightTwips = null,
+        ?int $indentFirstLineTwips = null,
+        ?int $lineSpacingTwips = null,
+        ?bool $pageBreakAfter = null,
+        ?BorderSet $borders = null,
+    ): self {
+        return new self(
+            alignment: $alignment ?? $this->alignment,
+            spaceBeforeTwips: $spaceBeforeTwips ?? $this->spaceBeforeTwips,
+            spaceAfterTwips: $spaceAfterTwips ?? $this->spaceAfterTwips,
+            indentLeftTwips: $indentLeftTwips ?? $this->indentLeftTwips,
+            indentRightTwips: $indentRightTwips ?? $this->indentRightTwips,
+            indentFirstLineTwips: $indentFirstLineTwips ?? $this->indentFirstLineTwips,
+            lineSpacingTwips: $lineSpacingTwips ?? $this->lineSpacingTwips,
+            pageBreakAfter: $pageBreakAfter ?? $this->pageBreakAfter,
+            borders: $borders ?? $this->borders,
+        );
+    }
 }

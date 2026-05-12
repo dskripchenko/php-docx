@@ -245,8 +245,12 @@ final class BodyXmlBuilder
         // Background color на run-уровне в OOXML интерпретируется как
         // horizontal stripe (Pages) или highlight (Word) — оба варианта
         // обычно дают неожиданный визуал. Если caller хочет background
-        // для текста — лучше использовать cell-level shd (в TableCell).
+        // для текста — лучше использовать cell-level shd или w:highlight.
         // Игнорируем RunStyle.backgroundColor.
+
+        if ($s->highlight !== null) {
+            $rPr .= '<w:highlight w:val="'.$s->highlight.'"/>';
+        }
 
         return '<w:rPr>'.$rPr.'</w:rPr>';
     }

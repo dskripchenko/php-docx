@@ -45,7 +45,7 @@ use Dskripchenko\PhpDocx\Style\TableStyle;
 final class Converter
 {
     /** Теги, которые превращаются в BlockElement или производят их split. */
-    private const array BLOCK_TAGS = ['p', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'table', 'hr', 'ul', 'ol', 'blockquote', 'pagebreak'];
+    private const array BLOCK_TAGS = ['p', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'table', 'hr', 'ul', 'ol', 'blockquote', 'pagebreak', 'pre', 'dl', 'figure', 'section', 'article', 'aside', 'header', 'footer', 'nav', 'main'];
 
     public function __construct(
         private readonly PageSetup $defaultPageSetup = new PageSetup,
@@ -167,9 +167,43 @@ final class Converter
             'hr' => $this->parseHr($node),
             'pagebreak' => [new PageBreak],
             'ul', 'ol' => $this->parseList($node, $localRun, $localPara, ordered: $tag === 'ol'),
-            'blockquote' => $this->processChildNodes($node, $localRun, $localPara),
+            'blockquote' => $this->processChildNodes($node, $localRun, $localPara->copy(indentLeftTwips: 720)),
+            // Semantic block-теги — рендерим как div'ы (children).
+            'section', 'article', 'aside', 'header', 'footer', 'nav', 'main' =>
+                $this->processChildNodes($node, $localRun, $localPara),
+            // Pre — preserve whitespace + Courier New. Текст внутри идёт как-есть.
+            'pre' => $this->parsePreformatted($node, $localRun->withFontFamily('Courier New'), $localPara),
             default => [],
         };
+    }
+
+    /**
+     * @return list<BlockElement>
+     */
+    private function parsePreformatted(\DOMElement $node, RunStyle $runStyle, ParagraphStyle $paraStyle): array
+    {
+        // Preserve whitespace и newlines. Внутренние <code>/<br>/etc parse'ятся
+        // как inline, но не normalize'им text content.
+        $inlines = [];
+        foreach ($node->childNodes as $child) {
+            if ($child instanceof \DOMText) {
+                if ($child->textContent !== '') {
+                    $inlines[] = new Run($child->textContent, $runStyle);
+                }
+
+                continue;
+            }
+            if ($child instanceof \DOMElement) {
+                foreach ($this->processInlineElement($child, $runStyle) as $i) {
+                    $inlines[] = $i;
+                }
+            }
+        }
+        if ($inlines === []) {
+            return [];
+        }
+
+        return [new Paragraph($inlines, $paraStyle)];
     }
 
     /**
@@ -218,39 +252,26 @@ final class Converter
         $css = InlineStyleParser::parse($node->getAttribute('style'));
         $local = RunStyleApplier::apply($runStyle, $css);
 
-        // Mark-теги наследуют + добавляют свой признак
+        // Mark-теги наследуют + добавляют свой признак (через with*-helpers).
         $marked = match ($tag) {
             'strong', 'b' => $local->withBold(),
-            'em', 'i' => new RunStyle(
-                sizeHalfPoints: $local->sizeHalfPoints, color: $local->color,
-                backgroundColor: $local->backgroundColor, fontFamily: $local->fontFamily,
-                bold: $local->bold, italic: true, underline: $local->underline,
-                strikethrough: $local->strikethrough, superscript: $local->superscript, subscript: $local->subscript,
+            'em', 'i', 'cite', 'dfn', 'var', 'address' => $local->withItalic(),
+            'u' => $local->withUnderline(),
+            's', 'del', 'strike' => $local->withStrikethrough(),
+            'sup' => $local->withSuperscript(),
+            'sub' => $local->withSubscript(),
+            // Highlighted text (CSS background-color на span НЕ работает в OOXML).
+            'mark' => $local->withHighlight('yellow'),
+            // Monospaced inline-теги.
+            'code', 'kbd', 'samp', 'tt' => $local->withFontFamily('Courier New'),
+            // Smaller font (≈83% от текущего).
+            'small' => $local->withSizeHalfPoints(
+                $local->sizeHalfPoints !== null
+                    ? max(10, (int) round($local->sizeHalfPoints * 0.83))
+                    : 18,
             ),
-            'u' => new RunStyle(
-                sizeHalfPoints: $local->sizeHalfPoints, color: $local->color,
-                backgroundColor: $local->backgroundColor, fontFamily: $local->fontFamily,
-                bold: $local->bold, italic: $local->italic, underline: true,
-                strikethrough: $local->strikethrough, superscript: $local->superscript, subscript: $local->subscript,
-            ),
-            's', 'del', 'strike' => new RunStyle(
-                sizeHalfPoints: $local->sizeHalfPoints, color: $local->color,
-                backgroundColor: $local->backgroundColor, fontFamily: $local->fontFamily,
-                bold: $local->bold, italic: $local->italic, underline: $local->underline,
-                strikethrough: true, superscript: $local->superscript, subscript: $local->subscript,
-            ),
-            'sup' => new RunStyle(
-                sizeHalfPoints: $local->sizeHalfPoints, color: $local->color,
-                backgroundColor: $local->backgroundColor, fontFamily: $local->fontFamily,
-                bold: $local->bold, italic: $local->italic, underline: $local->underline,
-                strikethrough: $local->strikethrough, superscript: true, subscript: false,
-            ),
-            'sub' => new RunStyle(
-                sizeHalfPoints: $local->sizeHalfPoints, color: $local->color,
-                backgroundColor: $local->backgroundColor, fontFamily: $local->fontFamily,
-                bold: $local->bold, italic: $local->italic, underline: $local->underline,
-                strikethrough: $local->strikethrough, superscript: false, subscript: true,
-            ),
+            // Inline quoted (italic + добавим « » если хочется — пока просто italic).
+            'q' => $local->withItalic(),
             default => $local,
         };
 
