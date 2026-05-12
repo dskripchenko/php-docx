@@ -70,6 +70,12 @@ final class StyleRegistry
             new RunStyle,
             new ParagraphStyle(indentLeftTwips: 720),
         );
+        // Caption — для подписей таблиц / figcaption / etc.
+        $r->paragraph(
+            'Caption',
+            new RunStyle(sizeHalfPoints: 20, color: '6b7280', italic: true),
+            new ParagraphStyle(alignment: Alignment::Center, spaceBeforeTwips: 80, spaceAfterTwips: 80),
+        );
 
         return $r;
     }

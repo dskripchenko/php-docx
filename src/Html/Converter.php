@@ -333,20 +333,95 @@ final class Converter
         $attrs = $this->collectAttrs($node);
         $tableStyle = TableStyleApplier::apply(new TableStyle, $css, $attrs);
 
+        // <caption> текст (опционально) — render'ится перед <w:tbl> со стилем Caption.
+        $caption = null;
+        foreach ($node->childNodes as $c) {
+            if ($c instanceof \DOMElement && strtolower($c->tagName) === 'caption') {
+                $cText = trim($c->textContent);
+                if ($cText !== '') {
+                    $caption = $cText;
+                }
+                break;
+            }
+        }
+
+        // <colgroup>/<col> — explicit column widths
+        $gridColumnsTwips = $this->parseColgroup($node);
+
         $rows = [];
         foreach ($this->directTableRows($node) as $tr) {
             $rows[] = $this->parseTableRow($tr, $runStyle, $paraStyle);
         }
 
-        // Авто-распределение cell widths: если часть ячеек первой строки
-        // имеет explicit width (twips или percent), а часть — null, то
-        // распределяем остаток до 100% между null-cells. Если ни у кого
-        // нет — раздаём поровну (избегает inherit от родителя).
         if ($rows !== []) {
             $rows[0] = $this->balanceFirstRowWidths($rows[0]);
         }
 
-        return new Table($rows, $tableStyle);
+        return new Table($rows, $tableStyle, $caption, $gridColumnsTwips);
+    }
+
+    /**
+     * @return list<int>|null
+     */
+    private function parseColgroup(\DOMElement $table): ?array
+    {
+        $widths = [];
+        $found = false;
+        foreach ($table->childNodes as $child) {
+            if (! $child instanceof \DOMElement || strtolower($child->tagName) !== 'colgroup') {
+                continue;
+            }
+            $found = true;
+            foreach ($child->childNodes as $col) {
+                if (! $col instanceof \DOMElement || strtolower($col->tagName) !== 'col') {
+                    continue;
+                }
+                $widths[] = $this->parseColWidth($col);
+            }
+            break;
+        }
+        if (! $found) {
+            return null;
+        }
+        $hasAny = false;
+        foreach ($widths as $w) {
+            if ($w !== null) {
+                $hasAny = true;
+                break;
+            }
+        }
+        if (! $hasAny) {
+            return null;
+        }
+        // Default для col'ов без width — равное распределение остатка от 9000 twips.
+        $sum = array_sum(array_filter($widths, fn ($w) => $w !== null));
+        $nullCount = count(array_filter($widths, fn ($w) => $w === null));
+        $fallback = $nullCount > 0 ? max(720, (int) floor(max(0, 9000 - $sum) / $nullCount)) : 2000;
+
+        return array_map(static fn (?int $w): int => $w ?? $fallback, $widths);
+    }
+
+    private function parseColWidth(\DOMElement $col): ?int
+    {
+        $attr = $col->getAttribute('width');
+        if ($attr !== '') {
+            $twips = LengthParser::parseTwips($attr);
+            if ($twips !== null) {
+                return $twips;
+            }
+            if (preg_match('/^\d+$/', $attr) === 1) {
+                return (int) $attr * 15; // bare number = px
+            }
+        }
+        $css = InlineStyleParser::parse($col->getAttribute('style'));
+        if (isset($css['width'])) {
+            $twips = LengthParser::parseTwips($css['width']);
+            if ($twips !== null) {
+                return $twips;
+            }
+        }
+
+        return null;
     }
 
     /**

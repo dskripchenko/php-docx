@@ -302,8 +302,12 @@ final class BodyXmlBuilder
 
     private function renderTable(Table $t): string
     {
+        $caption = $t->caption !== null && $t->caption !== ''
+            ? $this->renderCaption($t->caption)
+            : '';
+
         $tblPr = $this->renderTableProperties($t->style);
-        $gridCols = $this->computeGridColumns($t);
+        $gridCols = $t->gridColumnsTwips ?? $this->computeGridColumns($t);
         $gridXml = '<w:tblGrid>';
         foreach ($gridCols as $widthTwips) {
             $gridXml .= '<w:gridCol w:w="'.$widthTwips.'"/>';
@@ -315,7 +319,22 @@ final class BodyXmlBuilder
             $rows .= $this->renderTableRow($row);
         }
 
-        return '<w:tbl>'.$tblPr.$gridXml.$rows.'</w:tbl>';
+        return $caption.'<w:tbl>'.$tblPr.$gridXml.$rows.'</w:tbl>';
+    }
+
+    /**
+     * Caption-paragraph перед таблицей. Стиль "Caption" регистрируется
+     * в StyleRegistry::defaults() (italic centered 10pt grey).
+     */
+    private function renderCaption(string $text): string
+    {
+        $escaped = XmlEscape::text($text);
+
+        return '<w:p>'
+            .'<w:pPr><w:pStyle w:val="Caption"/><w:jc w:val="center"/></w:pPr>'
+            .'<w:r><w:rPr><w:i/><w:iCs/><w:color w:val="6b7280"/><w:sz w:val="20"/></w:rPr>'
+            .'<w:t xml:space="preserve">'.$escaped.'</w:t></w:r>'
+            .'</w:p>';
     }
 
     private function renderTableProperties(TableStyle $s): string
