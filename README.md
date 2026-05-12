@@ -2,8 +2,9 @@
 
 Minimal HTML → DOCX (Office Open XML) converter without legacy dependencies.
 
-Designed for **print-form use cases**: structured templates with paragraphs,
-tables, images, headers/footers — not for arbitrary HTML content from the web.
+Generic HTML → DOCX writer for structured content: paragraphs, headings,
+tables, lists, images, headers/footers. Built specifically to avoid the
+quirks of `phpoffice/phpword`'s `Shared\Html` converter.
 
 ## Status
 
@@ -28,10 +29,11 @@ in the parent project for the migration roadmap from `phpoffice/phpword`.
 | `<strong>`, `<em>`, `<u>`, `<s>`, `<sub>`, `<sup>` | Custom XML parts |
 | `<a href>` | Embedded SVG (caller rasterizes upstream) |
 | `<img src="data:...">` + relationships | Math equations |
-| `<ul>`, `<ol>`, `<li>` | Forms (`<input>`, `<form>`) |
+| `<ul>`, `<ol>`, `<li>` (with nested levels) | Forms (`<input>`, `<form>`) |
 | Inline `style="..."` (font, color, bg, border, padding, etc.) | JavaScript anything |
 | Page setup: A4/A3/A5/Letter/Legal, P/L orientation, margins | |
 | Headers/footers, watermark | |
+| Custom heading styles via `StyleRegistry` | |
 
 ## Quick start
 
