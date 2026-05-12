@@ -242,9 +242,11 @@ final class BodyXmlBuilder
         if ($s->sizeHalfPoints !== null) {
             $rPr .= '<w:sz w:val="'.$s->sizeHalfPoints.'"/><w:szCs w:val="'.$s->sizeHalfPoints.'"/>';
         }
-        if ($s->backgroundColor !== null) {
-            $rPr .= '<w:shd w:val="clear" w:color="auto" w:fill="'.$s->backgroundColor.'"/>';
-        }
+        // Background color на run-уровне в OOXML интерпретируется как
+        // horizontal stripe (Pages) или highlight (Word) — оба варианта
+        // обычно дают неожиданный визуал. Если caller хочет background
+        // для текста — лучше использовать cell-level shd (в TableCell).
+        // Игнорируем RunStyle.backgroundColor.
 
         return '<w:rPr>'.$rPr.'</w:rPr>';
     }

@@ -45,7 +45,7 @@ use Dskripchenko\PhpDocx\Style\TableStyle;
 final class Converter
 {
     /** Теги, которые превращаются в BlockElement или производят их split. */
-    private const array BLOCK_TAGS = ['p', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'table', 'hr', 'ul', 'ol', 'blockquote'];
+    private const array BLOCK_TAGS = ['p', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'table', 'hr', 'ul', 'ol', 'blockquote', 'pagebreak'];
 
     public function __construct(
         private readonly PageSetup $defaultPageSetup = new PageSetup,
@@ -157,6 +157,7 @@ final class Converter
                 $this->parseParagraph($node, $localRun, $localPara, headingLevel: (int) substr($tag, 1)),
             'table' => [$this->parseTable($node, $localRun, $localPara)],
             'hr' => $this->parseHr($node),
+            'pagebreak' => [new PageBreak],
             'ul', 'ol' => $this->parseList($node, $localRun, $localPara, ordered: $tag === 'ol'),
             'blockquote' => $this->processChildNodes($node, $localRun, $localPara),
             default => [],
@@ -292,14 +293,35 @@ final class Converter
         $tableStyle = TableStyleApplier::apply(new TableStyle, $css, $attrs);
 
         $rows = [];
-        foreach ($node->getElementsByTagName('tr') as $tr) {
-            if (! $tr instanceof \DOMElement) {
-                continue;
-            }
+        // Только прямые `<tr>` (или через `<thead>`/`<tbody>`/`<tfoot>`) —
+        // getElementsByTagName рекурсивный, ловит и nested <table><tr>.
+        foreach ($this->directTableRows($node) as $tr) {
             $rows[] = $this->parseTableRow($tr, $runStyle, $paraStyle);
         }
 
         return new Table($rows, $tableStyle);
+    }
+
+    /**
+     * @return iterable<\DOMElement>
+     */
+    private function directTableRows(\DOMElement $table): iterable
+    {
+        foreach ($table->childNodes as $child) {
+            if (! $child instanceof \DOMElement) {
+                continue;
+            }
+            $tag = strtolower($child->tagName);
+            if ($tag === 'tr') {
+                yield $child;
+            } elseif (in_array($tag, ['thead', 'tbody', 'tfoot'], true)) {
+                foreach ($child->childNodes as $grand) {
+                    if ($grand instanceof \DOMElement && strtolower($grand->tagName) === 'tr') {
+                        yield $grand;
+                    }
+                }
+            }
+        }
     }
 
     private function parseTableRow(\DOMElement $tr, RunStyle $runStyle, ParagraphStyle $paraStyle): TableRow

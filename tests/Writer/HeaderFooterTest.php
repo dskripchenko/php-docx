@@ -71,7 +71,7 @@ final class HeaderFooterTest extends TestCase
     }
 
     #[Test]
-    public function it_writes_watermark_as_header_paragraph(): void
+    public function it_writes_watermark_as_vml_shape(): void
     {
         $doc = new Document(
             section: new Section(body: [new Paragraph([new Run('body')])]),
@@ -80,11 +80,15 @@ final class HeaderFooterTest extends TestCase
         $bytes = (new Word2007Writer)->write($doc);
 
         $headerXml = self::extract($bytes, 'word/header1.xml');
-        self::assertStringContainsString('ОБРАЗЕЦ', $headerXml);
-        // Watermark — 48pt grey bold (96 half-points, color d0d0d0, b)
-        self::assertStringContainsString('<w:sz w:val="96"/>', $headerXml);
-        self::assertStringContainsString('<w:color w:val="d0d0d0"/>', $headerXml);
-        self::assertStringContainsString('<w:b/>', $headerXml);
+        // VML shape с textpath, rotation, transparency, абсолютным позиционированием.
+        self::assertStringContainsString('<v:shapetype id="_x0000_t136"', $headerXml);
+        self::assertStringContainsString('type="#_x0000_t136"', $headerXml);
+        self::assertStringContainsString('rotation:315', $headerXml);
+        self::assertStringContainsString('opacity=".5"', $headerXml);
+        self::assertStringContainsString('string="ОБРАЗЕЦ"', $headerXml);
+        // VML namespaces в <w:hdr>
+        self::assertStringContainsString('xmlns:v="urn:schemas-microsoft-com:vml"', $headerXml);
+        self::assertStringContainsString('xmlns:o="urn:schemas-microsoft-com:office:office"', $headerXml);
     }
 
     #[Test]
