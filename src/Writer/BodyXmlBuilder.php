@@ -300,6 +300,9 @@ final class BodyXmlBuilder
 
     private function renderTableProperties(TableStyle $s): string
     {
+        // Порядок элементов в <w:tblPr> по OOXML CT_TblPr schema:
+        //   tblW → jc → tblBorders → tblLayout → tblCellMar
+        // Word/Pages игнорируют свойства если порядок нарушен.
         $tblPr = '';
 
         // width
@@ -311,17 +314,22 @@ final class BodyXmlBuilder
             $tblPr .= '<w:tblW w:w="0" w:type="auto"/>';
         }
 
-        // layout
-        if ($s->fixedLayout) {
-            $tblPr .= '<w:tblLayout w:type="fixed"/>';
-        }
-
         // alignment
         if ($s->alignment !== Alignment::Start) {
             $tblPr .= '<w:jc w:val="'.$s->alignment->value.'"/>';
         }
 
-        // cell margins (defaults)
+        // borders
+        if ($s->borders !== null) {
+            $tblPr .= $this->renderBorderSet($s->borders, 'w:tblBorders');
+        }
+
+        // layout
+        if ($s->fixedLayout) {
+            $tblPr .= '<w:tblLayout w:type="fixed"/>';
+        }
+
+        // cell margins
         if ($s->cellMarginTopTwips !== 0 || $s->cellMarginRightTwips !== 0
             || $s->cellMarginBottomTwips !== 0 || $s->cellMarginLeftTwips !== 0) {
             $tblPr .= '<w:tblCellMar>';
@@ -330,11 +338,6 @@ final class BodyXmlBuilder
             $tblPr .= '<w:bottom w:w="'.$s->cellMarginBottomTwips.'" w:type="dxa"/>';
             $tblPr .= '<w:right w:w="'.$s->cellMarginRightTwips.'" w:type="dxa"/>';
             $tblPr .= '</w:tblCellMar>';
-        }
-
-        // borders
-        if ($s->borders !== null) {
-            $tblPr .= $this->renderBorderSet($s->borders, 'w:tblBorders');
         }
 
         return '<w:tblPr>'.$tblPr.'</w:tblPr>';
@@ -411,6 +414,10 @@ final class BodyXmlBuilder
 
     private function renderCellProperties(CellStyle $s): string
     {
+        // Порядок элементов в <w:tcPr> по OOXML CT_TcPr schema:
+        //   tcW → gridSpan → vMerge → tcBorders → shd → tcMar → vAlign
+        // Если порядок нарушен — Word/Pages игнорируют свойства (фон,
+        // padding, valign — самые видимые жертвы).
         $tcPr = '';
 
         // width
@@ -425,15 +432,23 @@ final class BodyXmlBuilder
             $tcPr .= '<w:gridSpan w:val="'.$s->gridSpan.'"/>';
         }
 
-        // rowSpan (vMerge): для multi-row span Word требует первая ячейка
-        // <w:vMerge w:val="restart"/>, следующие <w:vMerge/>. Для простоты
-        // v1 поддерживает только rowSpan на самой ячейке (writer не
-        // распространяет vMerge на следующие row'ы). TODO в Phase 4.
+        // vMerge (rowSpan): первая ячейка с restart, следующие — без val.
+        // Сейчас writer не распространяет vMerge на следующие row'ы (TODO).
         if ($s->rowSpan > 1) {
             $tcPr .= '<w:vMerge w:val="restart"/>';
         }
 
-        // padding
+        // borders (ПЕРЕД shd)
+        if ($s->borders !== null) {
+            $tcPr .= $this->renderBorderSet($s->borders, 'w:tcBorders');
+        }
+
+        // background (ПОСЛЕ borders, ПЕРЕД tcMar)
+        if ($s->backgroundColor !== null) {
+            $tcPr .= '<w:shd w:val="clear" w:color="auto" w:fill="'.$s->backgroundColor.'"/>';
+        }
+
+        // padding (ПОСЛЕ shd)
         if ($s->paddingTopTwips !== 0 || $s->paddingRightTwips !== 0
             || $s->paddingBottomTwips !== 0 || $s->paddingLeftTwips !== 0) {
             $tcPr .= '<w:tcMar>';
@@ -444,19 +459,9 @@ final class BodyXmlBuilder
             $tcPr .= '</w:tcMar>';
         }
 
-        // valign
+        // valign (последний)
         if ($s->verticalAlign !== VerticalAlign::Top) {
             $tcPr .= '<w:vAlign w:val="'.$s->verticalAlign->value.'"/>';
-        }
-
-        // background
-        if ($s->backgroundColor !== null) {
-            $tcPr .= '<w:shd w:val="clear" w:color="auto" w:fill="'.$s->backgroundColor.'"/>';
-        }
-
-        // borders
-        if ($s->borders !== null) {
-            $tcPr .= $this->renderBorderSet($s->borders, 'w:tcBorders');
         }
 
         return '<w:tcPr>'.$tcPr.'</w:tcPr>';

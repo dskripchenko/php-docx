@@ -148,7 +148,7 @@ final class Word2007Writer
             .'</v:shapetype>'
             .'<v:shape id="WordPictureWatermark" o:spid="_x0000_s2049" type="#_x0000_t136"'
             .' style="position:absolute;margin-left:0;margin-top:0;width:468pt;height:234pt;'
-            .'rotation:315;z-index:-251654144;mso-position-horizontal:center;'
+            .'rotation:315;z-index:251654144;mso-position-horizontal:center;'
             .'mso-position-horizontal-relative:margin;mso-position-vertical:center;'
             .'mso-position-vertical-relative:margin"'
             .' fillcolor="silver" stroked="f">'

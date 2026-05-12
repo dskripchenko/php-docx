@@ -293,13 +293,81 @@ final class Converter
         $tableStyle = TableStyleApplier::apply(new TableStyle, $css, $attrs);
 
         $rows = [];
-        // Только прямые `<tr>` (или через `<thead>`/`<tbody>`/`<tfoot>`) —
-        // getElementsByTagName рекурсивный, ловит и nested <table><tr>.
         foreach ($this->directTableRows($node) as $tr) {
             $rows[] = $this->parseTableRow($tr, $runStyle, $paraStyle);
         }
 
+        // Авто-распределение cell widths: если часть ячеек первой строки
+        // имеет explicit width (twips или percent), а часть — null, то
+        // распределяем остаток до 100% между null-cells. Если ни у кого
+        // нет — раздаём поровну (избегает inherit от родителя).
+        if ($rows !== []) {
+            $rows[0] = $this->balanceFirstRowWidths($rows[0]);
+        }
+
         return new Table($rows, $tableStyle);
+    }
+
+    /**
+     * Распределяет недостающие cell widths в первой строке до 100% (5000 pct).
+     * Используется как gridCol-источник, поэтому первая строка решает.
+     */
+    private function balanceFirstRowWidths(TableRow $row): TableRow
+    {
+        if ($row->cells === []) {
+            return $row;
+        }
+
+        // Считаем что имеем; 5000 pct = 100%; 100mm = ~5670 twips.
+        $totalPctClaimed = 0;
+        $cellsWithoutWidth = [];
+        foreach ($row->cells as $i => $cell) {
+            if ($cell->style->widthPercent !== null) {
+                $totalPctClaimed += $cell->style->widthPercent;
+            } elseif ($cell->style->widthTwips !== null) {
+                // ничего: explicit twips — не трогаем
+            } else {
+                $cellsWithoutWidth[] = $i;
+            }
+        }
+
+        if ($cellsWithoutWidth === []) {
+            return $row;
+        }
+
+        // Доступный остаток в pct.
+        $remaining = max(0, 5000 - $totalPctClaimed);
+        $perCell = (int) floor($remaining / count($cellsWithoutWidth));
+        if ($perCell <= 0) {
+            return $row;
+        }
+
+        $newCells = $row->cells;
+        foreach ($cellsWithoutWidth as $i) {
+            $old = $newCells[$i];
+            $newCells[$i] = new \Dskripchenko\PhpDocx\Element\TableCell(
+                children: $old->children,
+                style: new \Dskripchenko\PhpDocx\Style\CellStyle(
+                    widthTwips: $old->style->widthTwips,
+                    widthPercent: $perCell,
+                    paddingTopTwips: $old->style->paddingTopTwips,
+                    paddingRightTwips: $old->style->paddingRightTwips,
+                    paddingBottomTwips: $old->style->paddingBottomTwips,
+                    paddingLeftTwips: $old->style->paddingLeftTwips,
+                    verticalAlign: $old->style->verticalAlign,
+                    backgroundColor: $old->style->backgroundColor,
+                    borders: $old->style->borders,
+                    gridSpan: $old->style->gridSpan,
+                    rowSpan: $old->style->rowSpan,
+                ),
+            );
+        }
+
+        return new TableRow(
+            cells: $newCells,
+            isHeader: $row->isHeader,
+            heightTwips: $row->heightTwips,
+        );
     }
 
     /**
