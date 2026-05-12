@@ -5,26 +5,50 @@ declare(strict_types=1);
 namespace Dskripchenko\PhpDocx\Html;
 
 use Dskripchenko\PhpDocx\Document;
-use Dskripchenko\PhpDocx\Exception\DocxException;
+use Dskripchenko\PhpDocx\Element\BlockElement;
+use Dskripchenko\PhpDocx\Element\HorizontalRule;
+use Dskripchenko\PhpDocx\Element\Hyperlink;
+use Dskripchenko\PhpDocx\Element\Image;
+use Dskripchenko\PhpDocx\Element\ImageFormat;
+use Dskripchenko\PhpDocx\Element\InlineElement;
+use Dskripchenko\PhpDocx\Element\LineBreak;
+use Dskripchenko\PhpDocx\Element\PageBreak;
+use Dskripchenko\PhpDocx\Element\Paragraph;
+use Dskripchenko\PhpDocx\Element\Run;
+use Dskripchenko\PhpDocx\Element\Table;
+use Dskripchenko\PhpDocx\Element\TableCell;
+use Dskripchenko\PhpDocx\Element\TableRow;
+use Dskripchenko\PhpDocx\Html\StyleApplier\CellStyleApplier;
+use Dskripchenko\PhpDocx\Html\StyleApplier\ParagraphStyleApplier;
+use Dskripchenko\PhpDocx\Html\StyleApplier\RunStyleApplier;
+use Dskripchenko\PhpDocx\Html\StyleApplier\TableStyleApplier;
 use Dskripchenko\PhpDocx\Section;
+use Dskripchenko\PhpDocx\Style\CellStyle;
+use Dskripchenko\PhpDocx\Style\ParagraphStyle;
 use Dskripchenko\PhpDocx\Style\PageSetup;
+use Dskripchenko\PhpDocx\Style\RunStyle;
+use Dskripchenko\PhpDocx\Style\TableStyle;
 
 /**
- * Конвертер HTML → Document. Phase 1: skeleton (stub).
+ * HTML → Document converter. Phase 2 implementation.
  *
- * Полная реализация (Phase 2+): парсинг через DOMDocument::loadHTML (lenient),
- * обход DOM-tree, маппинг тегов в элементы, парсинг inline `style="..."`
- * через простой regex. CSS-классы — caller'у решать (inline'ить upstream).
+ * Парсит HTML5 через `DOMDocument::loadHTML` (lenient mode), обходит дерево,
+ * мапит элементы в типизированные value-objects.
+ *
+ *  - Только inline `style="..."` для стилей; CSS-rules — caller-inlines upstream.
+ *  - Картинки: только `<img src="data:image/...;base64,...">`. URL-images
+ *    (`http://`/`file://`) игнорируются (caller должен resolve'ить upstream).
+ *  - Block vs inline разруливается по тегу в `BLOCK_TAGS` set'е.
  */
 final class Converter
 {
+    /** Теги, которые превращаются в BlockElement или производят их split. */
+    private const array BLOCK_TAGS = ['p', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'table', 'hr', 'ul', 'ol', 'blockquote'];
+
     public function __construct(
         private readonly PageSetup $defaultPageSetup = new PageSetup,
     ) {}
 
-    /**
-     * Парсит HTML body fragment в Document.
-     */
     public function fromHtml(
         string $body,
         ?string $header = null,
@@ -32,7 +56,448 @@ final class Converter
         ?PageSetup $pageSetup = null,
         ?string $watermarkText = null,
     ): Document {
-        // TODO Phase 2: DOM traversal + element mapping.
-        throw new DocxException('Html\\Converter::fromHtml() not implemented yet (Phase 2).');
+        return new Document(
+            section: new Section(
+                body: $this->parseBlocks($body),
+                header: $header !== null ? $this->parseBlocks($header) : [],
+                footer: $footer !== null ? $this->parseBlocks($footer) : [],
+                pageSetup: $pageSetup ?? $this->defaultPageSetup,
+            ),
+            watermarkText: $watermarkText,
+        );
+    }
+
+    /**
+     * @return list<BlockElement>
+     */
+    private function parseBlocks(string $html): array
+    {
+        if (trim($html) === '') {
+            return [];
+        }
+
+        $doc = $this->loadHtml($html);
+        $body = $doc->getElementsByTagName('body')->item(0);
+        if (! $body instanceof \DOMElement) {
+            return [];
+        }
+
+        return $this->processChildNodes($body, new RunStyle, new ParagraphStyle);
+    }
+
+    /**
+     * @return list<BlockElement>
+     */
+    private function processChildNodes(\DOMElement $parent, RunStyle $runStyle, ParagraphStyle $paraStyle): array
+    {
+        $blocks = [];
+        /** @var list<InlineElement> $inlineBuffer */
+        $inlineBuffer = [];
+
+        $flushInline = function () use (&$blocks, &$inlineBuffer, $paraStyle): void {
+            $inlineBuffer = $this->trimInline($inlineBuffer);
+            if ($inlineBuffer !== []) {
+                $blocks[] = new Paragraph($inlineBuffer, $paraStyle);
+                $inlineBuffer = [];
+            }
+        };
+
+        foreach ($parent->childNodes as $child) {
+            if ($child instanceof \DOMText) {
+                $text = $child->textContent;
+                if ($text === '') {
+                    continue;
+                }
+                $inlineBuffer[] = new Run($this->normalizeText($text), $runStyle);
+
+                continue;
+            }
+            if (! $child instanceof \DOMElement) {
+                continue;
+            }
+
+            $tag = strtolower($child->tagName);
+            if (in_array($tag, self::BLOCK_TAGS, true)) {
+                $flushInline();
+                $produced = $this->processBlockElement($child, $runStyle, $paraStyle);
+                foreach ($produced as $b) {
+                    $blocks[] = $b;
+                }
+
+                continue;
+            }
+
+            // Inline element (span, strong, em, br, img inline, a, etc.)
+            $inlineProduced = $this->processInlineElement($child, $runStyle);
+            foreach ($inlineProduced as $i) {
+                $inlineBuffer[] = $i;
+            }
+        }
+
+        $flushInline();
+
+        return $blocks;
+    }
+
+    /**
+     * @return list<BlockElement>
+     */
+    private function processBlockElement(\DOMElement $node, RunStyle $runStyle, ParagraphStyle $paraStyle): array
+    {
+        $tag = strtolower($node->tagName);
+        $css = InlineStyleParser::parse($node->getAttribute('style'));
+        $localPara = ParagraphStyleApplier::apply($paraStyle, $css);
+        $localRun = RunStyleApplier::apply($runStyle, $css);
+
+        return match ($tag) {
+            'p', 'div' => $this->parseParagraph($node, $localRun, $localPara, headingLevel: null),
+            'h1', 'h2', 'h3', 'h4', 'h5', 'h6' =>
+                $this->parseParagraph($node, $localRun, $localPara, headingLevel: (int) substr($tag, 1)),
+            'table' => [$this->parseTable($node, $localRun, $localPara)],
+            'hr' => $this->parseHr($node),
+            'ul', 'ol' => $this->parseList($node, $localRun, $localPara, ordered: $tag === 'ol'),
+            'blockquote' => $this->processChildNodes($node, $localRun, $localPara),
+            default => [],
+        };
+    }
+
+    /**
+     * @return list<BlockElement>
+     */
+    private function parseParagraph(\DOMElement $node, RunStyle $runStyle, ParagraphStyle $paraStyle, ?int $headingLevel): array
+    {
+        // Если внутри блочного <p>/<div>/<h*> есть только inline-children —
+        // собираем единый Paragraph. Если есть block-level дети (вложенный
+        // <table>, <ul> и т.д.) — рекурсируем и параграф не создаём.
+        if ($this->containsBlockChild($node)) {
+            return $this->processChildNodes($node, $runStyle, $paraStyle);
+        }
+
+        $inlines = [];
+        foreach ($node->childNodes as $child) {
+            if ($child instanceof \DOMText) {
+                $text = $this->normalizeText($child->textContent);
+                if ($text !== '') {
+                    $inlines[] = new Run($text, $runStyle);
+                }
+
+                continue;
+            }
+            if ($child instanceof \DOMElement) {
+                foreach ($this->processInlineElement($child, $runStyle) as $i) {
+                    $inlines[] = $i;
+                }
+            }
+        }
+
+        $inlines = $this->trimInline($inlines);
+        if ($inlines === []) {
+            return [];
+        }
+
+        return [new Paragraph($inlines, $paraStyle, $headingLevel)];
+    }
+
+    /**
+     * @return list<InlineElement>
+     */
+    private function processInlineElement(\DOMElement $node, RunStyle $runStyle): array
+    {
+        $tag = strtolower($node->tagName);
+        $css = InlineStyleParser::parse($node->getAttribute('style'));
+        $local = RunStyleApplier::apply($runStyle, $css);
+
+        // Mark-теги наследуют + добавляют свой признак
+        $marked = match ($tag) {
+            'strong', 'b' => $local->withBold(),
+            'em', 'i' => new RunStyle(
+                sizeHalfPoints: $local->sizeHalfPoints, color: $local->color,
+                backgroundColor: $local->backgroundColor, fontFamily: $local->fontFamily,
+                bold: $local->bold, italic: true, underline: $local->underline,
+                strikethrough: $local->strikethrough, superscript: $local->superscript, subscript: $local->subscript,
+            ),
+            'u' => new RunStyle(
+                sizeHalfPoints: $local->sizeHalfPoints, color: $local->color,
+                backgroundColor: $local->backgroundColor, fontFamily: $local->fontFamily,
+                bold: $local->bold, italic: $local->italic, underline: true,
+                strikethrough: $local->strikethrough, superscript: $local->superscript, subscript: $local->subscript,
+            ),
+            's', 'del', 'strike' => new RunStyle(
+                sizeHalfPoints: $local->sizeHalfPoints, color: $local->color,
+                backgroundColor: $local->backgroundColor, fontFamily: $local->fontFamily,
+                bold: $local->bold, italic: $local->italic, underline: $local->underline,
+                strikethrough: true, superscript: $local->superscript, subscript: $local->subscript,
+            ),
+            'sup' => new RunStyle(
+                sizeHalfPoints: $local->sizeHalfPoints, color: $local->color,
+                backgroundColor: $local->backgroundColor, fontFamily: $local->fontFamily,
+                bold: $local->bold, italic: $local->italic, underline: $local->underline,
+                strikethrough: $local->strikethrough, superscript: true, subscript: false,
+            ),
+            'sub' => new RunStyle(
+                sizeHalfPoints: $local->sizeHalfPoints, color: $local->color,
+                backgroundColor: $local->backgroundColor, fontFamily: $local->fontFamily,
+                bold: $local->bold, italic: $local->italic, underline: $local->underline,
+                strikethrough: $local->strikethrough, superscript: false, subscript: true,
+            ),
+            default => $local,
+        };
+
+        return match ($tag) {
+            'br' => [new LineBreak],
+            'img' => $this->parseInlineImage($node) !== null ? [$this->parseInlineImage($node)] : [],
+            'a' => [new Hyperlink(
+                href: $node->getAttribute('href'),
+                children: $this->collectInline($node, $marked),
+            )],
+            // Mark-теги + неизвестные inline-теги (span и т.д.) — просто
+            // прокидываем стиль в детей.
+            default => $this->collectInline($node, $marked),
+        };
+    }
+
+    /**
+     * Рекурсивный сбор inline-children с применённым style.
+     *
+     * @return list<InlineElement>
+     */
+    private function collectInline(\DOMElement $node, RunStyle $runStyle): array
+    {
+        $out = [];
+        foreach ($node->childNodes as $child) {
+            if ($child instanceof \DOMText) {
+                $text = $this->normalizeText($child->textContent);
+                if ($text !== '') {
+                    $out[] = new Run($text, $runStyle);
+                }
+
+                continue;
+            }
+            if ($child instanceof \DOMElement) {
+                foreach ($this->processInlineElement($child, $runStyle) as $i) {
+                    $out[] = $i;
+                }
+            }
+        }
+
+        return $out;
+    }
+
+    private function parseTable(\DOMElement $node, RunStyle $runStyle, ParagraphStyle $paraStyle): Table
+    {
+        $css = InlineStyleParser::parse($node->getAttribute('style'));
+        $attrs = $this->collectAttrs($node);
+        $tableStyle = TableStyleApplier::apply(new TableStyle, $css, $attrs);
+
+        $rows = [];
+        foreach ($node->getElementsByTagName('tr') as $tr) {
+            if (! $tr instanceof \DOMElement) {
+                continue;
+            }
+            $rows[] = $this->parseTableRow($tr, $runStyle, $paraStyle);
+        }
+
+        return new Table($rows, $tableStyle);
+    }
+
+    private function parseTableRow(\DOMElement $tr, RunStyle $runStyle, ParagraphStyle $paraStyle): TableRow
+    {
+        $isHeader = $tr->parentNode instanceof \DOMElement
+            && strtolower($tr->parentNode->tagName) === 'thead';
+
+        $cells = [];
+        foreach ($tr->childNodes as $child) {
+            if (! $child instanceof \DOMElement) {
+                continue;
+            }
+            $tag = strtolower($child->tagName);
+            if ($tag !== 'td' && $tag !== 'th') {
+                continue;
+            }
+            $cells[] = $this->parseTableCell($child, $runStyle, $paraStyle, isHeader: $tag === 'th');
+        }
+
+        return new TableRow($cells, isHeader: $isHeader);
+    }
+
+    private function parseTableCell(\DOMElement $cell, RunStyle $runStyle, ParagraphStyle $paraStyle, bool $isHeader): TableCell
+    {
+        $css = InlineStyleParser::parse($cell->getAttribute('style'));
+        $attrs = $this->collectAttrs($cell);
+        $cellStyle = CellStyleApplier::apply(new CellStyle, $css, $attrs);
+
+        // Cell-уровневые run/paragraph стили: применяем CSS к ним тоже
+        // (color/font-size на td → distributes to inner text).
+        $cellRunStyle = RunStyleApplier::apply($runStyle, $css);
+        $cellParaStyle = ParagraphStyleApplier::apply($paraStyle, $css);
+
+        // <th> по умолчанию bold
+        if ($isHeader) {
+            $cellRunStyle = $cellRunStyle->withBold();
+        }
+
+        $blocks = $this->processChildNodes($cell, $cellRunStyle, $cellParaStyle);
+
+        // Если ячейка пустая или содержит только inline'ы которые collapse'нули,
+        // добавим пустой параграф — OOXML требует хотя бы один <w:p> в <w:tc>.
+        if ($blocks === []) {
+            $blocks = [new Paragraph([], $cellParaStyle)];
+        }
+
+        return new TableCell($blocks, $cellStyle);
+    }
+
+    /**
+     * @return list<BlockElement>
+     */
+    private function parseHr(\DOMElement $node): array
+    {
+        $class = strtolower($node->getAttribute('class'));
+        if (in_array('page-break', preg_split('/\s+/', $class) ?: [], true)) {
+            return [new PageBreak];
+        }
+
+        return [new HorizontalRule];
+    }
+
+    /**
+     * @return list<BlockElement>
+     */
+    private function parseList(\DOMElement $node, RunStyle $runStyle, ParagraphStyle $paraStyle, bool $ordered): array
+    {
+        // Phase 5b будет генерировать ListNode/ListItem. Пока — fallback
+        // на параграфы с bullet-символом (визуально похоже, без numbering.xml).
+        $blocks = [];
+        $i = 0;
+        foreach ($node->childNodes as $child) {
+            if (! $child instanceof \DOMElement) {
+                continue;
+            }
+            if (strtolower($child->tagName) !== 'li') {
+                continue;
+            }
+            $i++;
+            $bullet = $ordered ? "{$i}. " : '• ';
+            $inlines = [new Run($bullet, $runStyle), ...$this->collectInline($child, $runStyle)];
+            $blocks[] = new Paragraph($inlines, $paraStyle);
+        }
+
+        return $blocks;
+    }
+
+    private function parseInlineImage(\DOMElement $node): ?Image
+    {
+        $src = $node->getAttribute('src');
+        if ($src === '' || ! str_starts_with($src, 'data:image/')) {
+            return null;
+        }
+        if (preg_match('/^data:image\/(\w+);base64,(.+)$/s', $src, $m) !== 1) {
+            return null;
+        }
+        $format = match (strtolower($m[1])) {
+            'png' => ImageFormat::Png,
+            'jpg', 'jpeg' => ImageFormat::Jpeg,
+            'gif' => ImageFormat::Gif,
+            'bmp' => ImageFormat::Bmp,
+            default => null,
+        };
+        if ($format === null) {
+            return null;
+        }
+        $binary = base64_decode($m[2], true);
+        if ($binary === false) {
+            return null;
+        }
+
+        $widthPx = (int) ($node->getAttribute('width') ?: 0);
+        $heightPx = (int) ($node->getAttribute('height') ?: 0);
+        if ($widthPx <= 0 || $heightPx <= 0) {
+            // Без размеров — пытаемся прочитать из binary.
+            $info = @getimagesizefromstring($binary);
+            if ($info !== false) {
+                $widthPx = $widthPx > 0 ? $widthPx : (int) $info[0];
+                $heightPx = $heightPx > 0 ? $heightPx : (int) $info[1];
+            }
+        }
+        $widthPx = max(1, $widthPx);
+        $heightPx = max(1, $heightPx);
+
+        return Image::fromPx(
+            binary: $binary,
+            format: $format,
+            widthPx: $widthPx,
+            heightPx: $heightPx,
+            altText: $node->getAttribute('alt') ?: null,
+        );
+    }
+
+    private function loadHtml(string $html): \DOMDocument
+    {
+        $doc = new \DOMDocument;
+        $wrapped = '<?xml encoding="UTF-8"?><html><body>'.$html.'</body></html>';
+        $prev = libxml_use_internal_errors(true);
+        $doc->loadHTML($wrapped, LIBXML_NOERROR | LIBXML_NOWARNING);
+        libxml_clear_errors();
+        libxml_use_internal_errors($prev);
+
+        return $doc;
+    }
+
+    private function containsBlockChild(\DOMElement $node): bool
+    {
+        foreach ($node->childNodes as $child) {
+            if (! $child instanceof \DOMElement) {
+                continue;
+            }
+            if (in_array(strtolower($child->tagName), self::BLOCK_TAGS, true)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function collectAttrs(\DOMElement $node): array
+    {
+        $out = [];
+        foreach ($node->attributes as $attr) {
+            if ($attr instanceof \DOMAttr) {
+                $out[strtolower($attr->name)] = $attr->value;
+            }
+        }
+
+        return $out;
+    }
+
+    private function normalizeText(string $text): string
+    {
+        // Collapse whitespace (HTML-style — multiple WS → single space).
+        // Tags-context preserve будет в parsePreformatted (когда добавим <pre>).
+        return (string) preg_replace('/\s+/u', ' ', $text);
+    }
+
+    /**
+     * Убирает leading/trailing whitespace-only Run'ы — Word склеивает
+     * "  Hello  " в "Hello", мы делаем то же чтобы избежать ложных
+     * indent'ов.
+     *
+     * @param  list<InlineElement>  $inlines
+     * @return list<InlineElement>
+     */
+    private function trimInline(array $inlines): array
+    {
+        // strip leading whitespace runs
+        while ($inlines !== [] && $inlines[0] instanceof Run && trim($inlines[0]->text) === '') {
+            array_shift($inlines);
+        }
+        // strip trailing whitespace runs
+        while ($inlines !== [] && end($inlines) instanceof Run && trim(end($inlines)->text) === '') {
+            array_pop($inlines);
+        }
+
+        return array_values($inlines);
     }
 }
