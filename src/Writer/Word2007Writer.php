@@ -40,7 +40,8 @@ final class Word2007Writer
         // (Heading1..6 + ListParagraph) чтобы DOCX был самодостаточным.
         $styles = $this->styles->isEmpty() ? StyleRegistry::defaults() : $this->styles;
         $rels = new RelationshipManager;
-        $builder = new BodyXmlBuilder($rels);
+        $numbering = new NumberingXmlBuilder;
+        $builder = new BodyXmlBuilder($rels, $numbering);
         $bodyXml = $builder->render($section->body);
 
         // Header XML. Watermark — отдельный raw-XML префикс (VML shape с
@@ -53,21 +54,23 @@ final class Word2007Writer
         $headerRId = null;
         $headerXml = null;
         if ($headerBlocks !== [] || $watermarkXml !== '') {
-            $headerXml = $this->renderHeaderFooterXml($headerBlocks, $rels, isHeader: true, prefixXml: $watermarkXml);
+            $headerXml = $this->renderHeaderFooterXml($headerBlocks, $rels, $numbering, isHeader: true, prefixXml: $watermarkXml);
             $headerRId = $rels->registerHeaderFooter('header1.xml', isHeader: true);
         }
 
         $footerRId = null;
         $footerXml = null;
         if ($section->footer !== []) {
-            $footerXml = $this->renderHeaderFooterXml($section->footer, $rels, isHeader: false);
+            $footerXml = $this->renderHeaderFooterXml($section->footer, $rels, $numbering, isHeader: false);
             $footerRId = $rels->registerHeaderFooter('footer1.xml', isHeader: false);
         }
 
-        // Numbering part (Phase 5b) — генерим только если ListNode использовался.
+        // Numbering part (Phase 5b) — генерим только если ListNode использовался
+        // (в body, header или footer). Все builders шарят $numbering — он сам
+        // знает, был ли использован.
         $numberingXml = null;
-        if ($builder->usesNumbering()) {
-            $numberingXml = (new NumberingXmlBuilder)->render();
+        if ($numbering->isUsed()) {
+            $numberingXml = $numbering->render();
             $rels->registerNumbering();
         }
 
@@ -161,11 +164,12 @@ final class Word2007Writer
     /**
      * @param  list<\Dskripchenko\PhpDocx\Element\BlockElement>  $blocks
      */
-    private function renderHeaderFooterXml(array $blocks, RelationshipManager $rels, bool $isHeader, string $prefixXml = ''): string
+    private function renderHeaderFooterXml(array $blocks, RelationshipManager $rels, NumberingXmlBuilder $numbering, bool $isHeader, string $prefixXml = ''): string
     {
-        // Используем тот же builder с тем же rels-manager (картинки/links
-        // в header могут регистрировать rels в общем document-rels файле).
-        $contentBuilder = new BodyXmlBuilder($rels);
+        // Используем тот же builder с теми же rels-manager и numbering-builder
+        // (картинки/links/lists в header могут регистрировать ресурсы в
+        // общем document-rels/numbering файле).
+        $contentBuilder = new BodyXmlBuilder($rels, $numbering);
         $content = $prefixXml.$contentBuilder->render($blocks);
         $tag = $isHeader ? 'w:hdr' : 'w:ftr';
 

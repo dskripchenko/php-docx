@@ -13,6 +13,7 @@ use Dskripchenko\PhpDocx\Element\Image;
 use Dskripchenko\PhpDocx\Element\ImageFormat;
 use Dskripchenko\PhpDocx\Element\InlineElement;
 use Dskripchenko\PhpDocx\Element\LineBreak;
+use Dskripchenko\PhpDocx\Element\ListFormat;
 use Dskripchenko\PhpDocx\Element\ListItem;
 use Dskripchenko\PhpDocx\Element\ListNode;
 use Dskripchenko\PhpDocx\Element\PageBreak;
@@ -174,8 +175,93 @@ final class Converter
                 $this->processChildNodes($node, $localRun, $localPara),
             // Pre — preserve whitespace + Courier New. Текст внутри идёт как-есть.
             'pre' => $this->parsePreformatted($node, $localRun->withFontFamily('Courier New'), $localPara),
+            'dl' => $this->parseDefinitionList($node, $localRun, $localPara),
+            'figure' => $this->parseFigure($node, $localRun, $localPara),
             default => [],
         };
+    }
+
+    /**
+     * `<dl><dt>term</dt><dd>def</dd></dl>` → пары paragraph'ов:
+     *  - <dt> рендерится bold (без отступа)
+     *  - <dd> рендерится с left-indent 720 twips (0.5")
+     *
+     * @return list<BlockElement>
+     */
+    private function parseDefinitionList(\DOMElement $node, RunStyle $runStyle, ParagraphStyle $paraStyle): array
+    {
+        $blocks = [];
+        foreach ($node->childNodes as $child) {
+            if (! $child instanceof \DOMElement) {
+                continue;
+            }
+            $tag = strtolower($child->tagName);
+            if ($tag === 'dt') {
+                $inlines = $this->collectInline($child, $runStyle->withBold());
+                $blocks[] = new Paragraph($this->trimInline($inlines), $paraStyle);
+            } elseif ($tag === 'dd') {
+                $inlines = $this->collectInline($child, $runStyle);
+                $blocks[] = new Paragraph(
+                    $this->trimInline($inlines),
+                    $paraStyle->copy(indentLeftTwips: 720),
+                );
+            }
+        }
+
+        return $blocks;
+    }
+
+    /**
+     * `<figure>...<figcaption>caption</figcaption></figure>` → image + caption paragraph.
+     *
+     * @return list<BlockElement>
+     */
+    private function parseFigure(\DOMElement $node, RunStyle $runStyle, ParagraphStyle $paraStyle): array
+    {
+        $blocks = [];
+        $captionText = null;
+        foreach ($node->childNodes as $child) {
+            if (! $child instanceof \DOMElement) {
+                continue;
+            }
+            $tag = strtolower($child->tagName);
+            if ($tag === 'figcaption') {
+                $captionText = trim($child->textContent);
+
+                continue;
+            }
+            // Прочие children рендерим через regular block-pipeline.
+            $produced = $this->processBlockElement(
+                $child,
+                $runStyle,
+                $paraStyle->copy(alignment: \Dskripchenko\PhpDocx\Style\Alignment::Center),
+            );
+            foreach ($produced as $b) {
+                $blocks[] = $b;
+            }
+            // Если inline (image внутри figure) — оборачиваем
+            if ($produced === [] && in_array($tag, ['img', 'a'], true)) {
+                $inlines = $this->processInlineElement($child, $runStyle);
+                if ($inlines !== []) {
+                    $blocks[] = new Paragraph(
+                        $inlines,
+                        $paraStyle->copy(alignment: \Dskripchenko\PhpDocx\Style\Alignment::Center),
+                    );
+                }
+            }
+        }
+        if ($captionText !== null && $captionText !== '') {
+            $blocks[] = new Paragraph(
+                [new Run($captionText, $runStyle->withItalic()->withSizeHalfPoints(20))],
+                $paraStyle->copy(
+                    alignment: \Dskripchenko\PhpDocx\Style\Alignment::Center,
+                    spaceBeforeTwips: 40,
+                    spaceAfterTwips: 120,
+                ),
+            );
+        }
+
+        return $blocks;
     }
 
     /**
@@ -650,6 +736,20 @@ final class Converter
      */
     private function parseList(\DOMElement $node, RunStyle $runStyle, ParagraphStyle $paraStyle, bool $ordered): array
     {
+        $type = $ordered ? ($node->getAttribute('type') ?: null) : null;
+        $format = ListFormat::fromHtmlType($type, $ordered);
+        $startAt = $ordered ? max(1, (int) ($node->getAttribute('start') ?: '1')) : 1;
+        // <li value="N"> у первого <li> ровно эквивалентен ol start="N".
+        // У последующих <li> — Word требует отдельный numbering instance,
+        // что сложно. Поддерживаем только первый.
+        $firstLi = $this->findFirstChild($node, 'li');
+        if ($ordered && $firstLi !== null) {
+            $val = $firstLi->getAttribute('value');
+            if ($val !== '' && (int) $val > 0) {
+                $startAt = (int) $val;
+            }
+        }
+
         $items = [];
         foreach ($node->childNodes as $child) {
             if (! $child instanceof \DOMElement) {
@@ -664,7 +764,18 @@ final class Converter
             return [];
         }
 
-        return [new ListNode($items, ordered: $ordered)];
+        return [new ListNode($items, ordered: $ordered, format: $format, startAt: $startAt)];
+    }
+
+    private function findFirstChild(\DOMElement $node, string $tagName): ?\DOMElement
+    {
+        foreach ($node->childNodes as $child) {
+            if ($child instanceof \DOMElement && strtolower($child->tagName) === $tagName) {
+                return $child;
+            }
+        }
+
+        return null;
     }
 
     private function parseListItem(\DOMElement $li, RunStyle $runStyle): ListItem
@@ -685,7 +796,8 @@ final class Converter
             }
             $tag = strtolower($child->tagName);
             if ($tag === 'ul' || $tag === 'ol') {
-                // Nested list — берём первый encountered.
+                // Nested list — берём первый encountered. parseList сам
+                // прочитает type/start от вложенного <ol>.
                 if ($nestedList === null) {
                     $produced = $this->parseList($child, $runStyle, new ParagraphStyle, ordered: $tag === 'ol');
                     if ($produced !== [] && $produced[0] instanceof ListNode) {

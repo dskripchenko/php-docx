@@ -40,16 +40,21 @@ use Dskripchenko\PhpDocx\Style\VerticalAlign;
  */
 final class BodyXmlBuilder
 {
-    /** @var array<int, true> Set из использованных numId (для numbering.xml). */
-    private array $usedNumIds = [];
+    private bool $usesNumbering = false;
 
     public function __construct(
         private readonly RelationshipManager $rels = new RelationshipManager,
+        private readonly NumberingXmlBuilder $numbering = new NumberingXmlBuilder,
     ) {}
 
     public function usesNumbering(): bool
     {
-        return $this->usedNumIds !== [];
+        return $this->usesNumbering;
+    }
+
+    public function numbering(): NumberingXmlBuilder
+    {
+        return $this->numbering;
     }
 
     /**
@@ -87,10 +92,8 @@ final class BodyXmlBuilder
 
     private function renderListNode(ListNode $list): string
     {
-        $numId = $list->ordered
-            ? NumberingXmlBuilder::ORDERED_NUM_ID
-            : NumberingXmlBuilder::BULLET_NUM_ID;
-        $this->usedNumIds[$numId] = true;
+        $numId = $this->numbering->instanceFor($list->effectiveFormat(), $list->startAt);
+        $this->usesNumbering = true;
 
         $xml = '';
         foreach ($list->items as $item) {
@@ -115,10 +118,11 @@ final class BodyXmlBuilder
 
         // Nested list — рекурсивно, но с инкрементированным level.
         if ($item->nestedList !== null) {
-            $nestedNumId = $item->nestedList->ordered
-                ? NumberingXmlBuilder::ORDERED_NUM_ID
-                : NumberingXmlBuilder::BULLET_NUM_ID;
-            $this->usedNumIds[$nestedNumId] = true;
+            $nestedNumId = $this->numbering->instanceFor(
+                $item->nestedList->effectiveFormat(),
+                $item->nestedList->startAt,
+            );
+            $this->usesNumbering = true;
             foreach ($item->nestedList->items as $sub) {
                 $xml .= $this->renderListItem($sub, $nestedNumId, $level + 1);
             }
