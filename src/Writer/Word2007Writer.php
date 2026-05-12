@@ -8,6 +8,7 @@ use Dskripchenko\PhpDocx\Document;
 use Dskripchenko\PhpDocx\Exception\DocxException;
 use Dskripchenko\PhpDocx\Style\Orientation;
 use Dskripchenko\PhpDocx\Style\PageSetup;
+use Dskripchenko\PhpDocx\Style\StyleRegistry;
 
 /**
  * Writer Document → DOCX (Word2007 format).
@@ -28,9 +29,16 @@ use Dskripchenko\PhpDocx\Style\PageSetup;
  */
 final class Word2007Writer
 {
+    public function __construct(
+        private readonly StyleRegistry $styles = new StyleRegistry,
+    ) {}
+
     public function write(Document $document): string
     {
         $section = $document->section;
+        // Если caller передал пустой registry — используем defaults
+        // (Heading1..6 + ListParagraph) чтобы DOCX был самодостаточным.
+        $styles = $this->styles->isEmpty() ? StyleRegistry::defaults() : $this->styles;
         $rels = new RelationshipManager;
         $builder = new BodyXmlBuilder($rels);
         $bodyXml = $builder->render($section->body);
@@ -67,6 +75,10 @@ final class Word2007Writer
             $rels->registerNumbering();
         }
 
+        // Styles part (Phase 5c) — всегда генерим (с defaults как минимум).
+        $stylesXml = (new StylesXmlBuilder($styles))->render();
+        $rels->registerStyles();
+
         $tmpFile = tempnam(sys_get_temp_dir(), 'docx-');
         if ($tmpFile === false) {
             throw new DocxException('Не удалось создать temp-файл для DOCX.');
@@ -83,6 +95,7 @@ final class Word2007Writer
             hasHeader: $headerXml !== null,
             hasFooter: $footerXml !== null,
             hasNumbering: $numberingXml !== null,
+            hasStyles: true,
         ));
         $zip->addFromString('_rels/.rels', $this->renderRootRels());
         $zip->addFromString('word/document.xml', $this->renderDocumentXml($section->pageSetup, $bodyXml, $headerRId, $footerRId));
@@ -97,6 +110,7 @@ final class Word2007Writer
         if ($numberingXml !== null) {
             $zip->addFromString('word/numbering.xml', $numberingXml);
         }
+        $zip->addFromString('word/styles.xml', $stylesXml);
 
         foreach ($rels->mediaFiles() as $path => $binary) {
             $zip->addFromString($path, $binary);
@@ -160,6 +174,7 @@ final class Word2007Writer
         bool $hasHeader = false,
         bool $hasFooter = false,
         bool $hasNumbering = false,
+        bool $hasStyles = false,
     ): string {
         $defaults = '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
             .'<Default Extension="xml" ContentType="application/xml"/>';
@@ -177,6 +192,9 @@ final class Word2007Writer
         }
         if ($hasNumbering) {
             $overrides .= '<Override PartName="/word/numbering.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml"/>';
+        }
+        if ($hasStyles) {
+            $overrides .= '<Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>';
         }
 
         return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
