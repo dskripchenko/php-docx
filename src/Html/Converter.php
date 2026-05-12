@@ -356,8 +356,85 @@ final class Converter
         if ($rows !== []) {
             $rows[0] = $this->balanceFirstRowWidths($rows[0]);
         }
+        // Rowspan: автоматически inject'им continue-cells (<w:vMerge/>)
+        // в следующие строки для каждой ячейки с rowSpan>1.
+        $rows = $this->expandRowSpans($rows);
 
         return new Table($rows, $tableStyle, $caption, $gridColumnsTwips);
+    }
+
+    /**
+     * Walk rows, для каждой rowSpan>1 ячейки добавляет matching continue-cells
+     * в следующие row'ы. Иначе OOXML rowspan не работает: w:vMerge ожидается
+     * в КАЖДОЙ строке, которую затрагивает merge.
+     *
+     * @param  list<TableRow>  $rows
+     * @return list<TableRow>
+     */
+    private function expandRowSpans(array $rows): array
+    {
+        if (count($rows) <= 1) {
+            return $rows;
+        }
+
+        // For each row produce expanded cell list.
+        // pendingByCol[colIndex] = remaining_continuations
+        // continueStyle[colIndex] = CellStyle для continue-cell (наследуем
+        //   width/gridSpan/borders от originating cell для column-alignment).
+        $pendingByCol = [];
+        $continueStyle = [];
+
+        $newRows = [];
+        foreach ($rows as $row) {
+            $newCells = [];
+            $colCursor = 0;
+            $origIdx = 0;
+
+            // Step через колонки, вставляя continue-cells на pending-позициях
+            // и копируя original cells в остальные.
+            while ($origIdx < count($row->cells) || isset($pendingByCol[$colCursor])) {
+                if (isset($pendingByCol[$colCursor]) && $pendingByCol[$colCursor] > 0) {
+                    // Place continue-cell at this column.
+                    $style = $continueStyle[$colCursor];
+                    $contStyle = new \Dskripchenko\PhpDocx\Style\CellStyle(
+                        widthTwips: $style->widthTwips,
+                        widthPercent: $style->widthPercent,
+                        verticalAlign: $style->verticalAlign,
+                        borders: $style->borders,
+                        gridSpan: $style->gridSpan,
+                        vMergeContinue: true,
+                    );
+                    $newCells[] = new \Dskripchenko\PhpDocx\Element\TableCell(
+                        children: [new Paragraph([])],
+                        style: $contStyle,
+                    );
+                    $pendingByCol[$colCursor]--;
+                    if ($pendingByCol[$colCursor] === 0) {
+                        unset($pendingByCol[$colCursor]);
+                        unset($continueStyle[$colCursor]);
+                    }
+                    $colCursor += $style->gridSpan;
+
+                    continue;
+                }
+
+                if ($origIdx >= count($row->cells)) {
+                    break;
+                }
+                $cell = $row->cells[$origIdx];
+                $newCells[] = $cell;
+                if ($cell->style->rowSpan > 1) {
+                    $pendingByCol[$colCursor] = $cell->style->rowSpan - 1;
+                    $continueStyle[$colCursor] = $cell->style;
+                }
+                $colCursor += max(1, $cell->style->gridSpan);
+                $origIdx++;
+            }
+
+            $newRows[] = new TableRow($newCells, $row->isHeader, $row->heightTwips);
+        }
+
+        return $newRows;
     }
 
     /**

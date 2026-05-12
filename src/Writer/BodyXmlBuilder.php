@@ -471,9 +471,12 @@ final class BodyXmlBuilder
             $tcPr .= '<w:gridSpan w:val="'.$s->gridSpan.'"/>';
         }
 
-        // vMerge (rowSpan): первая ячейка с restart, следующие — без val.
-        // Сейчас writer не распространяет vMerge на следующие row'ы (TODO).
-        if ($s->rowSpan > 1) {
+        // vMerge: первая ячейка merge-группы с restart, продолжения — без val.
+        // Converter автоматически вставляет continue-cells ($vMergeContinue)
+        // в последующие строки.
+        if ($s->vMergeContinue) {
+            $tcPr .= '<w:vMerge/>';
+        } elseif ($s->rowSpan > 1) {
             $tcPr .= '<w:vMerge w:val="restart"/>';
         }
 
