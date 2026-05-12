@@ -84,7 +84,15 @@ final class Converter
             return [];
         }
 
-        return $this->processChildNodes($body, new RunStyle, new ParagraphStyle);
+        // Body's inline-style — basis для всех children. Симулируем CSS
+        // inheritance: font-family/color/font-size с <body> применяются ко
+        // всем descendants. CssInliner (tijsverkoyen) НЕ propagates
+        // inherited properties down — без этого все runs без явного fonts.
+        $bodyCss = InlineStyleParser::parse($body->getAttribute('style'));
+        $rootRun = RunStyleApplier::apply(new RunStyle, $bodyCss);
+        $rootPara = ParagraphStyleApplier::apply(new ParagraphStyle, $bodyCss);
+
+        return $this->processChildNodes($body, $rootRun, $rootPara);
     }
 
     /**
