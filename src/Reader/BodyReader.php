@@ -7,6 +7,8 @@ namespace Dskripchenko\PhpDocx\Reader;
 use Dskripchenko\PhpDocx\Element\BlockElement;
 use Dskripchenko\PhpDocx\Element\InlineElement;
 use Dskripchenko\PhpDocx\Element\LineBreak;
+use Dskripchenko\PhpDocx\Element\ListItem;
+use Dskripchenko\PhpDocx\Element\ListNode;
 use Dskripchenko\PhpDocx\Element\PageBreak;
 use Dskripchenko\PhpDocx\Element\Paragraph;
 use Dskripchenko\PhpDocx\Element\Run;
@@ -40,6 +42,7 @@ final class BodyReader
 
     public function __construct(
         private readonly StylesResolver $styles = new StylesResolver,
+        private readonly NumberingDefinitions $numbering = new NumberingDefinitions,
     ) {}
 
     /**
@@ -57,28 +60,170 @@ final class BodyReader
     public function read(\DOMElement $body): array
     {
         $blocks = [];
+        /** @var list<array{numId:int, ilvl:int, inlines:list<InlineElement>}> $pendingList */
+        $pendingList = [];
+        $pendingNumId = null;
+
+        $flushList = function () use (&$pendingList, &$pendingNumId, &$blocks): void {
+            if ($pendingList === []) {
+                return;
+            }
+            $blocks[] = $this->buildListNode($pendingList, $pendingNumId);
+            $pendingList = [];
+            $pendingNumId = null;
+        };
+
         foreach ($body->childNodes as $child) {
             if (! $child instanceof \DOMElement || $child->namespaceURI !== OoxmlNs::W) {
                 continue;
             }
             switch ($child->localName) {
                 case 'p':
+                    $item = $this->classifyParagraph($child);
+                    if ($item !== null) {
+                        // List paragraph.
+                        if ($pendingNumId !== null && $pendingNumId !== $item['numId']) {
+                            $flushList();
+                        }
+                        $pendingNumId = $item['numId'];
+                        $pendingList[] = $item;
+                        break;
+                    }
+                    // Обычный параграф.
+                    $flushList();
                     foreach ($this->readParagraph($child) as $b) {
                         $blocks[] = $b;
                     }
                     break;
                 case 'tbl':
+                    $flushList();
                     $blocks[] = $this->tableReader()->read($child);
                     break;
                 case 'sectPr':
-                    // metadata, не block
                     break;
                 default:
                     break;
             }
         }
+        $flushList();
 
         return $blocks;
+    }
+
+    /**
+     * Если параграф — list-item (numPr+зарегистрированный numId), возвращает
+     * descriptor. Иначе null (обычный параграф).
+     *
+     * @return array{numId:int, ilvl:int, inlines:list<InlineElement>}|null
+     */
+    private function classifyParagraph(\DOMElement $p): ?array
+    {
+        [, $runBase, , $numId, $ilvl] = $this->styles->effectiveStylesForParagraph($p);
+        if ($numId === null || ! $this->numbering->hasNumId($numId)) {
+            return null;
+        }
+        $inlines = $this->readInlines($p, $runBase);
+        // Убираем internal PageBreaks (Word редко кладёт их в list-items;
+        // если они есть — flatten как обычный inline).
+        $cleanInlines = array_values(array_filter(
+            $inlines,
+            fn ($i) => ! $i instanceof PageBreak,
+        ));
+
+        return [
+            'numId' => $numId,
+            'ilvl' => max(0, $ilvl ?? 0),
+            'inlines' => $cleanInlines,
+        ];
+    }
+
+    /**
+     * Из flat-списка list-items (по возрастанию или ad-hoc ilvl) собирает
+     * дерево ListNode/ListItem с nesting'ом.
+     *
+     * @param  list<array{numId:int, ilvl:int, inlines:list<InlineElement>}>  $items
+     */
+    private function buildListNode(array $items, ?int $numId): ListNode
+    {
+        if ($numId === null) {
+            // Не должно случаться — но fallback.
+            return new ListNode([]);
+        }
+        $minIlvl = $this->minIlvl($items);
+        $root = $this->buildRecursive($items, 0, count($items), $minIlvl, $numId);
+        if ($root instanceof ListNode) {
+            return $root;
+        }
+
+        return new ListNode([]);
+    }
+
+    /**
+     * @param  list<array{numId:int, ilvl:int, inlines:list<InlineElement>}>  $items
+     */
+    private function minIlvl(array $items): int
+    {
+        $min = PHP_INT_MAX;
+        foreach ($items as $it) {
+            if ($it['ilvl'] < $min) {
+                $min = $it['ilvl'];
+            }
+        }
+
+        return $min === PHP_INT_MAX ? 0 : $min;
+    }
+
+    /**
+     * Рекурсивно строит ListNode для items[from..to] на заданном depth.
+     * Items с ilvl == depth → siblings в текущем ListNode; items с
+     * ilvl > depth → nested внутрь предыдущего siblng'а.
+     *
+     * @param  list<array{numId:int, ilvl:int, inlines:list<InlineElement>}>  $items
+     */
+    private function buildRecursive(array $items, int $from, int $to, int $depth, int $numId): ListNode
+    {
+        $siblings = [];
+        $i = $from;
+        while ($i < $to) {
+            $cur = $items[$i];
+            if ($cur['ilvl'] < $depth) {
+                break; // отдадим обратно вверх
+            }
+            if ($cur['ilvl'] > $depth) {
+                // children предыдущего sibling'а
+                $j = $i;
+                while ($j < $to && $items[$j]['ilvl'] > $depth) {
+                    $j++;
+                }
+                $nested = $this->buildRecursive($items, $i, $j, $depth + 1, $numId);
+                // Прикрепить как nestedList последнего sibling'а, если есть.
+                if ($siblings !== []) {
+                    $last = $siblings[count($siblings) - 1];
+                    $siblings[count($siblings) - 1] = new ListItem($last->children, $nested);
+                } else {
+                    // Нет предыдущего sibling'а — оборачиваем в пустой parent-item.
+                    $siblings[] = new ListItem([], $nested);
+                }
+                $i = $j;
+
+                continue;
+            }
+            // ilvl == depth — обычный sibling.
+            $siblings[] = new ListItem($cur['inlines']);
+            $i++;
+        }
+
+        $format = $this->numbering->formatFor($numId, $depth);
+        $startAt = $this->numbering->startAtFor($numId, $depth);
+        $ordered = $this->numbering->isOrdered($numId, $depth);
+
+        return new ListNode(
+            items: $siblings,
+            ordered: $ordered,
+            levelStart: 0, // дочерние уровни сами знают свой ilvl через nesting
+            format: $format,
+            startAt: $startAt,
+        );
     }
 
     /**
