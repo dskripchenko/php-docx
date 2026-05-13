@@ -51,6 +51,18 @@ final class DocumentBuilder
     /** @var list<\Dskripchenko\PhpDocx\Element\BlockElement> */
     private array $footerBlocks = [];
 
+    /** @var list<\Dskripchenko\PhpDocx\Element\BlockElement> */
+    private array $firstHeaderBlocks = [];
+
+    /** @var list<\Dskripchenko\PhpDocx\Element\BlockElement> */
+    private array $firstFooterBlocks = [];
+
+    /** @var list<\Dskripchenko\PhpDocx\Element\BlockElement> */
+    private array $evenHeaderBlocks = [];
+
+    /** @var list<\Dskripchenko\PhpDocx\Element\BlockElement> */
+    private array $evenFooterBlocks = [];
+
     private function __construct()
     {
         $this->pageSetup = new PageSetup;
@@ -113,6 +125,65 @@ final class DocumentBuilder
         return $this;
     }
 
+    /**
+     * Header только для первой страницы. Writer автоматически добавит
+     * `<w:titlePg/>` в sectPr — иначе Word проигнорирует first-header.
+     *
+     * @param  callable(SectionContentBuilder): void  $builderCallback
+     */
+    public function firstHeader(callable $builderCallback): self
+    {
+        $b = new SectionContentBuilder;
+        $builderCallback($b);
+        $this->firstHeaderBlocks = $b->buildBlocks();
+
+        return $this;
+    }
+
+    /**
+     * Footer только для первой страницы.
+     *
+     * @param  callable(SectionContentBuilder): void  $builderCallback
+     */
+    public function firstFooter(callable $builderCallback): self
+    {
+        $b = new SectionContentBuilder;
+        $builderCallback($b);
+        $this->firstFooterBlocks = $b->buildBlocks();
+
+        return $this;
+    }
+
+    /**
+     * Header для чётных страниц. Writer автоматически добавит
+     * `<w:evenAndOddHeaders/>` в word/settings.xml — иначе Word
+     * проигнорирует even-header.
+     *
+     * @param  callable(SectionContentBuilder): void  $builderCallback
+     */
+    public function evenHeader(callable $builderCallback): self
+    {
+        $b = new SectionContentBuilder;
+        $builderCallback($b);
+        $this->evenHeaderBlocks = $b->buildBlocks();
+
+        return $this;
+    }
+
+    /**
+     * Footer для чётных страниц.
+     *
+     * @param  callable(SectionContentBuilder): void  $builderCallback
+     */
+    public function evenFooter(callable $builderCallback): self
+    {
+        $b = new SectionContentBuilder;
+        $builderCallback($b);
+        $this->evenFooterBlocks = $b->buildBlocks();
+
+        return $this;
+    }
+
     public function build(): Document
     {
         return new Document(
@@ -121,6 +192,10 @@ final class DocumentBuilder
                 header: $this->headerBlocks,
                 footer: $this->footerBlocks,
                 pageSetup: $this->pageSetup,
+                firstHeader: $this->firstHeaderBlocks,
+                firstFooter: $this->firstFooterBlocks,
+                evenHeader: $this->evenHeaderBlocks,
+                evenFooter: $this->evenFooterBlocks,
             ),
             watermarkText: $this->watermarkText,
         );

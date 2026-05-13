@@ -44,6 +44,8 @@ final class RelationshipManager
 
     public const string TYPE_STYLES = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles';
 
+    public const string TYPE_SETTINGS = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings';
+
     /**
      * Регистрирует image и возвращает rId для использования в `<a:blip r:embed="..."/>`.
      */
@@ -119,6 +121,18 @@ final class RelationshipManager
             'id' => $rId,
             'type' => self::TYPE_NUMBERING,
             'target' => 'numbering.xml',
+        ];
+
+        return $rId;
+    }
+
+    public function registerSettings(): string
+    {
+        $rId = $this->nextRId();
+        $this->relationships[] = [
+            'id' => $rId,
+            'type' => self::TYPE_SETTINGS,
+            'target' => 'settings.xml',
         ];
 
         return $rId;

@@ -14,9 +14,9 @@ use Dskripchenko\PhpDocx\Section;
  *
  * DOCX bytes → Document (AST). Координирует все reader'ы Phase 1-8.
  *
- * Возвращает Document с body/header/footer/watermark/pageSetup —
- * совместимо со всем существующим writer'ом (можно сразу пере-эмитить
- * через Word2007Writer).
+ * Header/footer типы (default/first/even) детектируются по
+ * `<w:headerReference w:type="X" r:id="Y">` в sectPr — pkg->headers
+ * mapping (path→DOM) сам по себе типа не несёт.
  */
 final class DocxReader
 {
@@ -50,16 +50,28 @@ final class DocxReader
             $pkg->documentPartPath,
         );
         $body = $bodyReader->read($bodyEl);
-
-        // Page setup
         $pageSetup = (new SectionReader)->readPageSetup($bodyEl);
 
-        // Headers (берём первый — Phase 8 не различает default/first/even)
-        $headerBlocks = [];
+        // Маппинг path → type через sectPr-references.
+        $headerTypes = $this->resolveHeaderTypes($bodyEl, $pkg, isFooter: false);
+        $footerTypes = $this->resolveHeaderTypes($bodyEl, $pkg, isFooter: true);
+
+        $headersBy = [
+            'default' => [],
+            'first' => [],
+            'even' => [],
+        ];
+        $footersBy = [
+            'default' => [],
+            'first' => [],
+            'even' => [],
+        ];
         $watermarkText = null;
+
         foreach ($pkg->headers as $partPath => $headerDoc) {
-            // Сначала вытащить watermark и удалить из DOM, чтобы он не
-            // попал в headerBlocks как обычный paragraph.
+            $type = $headerTypes[$partPath] ?? 'default';
+            // Watermark — обычно в default header'е; экстрагируем из любого
+            // (первый найденный побеждает) чтобы не дублировать в HTML.
             $watermarkText ??= (new WatermarkExtractor)->extract($headerDoc);
 
             $headerRoot = $headerDoc->documentElement;
@@ -68,32 +80,68 @@ final class DocxReader
             }
             $hImg = new ImageReader($pkg, $partPath);
             $hReader = new BodyReader($styles, $numbering, $hImg, $pkg, $partPath);
-            $headerBlocks = $hReader->read($headerRoot);
-            break;
+            $headersBy[$type] = $this->ensureBlocks($hReader->read($headerRoot));
         }
 
-        // Footers
-        $footerBlocks = [];
         foreach ($pkg->footers as $partPath => $footerDoc) {
+            $type = $footerTypes[$partPath] ?? 'default';
             $footerRoot = $footerDoc->documentElement;
             if (! $footerRoot instanceof \DOMElement) {
                 continue;
             }
             $fImg = new ImageReader($pkg, $partPath);
             $fReader = new BodyReader($styles, $numbering, $fImg, $pkg, $partPath);
-            $footerBlocks = $fReader->read($footerRoot);
-            break;
+            $footersBy[$type] = $this->ensureBlocks($fReader->read($footerRoot));
         }
 
         return new Document(
             section: new Section(
                 body: $this->ensureBlocks($body),
-                header: $this->ensureBlocks($headerBlocks),
-                footer: $this->ensureBlocks($footerBlocks),
+                header: $headersBy['default'],
+                footer: $footersBy['default'],
                 pageSetup: $pageSetup,
+                firstHeader: $headersBy['first'],
+                firstFooter: $footersBy['first'],
+                evenHeader: $headersBy['even'],
+                evenFooter: $footersBy['even'],
             ),
             watermarkText: $watermarkText,
         );
+    }
+
+    /**
+     * Парсит `<w:headerReference>`/`<w:footerReference>` в sectPr и
+     * возвращает map<partPath, type>.
+     *
+     * @return array<string, string>
+     */
+    private function resolveHeaderTypes(\DOMElement $body, DocxPackage $pkg, bool $isFooter): array
+    {
+        $tagName = $isFooter ? 'footerReference' : 'headerReference';
+        $refs = $body->getElementsByTagNameNS(OoxmlNs::W, $tagName);
+        $out = [];
+        foreach ($refs as $ref) {
+            if (! $ref instanceof \DOMElement) {
+                continue;
+            }
+            $type = $ref->getAttributeNS(OoxmlNs::W, 'type');
+            if ($type === '') {
+                $type = 'default';
+            }
+            $rId = $ref->getAttributeNS(OoxmlNs::R, 'id');
+            if ($rId === '') {
+                continue;
+            }
+            try {
+                $rel = $pkg->resolveDocumentRel($rId);
+            } catch (\Throwable) {
+                continue;
+            }
+            $absPath = $pkg->resolveMediaPath($pkg->documentPartPath, $rel->target);
+            $out[$absPath] = $type;
+        }
+
+        return $out;
     }
 
     /**
