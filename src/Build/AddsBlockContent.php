@@ -6,6 +6,7 @@ namespace Dskripchenko\PhpDocx\Build;
 
 use Dskripchenko\PhpDocx\Element\BlockElement;
 use Dskripchenko\PhpDocx\Element\HorizontalRule;
+use Dskripchenko\PhpDocx\Element\Image;
 use Dskripchenko\PhpDocx\Element\PageBreak;
 use Dskripchenko\PhpDocx\Element\Paragraph;
 use Dskripchenko\PhpDocx\Element\Run;
@@ -117,6 +118,58 @@ trait AddsBlockContent
         $l = new ListBuilder(ordered: true);
         $builderCallback($l);
         $this->blocks[] = $l->build();
+
+        return $this;
+    }
+
+    /**
+     * Картинка-блок (отдельным параграфом). Каркас вокруг inline image
+     * (Image сама по себе — InlineElement, но и BlockElement).
+     */
+    public function image(Image $image): self
+    {
+        $this->blocks[] = $image;
+
+        return $this;
+    }
+
+    /**
+     * Каркас вокруг Image::fromPx для byte-based image-блока.
+     */
+    public function imageFromBytes(
+        string $binary,
+        \Dskripchenko\PhpDocx\Element\ImageFormat $format,
+        int $widthPx,
+        int $heightPx,
+        ?string $altText = null,
+    ): self {
+        $this->blocks[] = \Dskripchenko\PhpDocx\Element\Image::fromPx(
+            $binary, $format, $widthPx, $heightPx, $altText
+        );
+
+        return $this;
+    }
+
+    /**
+     * Image из файла (формат и размеры авто-детект).
+     */
+    public function imageFromFile(
+        string $path,
+        ?int $widthPx = null,
+        ?int $heightPx = null,
+        ?string $altText = null,
+    ): self {
+        // Делегируем через временный ParagraphBuilder который имеет ту же
+        // imageFromFile в AddsInlineContent. Затем достаём из него Image
+        // и кладём как block.
+        $temp = new ParagraphBuilder;
+        $temp->imageFromFile($path, $widthPx, $heightPx, $altText);
+        $inlines = $temp->buildInlines();
+        foreach ($inlines as $el) {
+            if ($el instanceof Image) {
+                $this->blocks[] = $el;
+            }
+        }
 
         return $this;
     }

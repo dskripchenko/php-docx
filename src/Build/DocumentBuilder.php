@@ -85,6 +85,34 @@ final class DocumentBuilder
         return $this;
     }
 
+    /**
+     * Header section (повторяется на каждой странице).
+     *
+     * @param  callable(SectionContentBuilder): void  $builderCallback
+     */
+    public function header(callable $builderCallback): self
+    {
+        $b = new SectionContentBuilder;
+        $builderCallback($b);
+        $this->headerBlocks = $b->buildBlocks();
+
+        return $this;
+    }
+
+    /**
+     * Footer section (повторяется на каждой странице).
+     *
+     * @param  callable(SectionContentBuilder): void  $builderCallback
+     */
+    public function footer(callable $builderCallback): self
+    {
+        $b = new SectionContentBuilder;
+        $builderCallback($b);
+        $this->footerBlocks = $b->buildBlocks();
+
+        return $this;
+    }
+
     public function build(): Document
     {
         return new Document(
