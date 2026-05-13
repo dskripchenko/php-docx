@@ -79,6 +79,20 @@ trait AddsBlockContent
     }
 
     /**
+     * Таблица — closure с TableBuilder.
+     *
+     * @param  callable(TableBuilder): void  $builderCallback
+     */
+    public function table(callable $builderCallback): self
+    {
+        $t = new TableBuilder;
+        $builderCallback($t);
+        $this->blocks[] = $t->build();
+
+        return $this;
+    }
+
+    /**
      * Append pre-built BlockElement (или несколько). Удобно для интеграции
      * с AST-кодом — например, вставить Paragraph, собранный извне.
      *
