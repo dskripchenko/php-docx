@@ -52,6 +52,26 @@ final class TableCellBuilder
         return $this;
     }
 
+    public function widthPt(float $pt): self
+    {
+        return $this->widthTwips(Length::pt($pt));
+    }
+
+    public function widthMm(float $mm): self
+    {
+        return $this->widthTwips(Length::mm($mm));
+    }
+
+    public function widthCm(float $cm): self
+    {
+        return $this->widthTwips(Length::cm($cm));
+    }
+
+    public function widthInches(float $inches): self
+    {
+        return $this->widthTwips(Length::inch($inches));
+    }
+
     /**
      * Ширина в процентах. 0..100 — convenience-форма (внутренне умножается
      * на 50 чтобы получить OOXML-friendly значение pct=N*50).
@@ -76,6 +96,46 @@ final class TableCellBuilder
         $this->paddingLeftTwips = $left ?? $right ?? $top;
 
         return $this;
+    }
+
+    public function paddingMm(float $top, ?float $right = null, ?float $bottom = null, ?float $left = null): self
+    {
+        return $this->padding(
+            Length::mm($top),
+            $right === null ? null : Length::mm($right),
+            $bottom === null ? null : Length::mm($bottom),
+            $left === null ? null : Length::mm($left),
+        );
+    }
+
+    public function paddingPt(float $top, ?float $right = null, ?float $bottom = null, ?float $left = null): self
+    {
+        return $this->padding(
+            Length::pt($top),
+            $right === null ? null : Length::pt($right),
+            $bottom === null ? null : Length::pt($bottom),
+            $left === null ? null : Length::pt($left),
+        );
+    }
+
+    public function paddingCm(float $top, ?float $right = null, ?float $bottom = null, ?float $left = null): self
+    {
+        return $this->padding(
+            Length::cm($top),
+            $right === null ? null : Length::cm($right),
+            $bottom === null ? null : Length::cm($bottom),
+            $left === null ? null : Length::cm($left),
+        );
+    }
+
+    public function paddingInches(float $top, ?float $right = null, ?float $bottom = null, ?float $left = null): self
+    {
+        return $this->padding(
+            Length::inch($top),
+            $right === null ? null : Length::inch($right),
+            $bottom === null ? null : Length::inch($bottom),
+            $left === null ? null : Length::inch($left),
+        );
     }
 
     public function backgroundColor(string $hexWithoutHash): self

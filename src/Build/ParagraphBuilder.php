@@ -89,9 +89,38 @@ final class ParagraphBuilder
 
     public function indentMm(?float $left = null, ?float $right = null, ?float $firstLine = null): self
     {
-        $toTwips = static fn (?float $mm): ?int => $mm === null ? null : (int) round($mm * 56.6929);
+        return $this->indent(
+            $left === null ? null : Length::mm($left),
+            $right === null ? null : Length::mm($right),
+            $firstLine === null ? null : Length::mm($firstLine),
+        );
+    }
 
-        return $this->indent($toTwips($left), $toTwips($right), $toTwips($firstLine));
+    public function indentCm(?float $left = null, ?float $right = null, ?float $firstLine = null): self
+    {
+        return $this->indent(
+            $left === null ? null : Length::cm($left),
+            $right === null ? null : Length::cm($right),
+            $firstLine === null ? null : Length::cm($firstLine),
+        );
+    }
+
+    public function indentPt(?float $left = null, ?float $right = null, ?float $firstLine = null): self
+    {
+        return $this->indent(
+            $left === null ? null : Length::pt($left),
+            $right === null ? null : Length::pt($right),
+            $firstLine === null ? null : Length::pt($firstLine),
+        );
+    }
+
+    public function indentInches(?float $left = null, ?float $right = null, ?float $firstLine = null): self
+    {
+        return $this->indent(
+            $left === null ? null : Length::inch($left),
+            $right === null ? null : Length::inch($right),
+            $firstLine === null ? null : Length::inch($firstLine),
+        );
     }
 
     public function spacing(?int $before = null, ?int $after = null, ?int $line = null): self
@@ -103,6 +132,24 @@ final class ParagraphBuilder
         );
 
         return $this;
+    }
+
+    public function spacingPt(?float $before = null, ?float $after = null, ?float $line = null): self
+    {
+        return $this->spacing(
+            $before === null ? null : Length::pt($before),
+            $after === null ? null : Length::pt($after),
+            $line === null ? null : Length::pt($line),
+        );
+    }
+
+    public function spacingMm(?float $before = null, ?float $after = null, ?float $line = null): self
+    {
+        return $this->spacing(
+            $before === null ? null : Length::mm($before),
+            $after === null ? null : Length::mm($after),
+            $line === null ? null : Length::mm($line),
+        );
     }
 
     public function borders(BorderSet $borders): self

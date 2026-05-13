@@ -127,6 +127,26 @@ final class TableBuilder
         return $this;
     }
 
+    public function widthPt(float $pt): self
+    {
+        return $this->widthTwips(Length::pt($pt));
+    }
+
+    public function widthMm(float $mm): self
+    {
+        return $this->widthTwips(Length::mm($mm));
+    }
+
+    public function widthCm(float $cm): self
+    {
+        return $this->widthTwips(Length::cm($cm));
+    }
+
+    public function widthInches(float $inches): self
+    {
+        return $this->widthTwips(Length::inch($inches));
+    }
+
     /**
      * 0..100 → внутренне умножается на 50 для OOXML pct.
      */
@@ -172,6 +192,26 @@ final class TableBuilder
         $this->cellMarginLeftTwips = $left ?? $right ?? $top;
 
         return $this;
+    }
+
+    public function cellMarginsMm(float $top, ?float $right = null, ?float $bottom = null, ?float $left = null): self
+    {
+        return $this->cellMargins(
+            Length::mm($top),
+            $right === null ? null : Length::mm($right),
+            $bottom === null ? null : Length::mm($bottom),
+            $left === null ? null : Length::mm($left),
+        );
+    }
+
+    public function cellMarginsPt(float $top, ?float $right = null, ?float $bottom = null, ?float $left = null): self
+    {
+        return $this->cellMargins(
+            Length::pt($top),
+            $right === null ? null : Length::pt($right),
+            $bottom === null ? null : Length::pt($bottom),
+            $left === null ? null : Length::pt($left),
+        );
     }
 
     public function build(): Table
