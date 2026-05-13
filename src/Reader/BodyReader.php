@@ -36,9 +36,20 @@ use Dskripchenko\PhpDocx\Style\RunStyle;
  */
 final class BodyReader
 {
+    private ?TableReader $tableReader = null;
+
     public function __construct(
         private readonly StylesResolver $styles = new StylesResolver,
     ) {}
+
+    /**
+     * Lazy-инициализация TableReader (циклическая зависимость с BodyReader,
+     * поэтому делаем lazy через self-reference).
+     */
+    private function tableReader(): TableReader
+    {
+        return $this->tableReader ??= new TableReader($this, $this->styles->parser());
+    }
 
     /**
      * @return list<BlockElement>
@@ -50,15 +61,24 @@ final class BodyReader
             if (! $child instanceof \DOMElement || $child->namespaceURI !== OoxmlNs::W) {
                 continue;
             }
-            match ($child->localName) {
-                'p' => array_push($blocks, ...$this->readParagraph($child)),
-                'tbl' => null, // Phase 4
-                'sectPr' => null, // metadata, не block
-                default => null,
-            };
+            switch ($child->localName) {
+                case 'p':
+                    foreach ($this->readParagraph($child) as $b) {
+                        $blocks[] = $b;
+                    }
+                    break;
+                case 'tbl':
+                    $blocks[] = $this->tableReader()->read($child);
+                    break;
+                case 'sectPr':
+                    // metadata, не block
+                    break;
+                default:
+                    break;
+            }
         }
 
-        return array_values(array_filter($blocks, fn ($b) => $b !== null));
+        return $blocks;
     }
 
     /**

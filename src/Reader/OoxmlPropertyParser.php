@@ -247,7 +247,11 @@ final class OoxmlPropertyParser
         }
     }
 
-    private function parseBorders(\DOMElement $pBdr): BorderSet
+    /**
+     * Public для использования из TableReader (tblBorders/tcBorders имеют
+     * тот же sub-schema что и pBdr — top/left/bottom/right + insideH/V).
+     */
+    public function parseBorders(\DOMElement $pBdr): BorderSet
     {
         $sides = [
             'top' => null, 'left' => null, 'bottom' => null, 'right' => null,
