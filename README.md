@@ -1,42 +1,89 @@
 # dskripchenko/php-docx
 
 Pure-PHP DOCX (Office Open XML) library: **bidirectional HTML ↔ DOCX**
-conversion with no external dependencies beyond standard PHP extensions.
+conversion, **fluent programmatic builder**, **variable detection**,
+**round-trip-safe AST**. No external dependencies beyond standard PHP
+extensions.
+
+**Read this in other languages:**
+**English** ·
+[Русский](docs/ru.md) ·
+[中文](docs/zh.md) ·
+[Deutsch](docs/de.md)
+
+---
+
+## Table of contents
+
+- [Features](#features)
+- [Requirements](#requirements)
+- [Installation](#installation)
+- [Quick start](#quick-start)
+  - [HTML → DOCX](#1-html--docx)
+  - [Programmatic builder](#2-programmatic-builder)
+  - [DOCX → HTML / AST](#3-docx--html--ast)
+- [HTML → DOCX](#html--docx-1)
+- [Programmatic builder API](#programmatic-builder-api)
+- [DOCX → HTML (Reader)](#docx--html-reader)
+- [Headers, footers & watermarks](#headers-footers--watermarks)
+- [Variable detection](#variable-detection)
+- [Length helpers](#length-helpers)
+- [AST overview](#ast-overview)
+- [Round-trip](#round-trip)
+- [Architecture](#architecture)
+- [Development](#development)
+- [License](#license)
+
+---
 
 ## Features
 
-- **Writer** — HTML5 (with inline styles) → DOCX bytes.
-- **Reader** — arbitrary DOCX (Word/Pages/LibreOffice) → AST → HTML.
-- **AST** — typed value-objects (`Document`, `Section`, `Paragraph`, `Run`,
-  `Table`, `ListNode`, `Image`, `Hyperlink`, `Bookmark`, `Field`, …)
-  shared by both directions.
-- **Variable detection** — MERGEFIELD / SDT content controls /
-  configurable text patterns (`{{x}}`, `${x}`, `%x%`).
-
-## Supported elements
-
-| HTML side | OOXML side |
-|---|---|
-| `<p>`, `<h1..h6>`, `<br>`, `<hr>`, page-break | `<w:p>`, `<w:r>`, `<w:br>`, `<w:pStyle Heading1..6>` |
-| `<strong>`, `<em>`, `<u>`, `<s>`, `<sup>`, `<sub>`, `<mark>` | `<w:b>`, `<w:i>`, `<w:u>`, `<w:strike>`, `<w:vertAlign>`, `<w:highlight>` |
-| `<small>`, `<pre>`, `<code>`, `<kbd>`, `<samp>`, `<var>`, `<cite>`, `<dfn>`, `<q>` | font-family + size variants in `<w:rPr>` |
-| `<table>` with `colspan`/`rowspan`/`width`/`<thead>`/`<tbody>`/`<caption>`/`<colgroup>` | `<w:tbl>` with `gridSpan`/`vMerge`/`tblGrid`/etc. |
-| `<a href>` external + `<a href="#x">`/`<a id>` internal links | `<w:hyperlink>` r:id / w:anchor + `<w:bookmarkStart>`/`<w:bookmarkEnd>` |
-| `<img src="data:...">` | `<w:drawing>` + `word/media/*` + rels |
-| `<ul>`, `<ol type="aAiI" start="N">`, `<li value="N">`, nested 3+ levels | `<w:numbering>` with abstract/concrete defs |
-| `<dl>`/`<dt>`/`<dd>`, `<figure>`/`<figcaption>` | paragraph pairs / caption-styled paragraph |
-| Inline `style="..."` (font, color, bg, border, padding, alignment, …) | `<w:rPr>`/`<w:pPr>`/`<w:tcPr>` properties |
-| `<page-number/>`, `<page-total/>`, `<current-date format="...">` | `<w:fldSimple w:instr="PAGE | NUMPAGES | DATE \\@ ...">` |
-| Page setup: paper size, orientation, margins | `<w:pgSz>`, `<w:pgMar>` |
-| Headers, footers, watermark text | `word/header*.xml`, `word/footer*.xml`, VML/DrawingML watermark |
-| Custom heading/paragraph styles via `StyleRegistry` | `word/styles.xml` |
+- **HTML → DOCX writer** — full set of typical layout elements
+  (paragraphs/headings/tables/lists/images/links/fields), inline-style
+  resolution, custom heading registry.
+- **DOCX → HTML reader** — parses arbitrary Word/Pages/LibreOffice
+  documents into a typed AST, then serialises back to HTML with inline
+  styles. Style cascade (docDefaults → named → direct), theme colors,
+  numbering reconstruction, vMerge/gridSpan collapse, watermark
+  detection (VML + DrawingML).
+- **Fluent programmatic builder** — `DocumentBuilder` with closure
+  scopes for nested structures (tables, lists, headers).
+- **Variable detection** — MERGEFIELD, SDT content controls, configurable
+  text patterns (`{{x}}`, `${x}`, `%x%`).
+- **Multi-header/footer** — default / first-page / even-pages variants
+  with automatic `<w:titlePg/>` and `<w:evenAndOddHeaders/>` plumbing.
+- **Round-trip safe** — read DOCX → AST → write DOCX produces a valid
+  document; bytes-level differences are limited to whitespace/ordering.
+- **PHP 8.2+** — `readonly` value-objects, named arguments,
+  constructor promotion, enums.
+- **Zero composer dependencies.**
 
 ### Out of scope
 
-Tracked changes, comments, embedded charts, OLE objects, footnotes/endnotes,
-SmartArt, math equations (OMML), form fields, JavaScript / custom XML parts.
+Tracked changes, comments, embedded charts, OLE objects,
+footnotes/endnotes, SmartArt, math equations (OMML), form fields,
+custom XML parts.
 
-## HTML → DOCX
+---
+
+## Requirements
+
+- PHP **8.2+**
+- `ext-zip`, `ext-dom`, `ext-mbstring`
+
+---
+
+## Installation
+
+```bash
+composer require dskripchenko/php-docx
+```
+
+---
+
+## Quick start
+
+### 1. HTML → DOCX
 
 ```php
 use Dskripchenko\PhpDocx\Html\Converter;
@@ -46,17 +93,48 @@ $html = <<<HTML
 <h1>Invoice #42</h1>
 <p>Total: <strong>500 USD</strong></p>
 <table>
-  <tr><td>Item A</td><td>250 USD</td></tr>
-  <tr><td>Item B</td><td>250 USD</td></tr>
+  <tr><th>Item</th><th>Qty</th></tr>
+  <tr><td>Widget</td><td>2</td></tr>
 </table>
 <p>Page <page-number/> of <page-total/></p>
 HTML;
 
-$document = (new Converter)->fromHtml($html);
-file_put_contents('invoice.docx', (new Word2007Writer)->write($document));
+$doc = (new Converter)->fromHtml($html);
+file_put_contents('invoice.docx', (new Word2007Writer)->write($doc));
 ```
 
-## DOCX → HTML
+### 2. Programmatic builder
+
+```php
+use Dskripchenko\PhpDocx\Build\DocumentBuilder;
+use Dskripchenko\PhpDocx\Element\ListFormat;
+
+DocumentBuilder::new()
+    ->watermark('DRAFT')
+    ->header(fn ($h) => $h->paragraph('Acme Inc.'))
+    ->footer(fn ($f) => $f->paragraph(fn ($p) => $p
+        ->text('Page ')->pageNumber()->text(' of ')->totalPages()
+    ))
+    ->heading(1, 'Invoice #42')
+    ->paragraph(fn ($p) => $p
+        ->text('Customer: ')->bold('Acme Co.')
+        ->lineBreak()
+        ->text('ID: ')->mergeField('CustomerID')
+    )
+    ->table(fn ($t) => $t
+        ->columns(fn ($c) => $c->widthCm(8), fn ($c) => $c->widthCm(3))
+        ->headerRow(['Item', 'Qty'])
+        ->row(['Widget', '2'])
+    )
+    ->orderedList(fn ($l) => $l
+        ->format(ListFormat::LowerLetter)
+        ->item('Net 30 terms')
+        ->item('Free shipping')
+    )
+    ->toFile('invoice.docx');
+```
+
+### 3. DOCX → HTML / AST
 
 ```php
 use Dskripchenko\PhpDocx\Reader\DocxReader;
@@ -66,47 +144,487 @@ use Dskripchenko\PhpDocx\Html\Serializer;
 
 $bytes = file_get_contents('input.docx');
 
-// AST из произвольного DOCX (Word/Pages/LibreOffice).
 $document = (new DocxReader)->read($bytes);
 
-// Опционально: вытащить переменные (MERGEFIELD / SDT / {{patterns}}).
 $pkg = (new DocxPackageReader)->read($bytes);
 $variables = (new VariableDetector)->detect($pkg);
 
-// AST → HTML + извлечённые media bytes.
 $imported = (new Serializer)->serialize($document, $variables);
 
-echo $imported->bodyHtml;           // <h1>...</h1><p>...</p>...
-echo $imported->headerHtml;         // ?string
-echo $imported->footerHtml;         // ?string
-echo $imported->watermarkText;      // ?string
-$imported->pageSettings;            // PageSetup VO
-$imported->variables;               // list<DetectedVariable>
-$imported->media;                   // array<filename, bytes>
+echo $imported->bodyHtml;
+echo $imported->headerHtml;
+echo $imported->footerHtml;
+echo $imported->watermarkText;
+$imported->pageSettings;
+$imported->variables;
+$imported->media;
 ```
+
+---
+
+## HTML → DOCX
+
+Input HTML must use **inline styles only** (no `<style>` blocks). Use a
+CSS-inliner upstream if needed.
+
+### Supported elements
+
+| Category | HTML tags |
+|---|---|
+| Text blocks | `<p>`, `<h1..h6>`, `<div>`, `<pre>`, `<blockquote>` |
+| Inline marks | `<strong>/<b>`, `<em>/<i>`, `<u>`, `<s>/<del>`, `<sup>`, `<sub>`, `<mark>` |
+| Code/teletype | `<code>`, `<kbd>`, `<samp>`, `<var>`, `<cite>`, `<dfn>`, `<q>`, `<small>` |
+| Links | `<a href>` external, `<a href="#anchor">` internal, `<a id>` bookmarks |
+| Images | `<img src="data:image/...;base64,...">` |
+| Tables | `<table>`, `<thead>/<tbody>`, `<tr>`, `<th>/<td>`, `<colgroup>/<col>`, `<caption>`, `colspan`, `rowspan` |
+| Lists | `<ul>`, `<ol type="a/A/i/I" start="N">`, `<li value="N">`, `<dl>/<dt>/<dd>` |
+| Custom tags | `<page-number/>`, `<page-total/>`, `<current-date format="...">`, `<page-break>` |
+| Layout | `<hr>`, `<br>`, `<figure>/<figcaption>` |
+
+### Inline styles
+
+The converter understands `style="…"` properties:
+
+- Run-level: `font-family`, `font-size`, `font-weight`, `font-style`,
+  `text-decoration`, `color`, `background-color`
+- Paragraph-level: `text-align`, `margin`, `text-indent`, `line-height`,
+  `border`, `padding`
+- Table-level: `width`, `border`, `border-collapse`
+- Cell-level: `width`, `padding`, `border`, `vertical-align`,
+  `background-color`
+
+### Custom tags
+
+```html
+<p>Page <page-number/> of <page-total/></p>
+<p>Generated on <current-date format="dd.MM.yyyy"/></p>
+```
+
+These become OOXML field codes (`<w:fldSimple w:instr="PAGE">`).
+
+### Custom heading styles
+
+```php
+use Dskripchenko\PhpDocx\Style\StyleRegistry;
+use Dskripchenko\PhpDocx\Style\RunStyle;
+use Dskripchenko\PhpDocx\Style\ParagraphStyle;
+use Dskripchenko\PhpDocx\Style\Alignment;
+
+$styles = (new StyleRegistry)
+    ->heading(1, new RunStyle(sizeHalfPoints: 44, bold: true), new ParagraphStyle(alignment: Alignment::Center))
+    ->heading(2, new RunStyle(sizeHalfPoints: 28, bold: true));
+
+$writer = new Word2007Writer($styles);
+```
+
+---
+
+## Programmatic builder API
+
+The `Build` namespace provides a fluent API for assembling DOCX
+documents block by block, finalising to the same immutable AST that the
+HTML pipeline produces.
+
+### DocumentBuilder
+
+Entry point. Accumulates body, header/footer, watermark, page setup.
+
+```php
+use Dskripchenko\PhpDocx\Build\DocumentBuilder;
+use Dskripchenko\PhpDocx\Style\PageSetup;
+use Dskripchenko\PhpDocx\Style\PaperSize;
+use Dskripchenko\PhpDocx\Style\Orientation;
+
+$doc = DocumentBuilder::new()
+    ->pageSetup(new PageSetup(
+        paperSize: PaperSize::A4,
+        orientation: Orientation::Portrait,
+    ))
+    ->watermark('CONFIDENTIAL')
+    ->heading(1, 'Report')
+    ->paragraph('Body')
+    ->build();           // → Document AST
+
+$bytes = DocumentBuilder::new()->paragraph('Hi')->toBytes();
+$count = DocumentBuilder::new()->paragraph('Hi')->toFile('out.docx');
+```
+
+### ParagraphBuilder
+
+Inside `->paragraph(fn ($p) => …)`:
+
+```php
+->paragraph(fn ($p) => $p
+    ->text('plain ')
+    ->bold('bold ')
+    ->italic('italic ')
+    ->underline('under ')
+    ->strike('strike ')
+    ->sup('super')->text('script ')
+    ->sub('sub')->text('script ')
+    ->styled('red', fn ($s) => $s->color('ff0000')->bold())
+    ->lineBreak()
+    ->link('https://example.com', 'website')
+    ->internalLink('section1', 'go to section 1')
+    ->bookmark('anchor1', 'anchor target')
+    ->pageNumber()
+    ->totalPages()
+    ->currentDate('yyyy-MM-dd')
+    ->mergeField('CustomerName')
+    ->image($img)
+    ->imageFromFile('/path/to/logo.png', widthPx: 150, altText: 'Logo')
+)
+```
+
+Paragraph-level styling:
+
+```php
+->paragraph(fn ($p) => $p
+    ->alignCenter()           // or alignRight()/alignJustify()
+    ->indentMm(left: 20, firstLine: 10)
+    ->spacingPt(before: 6, after: 12)
+    ->text('Indented & spaced')
+)
+```
+
+### TableBuilder
+
+```php
+use Dskripchenko\PhpDocx\Build\{TableBuilder, TableRowBuilder, TableCellBuilder, ColumnBuilder};
+
+->table(fn (TableBuilder $t) => $t
+    ->caption('Sales 2026')
+    ->column(fn (ColumnBuilder $c) => $c->widthCm(6))
+    ->column(fn (ColumnBuilder $c) => $c->widthCm(3))
+    ->widthPercent(100)
+    ->alignCenter()
+    ->cellMarginsMm(2)
+    ->headerRow(['Item', 'Price'])
+    ->row(['Apple', '10 USD'])
+    ->row(fn (TableRowBuilder $r) => $r
+        ->cell('Banana')
+        ->cell(fn (TableCellBuilder $c) => $c
+            ->backgroundColor('ffeb3b')
+            ->valignCenter()
+            ->paragraph(fn ($p) => $p->bold('20 USD'))
+        )
+    )
+)
+```
+
+Spans and merges:
+
+```php
+->row(fn ($r) => $r
+    ->cell(fn ($c) => $c->gridSpan(2)->paragraph('Wide header'))
+)
+->row(fn ($r) => $r
+    ->cell(fn ($c) => $c->rowSpan(2)->paragraph('Tall'))
+    ->cell('right')
+)
+```
+
+### ListBuilder
+
+```php
+use Dskripchenko\PhpDocx\Build\ListBuilder;
+use Dskripchenko\PhpDocx\Element\ListFormat;
+
+->bulletList(fn (ListBuilder $l) => $l
+    ->item('First')
+    ->item('Second', fn ($n) => $n
+        ->item('Nested A')
+        ->item('Nested B')
+    )
+)
+
+->orderedList(fn (ListBuilder $l) => $l
+    ->format(ListFormat::LowerLetter)   // a, b, c
+    ->startAt(3)
+    ->item('item starts at "c"')
+)
+```
+
+### RunStyleBuilder
+
+Used inside `->styled(text, fn (RunStyleBuilder) => …)` or standalone via
+`RunStyleBuilder::new()->…->build()`.
+
+```php
+RunStyleBuilder::new()
+    ->bold()
+    ->italic()
+    ->underline()
+    ->strike()
+    ->color('ff0000')
+    ->backgroundColor('eeeeee')
+    ->highlight('yellow')
+    ->fontFamily('Arial')
+    ->fontSizePt(14.5)
+    ->build();
+```
+
+### Length helpers
+
+Convert common units to OOXML twips (1 twip = 1/20 pt). Used wherever a
+twip int is expected.
+
+```php
+use Dskripchenko\PhpDocx\Build\Length;
+
+Length::pt(12);     // 240
+Length::mm(20);     // 1134
+Length::cm(2.5);    // 1417
+Length::inch(0.5);  // 720
+Length::px(100);    // 1500  (CSS px @ 96 DPI)
+```
+
+Most builders expose unit-aware shortcuts:
+
+- TableBuilder: `widthPt/widthMm/widthCm/widthInches`, `cellMarginsMm/cellMarginsPt`
+- TableCellBuilder: `widthPt/Mm/Cm/Inches`, `paddingMm/Pt/Cm/Inches`
+- ColumnBuilder: `widthPt/Mm/Cm/Inches/Px`
+- ParagraphBuilder: `indentMm/Cm/Pt/Inches`, `spacingPt/Mm`
+- RunStyleBuilder: `fontSizePt`
+
+---
+
+## DOCX → HTML (Reader)
+
+### High-level: DocxReader
+
+```php
+use Dskripchenko\PhpDocx\Reader\DocxReader;
+
+$document = (new DocxReader)->read(file_get_contents('input.docx'));
+// → Document (AST)
+```
+
+This runs the full pipeline: package unpack → styles resolve →
+body/header/footer parsing → vMerge/list reconstruction → image
+extraction → watermark detection → page setup.
+
+### Low-level: DocxPackageReader
+
+If you need the raw OOXML parts:
+
+```php
+use Dskripchenko\PhpDocx\Reader\DocxPackageReader;
+
+$pkg = (new DocxPackageReader)->read($bytes);
+
+$pkg->documentXml;           // \DOMDocument
+$pkg->stylesXml;             // ?\DOMDocument
+$pkg->numberingXml;          // ?\DOMDocument
+$pkg->themeXml;              // ?\DOMDocument
+$pkg->settingsXml;           // ?\DOMDocument
+$pkg->headers;               // array<path, \DOMDocument>
+$pkg->footers;               // array<path, \DOMDocument>
+$pkg->media;                 // array<path, bytes>
+$pkg->documentRelationships();  // list<Relationship>
+$pkg->resolveDocumentRel('rId7');  // Relationship
+```
+
+### Serializer: AST → HTML
+
+```php
+use Dskripchenko\PhpDocx\Html\Serializer;
+
+$imported = (new Serializer)->serialize($document, $variables);
+
+// ImportedDocument:
+$imported->bodyHtml;         // string
+$imported->headerHtml;       // ?string
+$imported->footerHtml;       // ?string
+$imported->watermarkText;    // ?string
+$imported->pageSettings;     // PageSetup
+$imported->variables;        // list<DetectedVariable>
+$imported->media;            // array<filename, bytes>
+```
+
+HTML output uses inline styles only — re-loadable into the same library
+via `Html\Converter::fromHtml($imported->bodyHtml)`.
+
+---
+
+## Headers, footers & watermarks
+
+Three header/footer types are supported per section: `default`, `first`
+(title page), `even` (even pages). Word automatically renders the right
+one based on page number.
+
+```php
+DocumentBuilder::new()
+    ->header(fn ($h) => $h->paragraph('Default header'))
+    ->firstHeader(fn ($h) => $h->paragraph('Cover page'))
+    ->evenHeader(fn ($h) => $h->paragraph(fn ($p) => $p
+        ->text('Page ')->pageNumber()
+    ))
+    ->footer(fn ($f) => $f->paragraph('© 2026 Acme'))
+    ->firstFooter(fn ($f) => $f->paragraph('Confidential'))
+    ->evenFooter(fn ($f) => $f->paragraph('Even footer'))
+    ->paragraph('Body')
+    ->toFile('with-headers.docx');
+```
+
+The writer automatically:
+- emits `<w:titlePg/>` in `sectPr` when first-page header/footer is set
+- emits `word/settings.xml` with `<w:evenAndOddHeaders/>` when even
+  header/footer is set
+
+### Watermark
+
+```php
+DocumentBuilder::new()
+    ->watermark('DRAFT')
+    ->paragraph('Body')
+    ->toFile('with-watermark.docx');
+```
+
+Renders as a 45°-rotated VML text shape on every page.
+
+---
+
+## Variable detection
+
+Scans an imported DOCX for three kinds of variables:
+
+1. **MERGEFIELD** — Word mail-merge native, both simple `<w:fldSimple>`
+   and complex `<w:fldChar>` form.
+2. **SDT content controls** — `<w:sdt>` with `<w:tag w:val="...">`.
+3. **Text patterns** — configurable regexes (defaults: `{{name}}`,
+   `${name}`, `%name%`).
+
+```php
+use Dskripchenko\PhpDocx\Reader\VariableDetector;
+
+$pkg = (new DocxPackageReader)->read($bytes);
+$detector = new VariableDetector;     // defaults
+// Or with custom regexes:
+$detector = new VariableDetector(['/\[\[(\w+)\]\]/']);
+
+$variables = $detector->detect($pkg);
+foreach ($variables as $v) {
+    echo "{$v->name} ({$v->source->value})";
+    echo " placeholder='{$v->placeholder}'";
+    echo " sample='{$v->sampleValue}'\n";
+}
+```
+
+Detection runs across `body + all headers + all footers`. Results are
+deduplicated by `(source, name)`.
+
+---
+
+## Length helpers
+
+See [Length helpers](#length-helpers) above. Conversion table:
+
+| Unit | Twips | Pt | Notes |
+|---|---|---|---|
+| 1 twip | 1 | 0.05 | OOXML native |
+| 1 pt | 20 | 1 | typography |
+| 1 mm | ~57 | 2.83 | metric |
+| 1 cm | ~567 | 28.35 | metric |
+| 1 inch | 1440 | 72 | imperial |
+| 1 px | 15 | 0.75 | CSS @ 96 DPI |
+
+---
+
+## AST overview
+
+All elements live under `Dskripchenko\PhpDocx\Element` namespace.
+
+| Element | Type | Notes |
+|---|---|---|
+| `Document` | root | `{ section: Section, watermarkText: ?string }` |
+| `Section` | container | `{ body, header, footer, pageSetup, firstHeader, firstFooter, evenHeader, evenFooter }` |
+| `Paragraph` | BlockElement | `{ children: InlineElement[], style: ParagraphStyle, headingLevel: ?int }` |
+| `Run` | InlineElement | `{ text: string, style: RunStyle }` |
+| `Hyperlink` | InlineElement | `{ href: ?string, anchor: ?string, children: InlineElement[] }` |
+| `Bookmark` | InlineElement | `{ name: string, children: InlineElement[] }` |
+| `Image` | both | `{ binary, format, widthEmu, heightEmu, altText }` |
+| `Field` | InlineElement | `{ instruction: string, style: RunStyle }` |
+| `LineBreak`, `PageBreak`, `HorizontalRule` | both | marker elements |
+| `Table` | BlockElement | `{ rows: TableRow[], style, caption, gridColumnsTwips }` |
+| `TableRow` | element | `{ cells: TableCell[], isHeader, heightTwips }` |
+| `TableCell` | element | `{ children: BlockElement[], style: CellStyle }` |
+| `ListNode` | BlockElement | `{ items: ListItem[], ordered, format, startAt }` |
+| `ListItem` | element | `{ children: InlineElement[], nestedList: ?ListNode }` |
+
+Styles live under `Dskripchenko\PhpDocx\Style`:
+
+- `RunStyle` — font, weight, italic, color, size, highlight, …
+- `ParagraphStyle` — alignment, indents, spacing, borders
+- `CellStyle` — width, padding, borders, valign, gridSpan, rowSpan
+- `TableStyle` — width, borders, alignment, cell margins, layout
+- `PageSetup`, `PaperSize`, `Orientation`, `Alignment`, `VerticalAlign`,
+  `BorderStyle`, `Border`, `BorderSet`
+
+---
 
 ## Round-trip
 
 ```php
-$ast = (new DocxReader)->read($originalDocxBytes);
-$reEmitted = (new Word2007Writer)->write($ast);
-// Valid DOCX, открывается в Word/Pages/LibreOffice без warning'ов.
+$bytes1 = file_get_contents('original.docx');
+$doc = (new DocxReader)->read($bytes1);
+$bytes2 = (new Word2007Writer)->write($doc);
+file_put_contents('roundtrip.docx', $bytes2);
 ```
 
-## Requirements
+The library targets **semantic** round-trip safety, not byte equality —
+content, structure and styling survive, but XML ordering and whitespace
+may differ.
 
-- PHP **8.2+**
-- `ext-zip`, `ext-dom`, `ext-mbstring`
-- Zero composer-package dependencies.
+In-scope round-trip features:
+- Paragraphs/headings with all run formatting
+- Tables with `vMerge`/`gridSpan` reconstruction
+- Lists (bullet/decimal/letter/roman) with arbitrary nesting
+- Images with EMU sizes and alt text
+- Hyperlinks (external + internal anchors) and bookmarks
+- Headers/footers (default/first/even) and watermarks
+- Field codes (PAGE, NUMPAGES, DATE, MERGEFIELD)
+- Page setup (size, orientation, margins)
+
+Out-of-scope features are silently dropped (footnotes, comments,
+equations, etc.).
+
+---
+
+## Architecture
+
+```
+HTML (inline styles)
+       │
+       ▼  Html\Converter
+   Document (AST)  ◀──── DocumentBuilder (programmatic)
+       │
+       ▼  Writer\Word2007Writer
+   DOCX bytes
+       ▲
+       │  Reader\DocxReader
+   Document (AST)
+       │
+       ▼  Html\Serializer
+   ImportedDocument (bodyHtml, headerHtml, footerHtml, variables, media)
+```
+
+The same `Document` AST is shared by HTML conversion, programmatic
+construction and DOCX reading — every entry/exit point operates on
+typed value-objects.
+
+---
 
 ## Development
 
 ```bash
 composer install
-composer test       # ~250 tests
+composer test       # phpunit suite (~340 tests)
 composer stan       # phpstan level 8
 ```
 
+---
+
 ## License
 
-MIT
+MIT — see [LICENSE](LICENSE).
