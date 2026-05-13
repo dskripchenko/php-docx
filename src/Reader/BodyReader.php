@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace Dskripchenko\PhpDocx\Reader;
 
 use Dskripchenko\PhpDocx\Element\BlockElement;
+use Dskripchenko\PhpDocx\Element\Bookmark;
+use Dskripchenko\PhpDocx\Element\Field;
+use Dskripchenko\PhpDocx\Element\Hyperlink;
 use Dskripchenko\PhpDocx\Element\Image;
 use Dskripchenko\PhpDocx\Element\InlineElement;
 use Dskripchenko\PhpDocx\Element\LineBreak;
@@ -45,6 +48,8 @@ final class BodyReader
         private readonly StylesResolver $styles = new StylesResolver,
         private readonly NumberingDefinitions $numbering = new NumberingDefinitions,
         private readonly ?ImageReader $imageReader = null,
+        private readonly ?DocxPackage $package = null,
+        private readonly string $partPath = 'word/document.xml',
     ) {}
 
     /**
@@ -251,6 +256,19 @@ final class BodyReader
     public function readInlines(\DOMElement $parent, RunStyle $baseRunStyle): array
     {
         $out = [];
+        // Bookmark-stack: openBookmarks[id] = ['name'=>..., 'children'=>[], 'targetIndex'=>...]
+        // children накапливаются в $out — отдельные «buffers» не нужны;
+        // мы запомним index'ы from/to и потом split'нём.
+        // bookmarkStart: запоминаем индекс старта; bookmarkEnd: оборачиваем
+        // диапазон в Bookmark и заменяем slice в $out.
+        $openBookmarks = [];
+
+        // Complex-field state machine.
+        // null | 'instr' | 'value'
+        $fieldState = null;
+        $fieldInstr = '';
+        $fieldStyle = $baseRunStyle;
+
         foreach ($parent->childNodes as $child) {
             if (! $child instanceof \DOMElement || $child->namespaceURI !== OoxmlNs::W) {
                 continue;
@@ -259,31 +277,66 @@ final class BodyReader
             if ($local === 'pPr') {
                 continue;
             }
-            if ($local === 'r') {
-                foreach ($this->readRun($child, $baseRunStyle) as $i) {
-                    $out[] = $i;
+
+            if ($local === 'bookmarkStart') {
+                $id = $child->getAttributeNS(OoxmlNs::W, 'id');
+                $name = $child->getAttributeNS(OoxmlNs::W, 'name');
+                if ($id !== '' && $name !== '') {
+                    $openBookmarks[$id] = ['name' => $name, 'startIndex' => count($out)];
                 }
 
                 continue;
             }
+            if ($local === 'bookmarkEnd') {
+                $id = $child->getAttributeNS(OoxmlNs::W, 'id');
+                if (isset($openBookmarks[$id])) {
+                    $info = $openBookmarks[$id];
+                    $captured = array_slice($out, $info['startIndex']);
+                    $out = array_slice($out, 0, $info['startIndex']);
+                    $out[] = new Bookmark($info['name'], array_values($captured));
+                    unset($openBookmarks[$id]);
+                }
+
+                continue;
+            }
+
             if ($local === 'hyperlink') {
-                // Phase 7 будет вставлять Hyperlink — пока flatten children
-                foreach ($this->readInlines($child, $baseRunStyle) as $i) {
-                    $out[] = $i;
+                $hyperlink = $this->buildHyperlink($child, $baseRunStyle);
+                if ($hyperlink !== null) {
+                    $out[] = $hyperlink;
+                } else {
+                    // fallback — flatten
+                    foreach ($this->readInlines($child, $baseRunStyle) as $i) {
+                        $out[] = $i;
+                    }
                 }
 
                 continue;
             }
             if ($local === 'fldSimple') {
-                // Простой field — emit content runs как текст (Phase 7 заменит).
-                foreach ($this->readInlines($child, $baseRunStyle) as $i) {
-                    $out[] = $i;
+                $instr = trim($child->getAttributeNS(OoxmlNs::W, 'instr'));
+                if ($instr !== '') {
+                    $out[] = new Field($instr, $baseRunStyle);
                 }
-
+                // contained runs — игнорируем (placeholder text Word'а)
                 continue;
             }
-            if ($local === 'bookmarkStart' || $local === 'bookmarkEnd') {
-                // Phase 7 emit Bookmark; пока skip.
+            if ($local === 'r') {
+                // Внутри <w:r> может быть fldChar/instrText (complex field).
+                $runResult = $this->readRunWithFieldState(
+                    $child,
+                    $baseRunStyle,
+                    $fieldState,
+                    $fieldInstr,
+                    $fieldStyle,
+                );
+                foreach ($runResult['inlines'] as $i) {
+                    $out[] = $i;
+                }
+                $fieldState = $runResult['state'];
+                $fieldInstr = $runResult['instr'];
+                $fieldStyle = $runResult['style'];
+
                 continue;
             }
             // unknown — skip
@@ -292,22 +345,58 @@ final class BodyReader
         return $out;
     }
 
-    /**
-     * `<w:r>` → 1+ inline (Run/LineBreak/PageBreak).
-     *
-     * @return list<InlineElement>
-     */
-    private function readRun(\DOMElement $r, RunStyle $baseRunStyle): array
+    private function buildHyperlink(\DOMElement $hyperlinkEl, RunStyle $baseRunStyle): ?Hyperlink
     {
+        $rId = $hyperlinkEl->getAttributeNS(OoxmlNs::R, 'id');
+        $anchor = $hyperlinkEl->hasAttributeNS(OoxmlNs::W, 'anchor')
+            ? $hyperlinkEl->getAttributeNS(OoxmlNs::W, 'anchor')
+            : '';
+        $children = $this->readInlines($hyperlinkEl, $baseRunStyle);
+
+        if ($anchor !== '') {
+            return Hyperlink::internal($anchor, $children);
+        }
+        if ($rId !== '' && $this->package !== null) {
+            try {
+                $rel = $this->package->resolveRel($this->partPath, $rId);
+
+                return new Hyperlink(href: $rel->target, children: $children);
+            } catch (\Throwable) {
+                return null;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Wrapper над readRun который также управляет complex-field state.
+     *
+     * @return array{inlines: list<InlineElement>, state: string|null, instr: string, style: RunStyle}
+     */
+    private function readRunWithFieldState(
+        \DOMElement $r,
+        RunStyle $baseRunStyle,
+        ?string $state,
+        string $instr,
+        RunStyle $fieldStyle,
+    ): array {
         $runStyle = $this->styles->effectiveStylesForRun($r, $baseRunStyle);
-        $out = [];
+        $emitted = [];
         $textBuffer = '';
 
-        $flushText = function () use (&$out, &$textBuffer, $runStyle): void {
-            if ($textBuffer !== '') {
-                $out[] = new Run($textBuffer, $runStyle);
-                $textBuffer = '';
+        $flushText = function () use (&$emitted, &$textBuffer, $runStyle, $state): void {
+            if ($textBuffer === '') {
+                return;
             }
+            if ($state === 'value') {
+                // в value-фазе текст подавляется (Word отрендерит сам)
+                $textBuffer = '';
+
+                return;
+            }
+            $emitted[] = new Run($textBuffer, $runStyle);
+            $textBuffer = '';
         };
 
         foreach ($r->childNodes as $child) {
@@ -315,43 +404,81 @@ final class BodyReader
                 continue;
             }
             switch ($child->localName) {
+                case 'fldChar':
+                    $type = $child->getAttributeNS(OoxmlNs::W, 'fldCharType');
+                    if ($type === 'begin') {
+                        $flushText();
+                        $state = 'instr';
+                        $instr = '';
+                        $fieldStyle = $runStyle;
+                    } elseif ($type === 'separate') {
+                        $flushText();
+                        $state = 'value';
+                    } elseif ($type === 'end') {
+                        $flushText();
+                        $cleanInstr = trim($instr);
+                        if ($cleanInstr !== '') {
+                            $emitted[] = new Field($cleanInstr, $fieldStyle);
+                        }
+                        $state = null;
+                        $instr = '';
+                    }
+                    break;
+                case 'instrText':
+                    if ($state === 'instr') {
+                        $instr .= $child->textContent;
+                    }
+                    break;
                 case 't':
-                    $textBuffer .= $child->textContent;
+                    if ($state === 'instr') {
+                        $instr .= $child->textContent;
+                    } else {
+                        $textBuffer .= $child->textContent;
+                    }
                     break;
                 case 'tab':
-                    $textBuffer .= "\t";
+                    if ($state !== 'value') {
+                        $textBuffer .= "\t";
+                    }
                     break;
                 case 'noBreakHyphen':
-                    $textBuffer .= "\u{2011}"; // non-breaking hyphen
+                    if ($state !== 'value') {
+                        $textBuffer .= "\u{2011}";
+                    }
                     break;
                 case 'softHyphen':
-                    $textBuffer .= "\u{00AD}";
+                    if ($state !== 'value') {
+                        $textBuffer .= "\u{00AD}";
+                    }
                     break;
                 case 'br':
                     $flushText();
-                    $type = $child->getAttributeNS(OoxmlNs::W, 'type');
-                    $out[] = $type === 'page' ? new PageBreak : new LineBreak;
+                    if ($state !== 'value') {
+                        $type = $child->getAttributeNS(OoxmlNs::W, 'type');
+                        $emitted[] = $type === 'page' ? new PageBreak : new LineBreak;
+                    }
                     break;
                 case 'drawing':
                     $flushText();
-                    if ($this->imageReader !== null) {
+                    if ($this->imageReader !== null && $state !== 'value') {
                         $image = $this->imageReader->read($child);
                         if ($image instanceof Image) {
-                            $out[] = $image;
+                            $emitted[] = $image;
                         }
                     }
                     break;
                 case 'rPr':
-                    // already used by effectiveStylesForRun
-                    break;
-                default:
-                    // sym, instrText — обработка в next phases
                     break;
             }
         }
         $flushText();
 
-        return $out;
+        return [
+            'inlines' => $emitted,
+            'state' => $state,
+            'instr' => $instr,
+            'style' => $fieldStyle,
+        ];
     }
 
     /**
