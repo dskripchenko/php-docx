@@ -93,6 +93,35 @@ trait AddsBlockContent
     }
 
     /**
+     * Bullet-список — `<ul>`-equivalent.
+     *
+     * @param  callable(ListBuilder): void  $builderCallback
+     */
+    public function bulletList(callable $builderCallback): self
+    {
+        $l = new ListBuilder(ordered: false);
+        $builderCallback($l);
+        $this->blocks[] = $l->build();
+
+        return $this;
+    }
+
+    /**
+     * Ordered-список — `<ol>`-equivalent. Format/startAt задаются
+     * внутри builder'а: `$l->format(ListFormat::LowerLetter)->startAt(3)`.
+     *
+     * @param  callable(ListBuilder): void  $builderCallback
+     */
+    public function orderedList(callable $builderCallback): self
+    {
+        $l = new ListBuilder(ordered: true);
+        $builderCallback($l);
+        $this->blocks[] = $l->build();
+
+        return $this;
+    }
+
+    /**
      * Append pre-built BlockElement (или несколько). Удобно для интеграции
      * с AST-кодом — например, вставить Paragraph, собранный извне.
      *
