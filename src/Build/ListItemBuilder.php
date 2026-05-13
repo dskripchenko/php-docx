@@ -73,6 +73,19 @@ final class ListItemBuilder
         return $this;
     }
 
+    /**
+     * Run с custom RunStyle через RunStyleBuilder closure.
+     *
+     *   ->styled('Important', fn($s) => $s->color('ff0000')->bold())
+     */
+    public function styled(string $text, callable $styleCallback): self
+    {
+        $builder = RunStyleBuilder::from($this->defaultRunStyle);
+        $styleCallback($builder);
+
+        return $this->text($text, $builder->build());
+    }
+
     public function withRunStyle(RunStyle $style): self
     {
         $this->defaultRunStyle = $style;
