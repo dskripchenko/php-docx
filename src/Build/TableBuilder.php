@@ -111,10 +111,28 @@ final class TableBuilder
 
     /**
      * Explicit grid columns (для <colgroup>-like контроля над шириной).
+     *
+     * Заменяет ВСЕ ранее объявленные колонки. Для appending одной — см. `column()`.
      */
     public function columns(int ...$widthsTwips): self
     {
         $this->gridColumnsTwips = array_values($widthsTwips);
+
+        return $this;
+    }
+
+    /**
+     * Append одну колонку через ColumnBuilder. Позволяет использовать
+     * widthMm/widthCm/widthPt/widthInches/widthPx вместо ручного math.
+     *
+     * @param  callable(ColumnBuilder): void  $builderCallback
+     */
+    public function column(callable $builderCallback): self
+    {
+        $col = new ColumnBuilder;
+        $builderCallback($col);
+        $this->gridColumnsTwips ??= [];
+        $this->gridColumnsTwips[] = $col->build();
 
         return $this;
     }
