@@ -1,41 +1,42 @@
 # dskripchenko/php-docx
 
-Minimal HTML → DOCX (Office Open XML) converter without legacy dependencies.
+Pure-PHP DOCX (Office Open XML) library: **bidirectional HTML ↔ DOCX**
+conversion with no external dependencies beyond standard PHP extensions.
 
-Generic HTML → DOCX writer for structured content: paragraphs, headings,
-tables, lists, images, headers/footers. Built specifically to avoid the
-quirks of `phpoffice/phpword`'s `Shared\Html` converter.
+## Features
 
-## Status
+- **Writer** — HTML5 (with inline styles) → DOCX bytes.
+- **Reader** — arbitrary DOCX (Word/Pages/LibreOffice) → AST → HTML.
+- **AST** — typed value-objects (`Document`, `Section`, `Paragraph`, `Run`,
+  `Table`, `ListNode`, `Image`, `Hyperlink`, `Bookmark`, `Field`, …)
+  shared by both directions.
+- **Variable detection** — MERGEFIELD / SDT content controls /
+  configurable text patterns (`{{x}}`, `${x}`, `%x%`).
 
-🚧 **Phase 1 — skeleton.** API is being implemented incrementally; see ADR
-in the parent project for the migration roadmap from `phpoffice/phpword`.
+## Supported elements
 
-## Goals
-
-- Pure-PHP, **zero external dependencies** beyond `ext-zip`, `ext-dom`, `ext-mbstring`.
-- HTML5 input with inline `style` attributes (caller inlines CSS classes upstream).
-- Predictable OOXML output — no quirks workarounds needed by consumers.
-- PHP 8.2+ idioms — readonly classes, constructor promotion, enums where appropriate.
-- Compatible with Microsoft Word 2007+, LibreOffice Writer, Apple Pages.
-
-## Scope
-
-| Supported | Out of scope |
+| HTML side | OOXML side |
 |---|---|
-| `<p>`, `<h1..h6>`, `<br>`, `<hr>` | Tracked changes, comments |
-| `<table>` (incl. `<thead>/<tbody>`, `colspan`, `rowspan`, `width`) | Embedded charts, OLE objects |
-| `<td>`/`<th>` styles: bg, borders, padding, vertical-align | Footnotes/endnotes (might add later) |
-| `<strong>`, `<em>`, `<u>`, `<s>`, `<sub>`, `<sup>` | Custom XML parts |
-| `<a href>` | Embedded SVG (caller rasterizes upstream) |
-| `<img src="data:...">` + relationships | Math equations |
-| `<ul>`, `<ol>`, `<li>` (with nested levels) | Forms (`<input>`, `<form>`) |
-| Inline `style="..."` (font, color, bg, border, padding, etc.) | JavaScript anything |
-| Page setup: A4/A3/A5/Letter/Legal, P/L orientation, margins | |
-| Headers/footers, watermark | |
-| Custom heading styles via `StyleRegistry` | |
+| `<p>`, `<h1..h6>`, `<br>`, `<hr>`, page-break | `<w:p>`, `<w:r>`, `<w:br>`, `<w:pStyle Heading1..6>` |
+| `<strong>`, `<em>`, `<u>`, `<s>`, `<sup>`, `<sub>`, `<mark>` | `<w:b>`, `<w:i>`, `<w:u>`, `<w:strike>`, `<w:vertAlign>`, `<w:highlight>` |
+| `<small>`, `<pre>`, `<code>`, `<kbd>`, `<samp>`, `<var>`, `<cite>`, `<dfn>`, `<q>` | font-family + size variants in `<w:rPr>` |
+| `<table>` with `colspan`/`rowspan`/`width`/`<thead>`/`<tbody>`/`<caption>`/`<colgroup>` | `<w:tbl>` with `gridSpan`/`vMerge`/`tblGrid`/etc. |
+| `<a href>` external + `<a href="#x">`/`<a id>` internal links | `<w:hyperlink>` r:id / w:anchor + `<w:bookmarkStart>`/`<w:bookmarkEnd>` |
+| `<img src="data:...">` | `<w:drawing>` + `word/media/*` + rels |
+| `<ul>`, `<ol type="aAiI" start="N">`, `<li value="N">`, nested 3+ levels | `<w:numbering>` with abstract/concrete defs |
+| `<dl>`/`<dt>`/`<dd>`, `<figure>`/`<figcaption>` | paragraph pairs / caption-styled paragraph |
+| Inline `style="..."` (font, color, bg, border, padding, alignment, …) | `<w:rPr>`/`<w:pPr>`/`<w:tcPr>` properties |
+| `<page-number/>`, `<page-total/>`, `<current-date format="...">` | `<w:fldSimple w:instr="PAGE | NUMPAGES | DATE \\@ ...">` |
+| Page setup: paper size, orientation, margins | `<w:pgSz>`, `<w:pgMar>` |
+| Headers, footers, watermark text | `word/header*.xml`, `word/footer*.xml`, VML/DrawingML watermark |
+| Custom heading/paragraph styles via `StyleRegistry` | `word/styles.xml` |
 
-## Quick start
+### Out of scope
+
+Tracked changes, comments, embedded charts, OLE objects, footnotes/endnotes,
+SmartArt, math equations (OMML), form fields, JavaScript / custom XML parts.
+
+## HTML → DOCX
 
 ```php
 use Dskripchenko\PhpDocx\Html\Converter;
@@ -48,35 +49,62 @@ $html = <<<HTML
   <tr><td>Item A</td><td>250 USD</td></tr>
   <tr><td>Item B</td><td>250 USD</td></tr>
 </table>
+<p>Page <page-number/> of <page-total/></p>
 HTML;
 
 $document = (new Converter)->fromHtml($html);
-
-$writer = new Word2007Writer;
-file_put_contents('invoice.docx', $writer->write($document));
+file_put_contents('invoice.docx', (new Word2007Writer)->write($document));
 ```
 
-## Why?
+## DOCX → HTML
 
-The widely-used `phpoffice/phpword` 1.x has several rough edges when used
-as an HTML → DOCX renderer:
+```php
+use Dskripchenko\PhpDocx\Reader\DocxReader;
+use Dskripchenko\PhpDocx\Reader\DocxPackageReader;
+use Dskripchenko\PhpDocx\Reader\VariableDetector;
+use Dskripchenko\PhpDocx\Html\Serializer;
 
-- CSS shorthands like `background:#XXX` are ignored.
-- Numeric `font-weight: 700` doesn't trigger bold.
-- `width: 100%` on `<table>` inherits to every child `<td>`.
-- `<br>` inside `<td>` rendered as `<w:br/>` which Pages.app ignores.
-- `Cell::$noWrap = true` by default — multi-line cells collapse.
-- HTML5 → strict XML loader incompatibility (void elements, entities).
+$bytes = file_get_contents('input.docx');
 
-This library is built specifically to avoid those problems for printable
-template scenarios.
+// AST из произвольного DOCX (Word/Pages/LibreOffice).
+$document = (new DocxReader)->read($bytes);
+
+// Опционально: вытащить переменные (MERGEFIELD / SDT / {{patterns}}).
+$pkg = (new DocxPackageReader)->read($bytes);
+$variables = (new VariableDetector)->detect($pkg);
+
+// AST → HTML + извлечённые media bytes.
+$imported = (new Serializer)->serialize($document, $variables);
+
+echo $imported->bodyHtml;           // <h1>...</h1><p>...</p>...
+echo $imported->headerHtml;         // ?string
+echo $imported->footerHtml;         // ?string
+echo $imported->watermarkText;      // ?string
+$imported->pageSettings;            // PageSetup VO
+$imported->variables;               // list<DetectedVariable>
+$imported->media;                   // array<filename, bytes>
+```
+
+## Round-trip
+
+```php
+$ast = (new DocxReader)->read($originalDocxBytes);
+$reEmitted = (new Word2007Writer)->write($ast);
+// Valid DOCX, открывается в Word/Pages/LibreOffice без warning'ов.
+```
+
+## Requirements
+
+- PHP **8.2+**
+- `ext-zip`, `ext-dom`, `ext-mbstring`
+- Zero composer-package dependencies.
 
 ## Development
 
 ```bash
 composer install
-composer test
-composer stan
+composer test       # ~250 tests
+composer stan       # phpstan level 8
 ```
 
 ## License

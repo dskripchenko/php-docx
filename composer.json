@@ -1,9 +1,9 @@
 {
     "name": "dskripchenko/php-docx",
-    "description": "Minimal HTML → DOCX (OOXML) converter without legacy dependencies. Focused on print-form use case: tables, paragraphs, images, headers/footers.",
+    "description": "Pure-PHP DOCX (OOXML) library: bidirectional HTML ↔ DOCX conversion, full styles cascade, tables with vMerge/gridSpan, lists, images, headers/footers, watermarks, fields, bookmarks. No external dependencies.",
     "type": "library",
     "license": "MIT",
-    "keywords": ["docx", "ooxml", "word", "html-to-docx", "print"],
+    "keywords": ["docx", "ooxml", "word", "html-to-docx", "docx-to-html", "docx-parser", "docx-reader", "docx-writer"],
     "authors": [
         {
             "name": "Denis Skripchenko",
