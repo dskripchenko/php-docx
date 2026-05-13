@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Dskripchenko\PhpDocx\Reader;
 
 use Dskripchenko\PhpDocx\Element\BlockElement;
+use Dskripchenko\PhpDocx\Element\Image;
 use Dskripchenko\PhpDocx\Element\InlineElement;
 use Dskripchenko\PhpDocx\Element\LineBreak;
 use Dskripchenko\PhpDocx\Element\ListItem;
@@ -43,6 +44,7 @@ final class BodyReader
     public function __construct(
         private readonly StylesResolver $styles = new StylesResolver,
         private readonly NumberingDefinitions $numbering = new NumberingDefinitions,
+        private readonly ?ImageReader $imageReader = null,
     ) {}
 
     /**
@@ -330,11 +332,20 @@ final class BodyReader
                     $type = $child->getAttributeNS(OoxmlNs::W, 'type');
                     $out[] = $type === 'page' ? new PageBreak : new LineBreak;
                     break;
+                case 'drawing':
+                    $flushText();
+                    if ($this->imageReader !== null) {
+                        $image = $this->imageReader->read($child);
+                        if ($image instanceof Image) {
+                            $out[] = $image;
+                        }
+                    }
+                    break;
                 case 'rPr':
                     // already used by effectiveStylesForRun
                     break;
                 default:
-                    // sym, instrText, drawing — обработка в next phases
+                    // sym, instrText — обработка в next phases
                     break;
             }
         }
