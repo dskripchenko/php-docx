@@ -5,7 +5,7 @@ file. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.1.0] — 2026-07-18
 
 ### Fixed
 - **Two ECMA-376 violations in the writer's output**, surfaced by the new
