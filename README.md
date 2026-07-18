@@ -1,5 +1,11 @@
 # dskripchenko/php-docx
 
+[![Tests](https://img.shields.io/github/actions/workflow/status/dskripchenko/php-docx/tests.yml?branch=main&label=tests&logo=github)](https://github.com/dskripchenko/php-docx/actions/workflows/tests.yml)
+[![Latest Version](https://img.shields.io/packagist/v/dskripchenko/php-docx?logo=packagist&logoColor=white)](https://packagist.org/packages/dskripchenko/php-docx)
+[![Total Downloads](https://img.shields.io/packagist/dt/dskripchenko/php-docx)](https://packagist.org/packages/dskripchenko/php-docx)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![PHP](https://img.shields.io/badge/PHP-8.2%2B-purple.svg)](https://www.php.net)
+
 Pure-PHP DOCX (Office Open XML) library: **bidirectional HTML ↔ DOCX**
 conversion, **fluent programmatic builder**, **variable detection**,
 **round-trip-safe AST**. No external dependencies beyond standard PHP

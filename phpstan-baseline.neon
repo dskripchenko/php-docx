@@ -1,0 +1,229 @@
+parameters:
+	ignoreErrors:
+		-
+			message: '#^Instanceof between Dskripchenko\\PhpDocx\\Element\\BlockElement and Dskripchenko\\PhpDocx\\Element\\BlockElement will always evaluate to true\.$#'
+			identifier: instanceof.alwaysTrue
+			count: 1
+			path: src/Build/DocumentBuilder.php
+
+		-
+			message: '#^Instanceof between Dskripchenko\\PhpDocx\\Element\\BlockElement and Dskripchenko\\PhpDocx\\Element\\BlockElement will always evaluate to true\.$#'
+			identifier: instanceof.alwaysTrue
+			count: 1
+			path: src/Build/SectionContentBuilder.php
+
+		-
+			message: '#^Parameter \#1 \$texts of method Dskripchenko\\PhpDocx\\Build\\TableRowBuilder\:\:cells\(\) expects list\<string\>, array\<mixed\> given\.$#'
+			identifier: argument.type
+			count: 2
+			path: src/Build/TableBuilder.php
+
+		-
+			message: '#^Instanceof between Dskripchenko\\PhpDocx\\Element\\BlockElement and Dskripchenko\\PhpDocx\\Element\\BlockElement will always evaluate to true\.$#'
+			identifier: instanceof.alwaysTrue
+			count: 1
+			path: src/Build/TableCellBuilder.php
+
+		-
+			message: '#^Instanceof between DOMAttr and DOMAttr will always evaluate to true\.$#'
+			identifier: instanceof.alwaysTrue
+			count: 1
+			path: src/Html/Converter.php
+
+		-
+			message: '#^Parameter \#1 \$array \(list\<Dskripchenko\\PhpDocx\\Element\\InlineElement\>\) of array_values is already a list, call has no effect\.$#'
+			identifier: arrayValues.list
+			count: 1
+			path: src/Html/Converter.php
+
+		-
+			message: '#^Parameter \$cells of class Dskripchenko\\PhpDocx\\Element\\TableRow constructor expects list\<Dskripchenko\\PhpDocx\\Element\\TableCell\>, non\-empty\-array\<int\<0, max\>, Dskripchenko\\PhpDocx\\Element\\TableCell\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Html/Converter.php
+
+		-
+			message: '#^Instanceof between Dskripchenko\\PhpDocx\\Element\\InlineElement and Dskripchenko\\PhpDocx\\Element\\PageBreak will always evaluate to false\.$#'
+			identifier: instanceof.alwaysFalse
+			count: 1
+			path: src/Html/Serializer.php
+
+		-
+			message: '#^Match arm comparison between Dskripchenko\\PhpDocx\\Style\\Alignment\:\:Distribute and Dskripchenko\\PhpDocx\\Style\\Alignment\:\:Distribute is always true\.$#'
+			identifier: match.alwaysTrue
+			count: 1
+			path: src/Html/Serializer.php
+
+		-
+			message: '#^Match arm comparison between Dskripchenko\\PhpDocx\\Style\\VerticalAlign\:\:Bottom and Dskripchenko\\PhpDocx\\Style\\VerticalAlign\:\:Bottom is always true\.$#'
+			identifier: match.alwaysTrue
+			count: 1
+			path: src/Html/Serializer.php
+
+		-
+			message: '#^Method Dskripchenko\\PhpDocx\\Html\\Serializer\:\:borderCss\(\) never returns null so it can be removed from the return type\.$#'
+			identifier: return.unusedType
+			count: 1
+			path: src/Html/Serializer.php
+
+		-
+			message: '#^Offset 0 on non\-empty\-list\<string\> on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: src/Html/StyleApplier/RunStyleApplier.php
+
+		-
+			message: '#^Instanceof between Dskripchenko\\PhpDocx\\Element\\InlineElement and Dskripchenko\\PhpDocx\\Element\\PageBreak will always evaluate to false\.$#'
+			identifier: instanceof.alwaysFalse
+			count: 2
+			path: src/Reader/BodyReader.php
+
+		-
+			message: '#^Instanceof between Dskripchenko\\PhpDocx\\Element\\ListNode and Dskripchenko\\PhpDocx\\Element\\ListNode will always evaluate to true\.$#'
+			identifier: instanceof.alwaysTrue
+			count: 1
+			path: src/Reader/BodyReader.php
+
+		-
+			message: '#^Method Dskripchenko\\PhpDocx\\Reader\\BodyReader\:\:readRunWithFieldState\(\) should return array\{inlines\: list\<Dskripchenko\\PhpDocx\\Element\\InlineElement\>, state\: string\|null, instr\: string, style\: Dskripchenko\\PhpDocx\\Style\\RunStyle\} but returns array\{inlines\: list\<Dskripchenko\\PhpDocx\\Element\\Field\|Dskripchenko\\PhpDocx\\Element\\Image\|Dskripchenko\\PhpDocx\\Element\\LineBreak\|Dskripchenko\\PhpDocx\\Element\\PageBreak\>, state\: string\|null, instr\: string, style\: Dskripchenko\\PhpDocx\\Style\\RunStyle\}\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Reader/BodyReader.php
+
+		-
+			message: '#^Parameter \#1 \$array \(list\<Dskripchenko\\PhpDocx\\Element\\InlineElement\>\) of array_values is already a list, call has no effect\.$#'
+			identifier: arrayValues.list
+			count: 1
+			path: src/Reader/BodyReader.php
+
+		-
+			message: '#^Result of \|\| is always true\.$#'
+			identifier: booleanOr.alwaysTrue
+			count: 1
+			path: src/Reader/BodyReader.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between '''' and '''' will always evaluate to true\.$#'
+			identifier: identical.alwaysTrue
+			count: 1
+			path: src/Reader/BodyReader.php
+
+		-
+			message: '#^Strict comparison using \=\=\= between array\{\} and array\{\} will always evaluate to true\.$#'
+			identifier: identical.alwaysTrue
+			count: 1
+			path: src/Reader/BodyReader.php
+
+		-
+			message: '#^Unreachable statement \- code above always terminates\.$#'
+			identifier: deadCode.unreachable
+			count: 2
+			path: src/Reader/BodyReader.php
+
+		-
+			message: '#^Instanceof between DOMElement and DOMElement will always evaluate to true\.$#'
+			identifier: instanceof.alwaysTrue
+			count: 3
+			path: src/Reader/DocxPackageReader.php
+
+		-
+			message: '#^Parameter \#1 \$xml of method Dskripchenko\\PhpDocx\\Reader\\DocxPackageReader\:\:loadXml\(\) expects string, string\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Reader/DocxPackageReader.php
+
+		-
+			message: '#^Parameter \#1 \$xml of method Dskripchenko\\PhpDocx\\Reader\\DocxPackageReader\:\:parseContentTypes\(\) expects string, string\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Reader/DocxPackageReader.php
+
+		-
+			message: '#^Parameter \#1 \$xml of method Dskripchenko\\PhpDocx\\Reader\\DocxPackageReader\:\:parseRels\(\) expects string, string\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Reader/DocxPackageReader.php
+
+		-
+			message: '#^Instanceof between DOMElement and DOMElement will always evaluate to true\.$#'
+			identifier: instanceof.alwaysTrue
+			count: 1
+			path: src/Reader/DocxReader.php
+
+		-
+			message: '#^Parameter \#1 \$byNumId of class Dskripchenko\\PhpDocx\\Reader\\NumberingDefinitions constructor expects array\<int, array\<int, array\{format\: Dskripchenko\\PhpDocx\\Element\\ListFormat, startAt\: int\}\>\>, array\<int, array\<int, array\{format\?\: Dskripchenko\\PhpDocx\\Element\\ListFormat, startAt\: int\}\>\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Reader/NumberingReader.php
+
+		-
+			message: '#^Access to undefined constant Dskripchenko\\PhpDocx\\Style\\Alignment\:\:Both\.$#'
+			identifier: classConstant.notFound
+			count: 1
+			path: src/Reader/OoxmlPropertyParser.php
+
+		-
+			message: '#^Parameter \#1 \$key of function array_key_exists expects int\|string, string\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Reader/OoxmlPropertyParser.php
+
+		-
+			message: '#^Method Dskripchenko\\PhpDocx\\Reader\\StylesResolver\:\:resolveStyleChain\(\) has parameter \$visited with no value type specified in iterable type array\.$#'
+			identifier: missingType.iterableValue
+			count: 1
+			path: src/Reader/StylesResolver.php
+
+		-
+			message: '#^Parameter \#1 \$string of function strtolower expects string, string\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Reader/ThemeResolver.php
+
+		-
+			message: '#^Ternary operator condition is always true\.$#'
+			identifier: ternary.alwaysTrue
+			count: 1
+			path: src/Reader/ThemeResolver.php
+
+		-
+			message: '#^Instanceof between DOMElement and DOMElement will always evaluate to true\.$#'
+			identifier: instanceof.alwaysTrue
+			count: 7
+			path: src/Reader/VariableDetector.php
+
+		-
+			message: '#^Instanceof between DOMElement and DOMElement will always evaluate to true\.$#'
+			identifier: instanceof.alwaysTrue
+			count: 1
+			path: src/Reader/WatermarkExtractor.php
+
+		-
+			message: '#^Offset int\<0, 2\> on array\{''%%1\.'', ''%%2\.'', ''%%3\.''\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: src/Writer/NumberingXmlBuilder.php
+
+		-
+			message: '#^Offset int\<0, 2\> on array\{''bullet''\|''decimal''\|''lowerLetter''\|''lowerRoman''\|''upperLetter''\|''upperRoman'', ''lowerLetter'', ''lowerRoman''\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: src/Writer/NumberingXmlBuilder.php
+
+		-
+			message: '#^Offset int\<0, 2\> on array\{''●'', ''○'', ''■''\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: src/Writer/NumberingXmlBuilder.php
+
+		-
+			message: '#^Parameter \$footerPartNames of method Dskripchenko\\PhpDocx\\Writer\\Word2007Writer\:\:renderContentTypes\(\) expects list\<string\>, array\<string, string\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Writer/Word2007Writer.php
+
+		-
+			message: '#^Parameter \$headerPartNames of method Dskripchenko\\PhpDocx\\Writer\\Word2007Writer\:\:renderContentTypes\(\) expects list\<string\>, array\<string, string\> given\.$#'
+			identifier: argument.type
+			count: 1
+			path: src/Writer/Word2007Writer.php
