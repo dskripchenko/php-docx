@@ -2,6 +2,19 @@ includes:
     - phpstan-baseline.neon
 
 parameters:
+    ignoreErrors:
+        # These fire inside the AddsBlockContent/AddsInlineContent traits;
+        # PHPStan attributes trait findings to whichever using class it
+        # analysed first, so a path-pinned baseline entry flaps between
+        # runs. Ignored path-independently instead.
+        -
+            message: '#^Instanceof between Dskripchenko\\PhpDocx\\Element\\BlockElement and Dskripchenko\\PhpDocx\\Element\\BlockElement will always evaluate to true\.$#'
+            identifier: instanceof.alwaysTrue
+            reportUnmatched: false
+        -
+            message: '#^Instanceof between Dskripchenko\\PhpDocx\\Element\\InlineElement and Dskripchenko\\PhpDocx\\Element\\InlineElement will always evaluate to true\.$#'
+            identifier: instanceof.alwaysTrue
+            reportUnmatched: false
     level: 8
     paths:
         - src

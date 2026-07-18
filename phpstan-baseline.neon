@@ -7,12 +7,6 @@ parameters:
 			path: src/Build/TableBuilder.php
 
 		-
-			message: '#^Instanceof between Dskripchenko\\PhpDocx\\Element\\BlockElement and Dskripchenko\\PhpDocx\\Element\\BlockElement will always evaluate to true\.$#'
-			identifier: instanceof.alwaysTrue
-			count: 1
-			path: src/Build/TableCellBuilder.php
-
-		-
 			message: '#^Instanceof between DOMAttr and DOMAttr will always evaluate to true\.$#'
 			identifier: instanceof.alwaysTrue
 			count: 1
