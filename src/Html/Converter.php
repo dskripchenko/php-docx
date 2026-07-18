@@ -52,7 +52,37 @@ final class Converter
 
     public function __construct(
         private readonly PageSetup $defaultPageSetup = new PageSetup,
+        /**
+         * Optional HTML preprocessing seam — e.g. a CSS inliner turning
+         * `<style>` blocks and classes into the inline styles this
+         * converter understands. Applied by fromHtmlWithStyles().
+         */
+        private readonly ?HtmlPreprocessor $preprocessor = null,
     ) {}
+
+    /**
+     * Like {@see fromHtml()}, but runs the HTML through the configured
+     * {@see HtmlPreprocessor} first (defaults to the CSS inliner when the
+     * optional `tijsverkoyen/css-to-inline-styles` package is installed).
+     * Use for HTML carrying `<style>` blocks or class-based styling.
+     */
+    public function fromHtmlWithStyles(
+        string $body,
+        ?string $header = null,
+        ?string $footer = null,
+        ?PageSetup $pageSetup = null,
+        ?string $watermarkText = null,
+    ): Document {
+        $pre = $this->preprocessor ?? new CssInlinerPreprocessor;
+
+        return $this->fromHtml(
+            $pre->preprocess($body),
+            $header !== null ? $pre->preprocess($header) : null,
+            $footer !== null ? $pre->preprocess($footer) : null,
+            $pageSetup,
+            $watermarkText,
+        );
+    }
 
     public function fromHtml(
         string $body,

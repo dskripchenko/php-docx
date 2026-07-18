@@ -16,7 +16,11 @@
         "ext-mbstring": "*",
         "ext-zip": "*"
     },
+    "suggest": {
+        "tijsverkoyen/css-to-inline-styles": "Enables Converter::fromHtmlWithStyles() — inlines <style> blocks and CSS classes before HTML conversion (^2.2)"
+    },
     "require-dev": {
+        "tijsverkoyen/css-to-inline-styles": "^2.2",
         "phpunit/phpunit": "^11.5",
         "phpstan/phpstan": "^2.0"
     },

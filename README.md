@@ -279,6 +279,25 @@ $writer = new Word2007Writer($styles);
 
 ---
 
+### Stylesheets and classes
+
+`fromHtml()` understands **inline styles only**. For HTML carrying
+`<style>` blocks or class-based styling, use `fromHtmlWithStyles()` —
+it first runs the document through an `HtmlPreprocessor`. The default
+implementation inlines CSS via the optional
+[`tijsverkoyen/css-to-inline-styles`](https://github.com/tijsverkoyen/CssToInlineStyles)
+package (`composer require tijsverkoyen/css-to-inline-styles`; php-docx
+itself stays zero-dependency), and you can plug your own preprocessor:
+
+```php
+use Dskripchenko\PhpDocx\Html\Converter;
+
+$doc = (new Converter)->fromHtmlWithStyles($htmlWithStyleBlocks);
+// or: new Converter(preprocessor: new MyPreprocessor)
+```
+
+---
+
 ## Programmatic builder API
 
 The `Build` namespace provides a fluent API for assembling DOCX
