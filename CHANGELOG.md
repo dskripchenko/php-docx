@@ -5,6 +5,15 @@ file. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] — 2026-07-18
+
+### Fixed
+- **PHP 8.2 support restored** — typed class constants (`const string …`,
+  a PHP 8.3+ feature) had crept into the codebase while composer.json
+  declares `"php": "^8.2"`, so the package failed to parse on PHP 8.2.
+  The constant types were removed; behaviour is unchanged. CI now runs
+  the matrix on PHP 8.2–8.4 to prevent regressions.
+
 ## [1.0.0] — 2026-05-13
 
 Initial public release.
