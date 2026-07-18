@@ -121,9 +121,6 @@ final class StylesXmlBuilder
     private function renderParagraphProperties(ParagraphStyle $s): string
     {
         $pPr = '';
-        if ($s->alignment !== Alignment::Start) {
-            $pPr .= '<w:jc w:val="'.$s->alignment->value.'"/>';
-        }
         if ($s->spaceBeforeTwips !== 0 || $s->spaceAfterTwips !== 0) {
             $attrs = [];
             if ($s->spaceBeforeTwips !== 0) {
@@ -143,6 +140,9 @@ final class StylesXmlBuilder
                 $attrs[] = 'w:right="'.$s->indentRightTwips.'"';
             }
             $pPr .= '<w:ind '.implode(' ', $attrs).'/>';
+        }
+        if ($s->alignment !== Alignment::Start) {
+            $pPr .= '<w:jc w:val="'.$s->alignment->value.'"/>';
         }
 
         if ($pPr === '') {

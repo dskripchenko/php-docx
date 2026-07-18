@@ -155,21 +155,8 @@ final class BodyXmlBuilder
         if ($headingLevel !== null && $headingLevel >= 1 && $headingLevel <= 6) {
             $pPr .= '<w:pStyle w:val="Heading'.$headingLevel.'"/>';
         }
-        if ($style->alignment !== Alignment::Start) {
-            $pPr .= '<w:jc w:val="'.$style->alignment->value.'"/>';
-        }
-        if ($style->indentLeftTwips !== 0 || $style->indentRightTwips !== 0 || $style->indentFirstLineTwips !== 0) {
-            $attrs = [];
-            if ($style->indentLeftTwips !== 0) {
-                $attrs[] = 'w:left="'.$style->indentLeftTwips.'"';
-            }
-            if ($style->indentRightTwips !== 0) {
-                $attrs[] = 'w:right="'.$style->indentRightTwips.'"';
-            }
-            if ($style->indentFirstLineTwips !== 0) {
-                $attrs[] = 'w:firstLine="'.$style->indentFirstLineTwips.'"';
-            }
-            $pPr .= '<w:ind '.implode(' ', $attrs).'/>';
+        if ($style->borders !== null) {
+            $pPr .= $this->renderBorderSet($style->borders, 'w:pBdr');
         }
         if ($style->spaceBeforeTwips !== 0 || $style->spaceAfterTwips !== 0 || $style->lineSpacingTwips !== null) {
             $attrs = [];
@@ -185,8 +172,21 @@ final class BodyXmlBuilder
             }
             $pPr .= '<w:spacing '.implode(' ', $attrs).'/>';
         }
-        if ($style->borders !== null) {
-            $pPr .= $this->renderBorderSet($style->borders, 'w:pBdr');
+        if ($style->indentLeftTwips !== 0 || $style->indentRightTwips !== 0 || $style->indentFirstLineTwips !== 0) {
+            $attrs = [];
+            if ($style->indentLeftTwips !== 0) {
+                $attrs[] = 'w:left="'.$style->indentLeftTwips.'"';
+            }
+            if ($style->indentRightTwips !== 0) {
+                $attrs[] = 'w:right="'.$style->indentRightTwips.'"';
+            }
+            if ($style->indentFirstLineTwips !== 0) {
+                $attrs[] = 'w:firstLine="'.$style->indentFirstLineTwips.'"';
+            }
+            $pPr .= '<w:ind '.implode(' ', $attrs).'/>';
+        }
+        if ($style->alignment !== Alignment::Start) {
+            $pPr .= '<w:jc w:val="'.$style->alignment->value.'"/>';
         }
 
         if ($pPr === '') {

@@ -5,6 +5,25 @@ file. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- **Two ECMA-376 violations in the writer's output**, surfaced by the new
+  schema-validation pass: paragraph properties emitted children out of
+  the CT_PPrBase order (`jc` before `spacing`/`ind`, `pBdr` last), and
+  `<w:pgMar>` omitted the required `w:gutter` attribute. Word tolerated
+  both; strict consumers don't. Guarded by string-level order tests plus
+  the real XSD validation in CI.
+
+### Added
+- **Conformance CI** (`conformance` workflow, badge in the README):
+  every push generates a reference document and validates it externally —
+  every WordprocessingML part against the official ECMA-376 Transitional
+  XSD schemas (xmllint; schemas fetched from ecma-international.org,
+  SHA-pinned), plus a consumer smoke: LibreOffice headless DOCX→PDF
+  conversion and python-docx content extraction.
+- PHP 8.5 added to the CI test matrix.
+
 ## [1.0.2] — 2026-07-18
 
 ### Fixed

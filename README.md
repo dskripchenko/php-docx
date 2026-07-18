@@ -1,6 +1,7 @@
 # dskripchenko/php-docx
 
 [![Tests](https://img.shields.io/github/actions/workflow/status/dskripchenko/php-docx/tests.yml?branch=main&label=tests&logo=github)](https://github.com/dskripchenko/php-docx/actions/workflows/tests.yml)
+[![Conformance](https://img.shields.io/github/actions/workflow/status/dskripchenko/php-docx/conformance.yml?branch=main&label=ECMA-376%20%C2%B7%20LibreOffice&logo=github)](https://github.com/dskripchenko/php-docx/actions/workflows/conformance.yml)
 [![Latest Version](https://img.shields.io/packagist/v/dskripchenko/php-docx?logo=packagist&logoColor=white)](https://packagist.org/packages/dskripchenko/php-docx)
 [![Total Downloads](https://img.shields.io/packagist/dt/dskripchenko/php-docx)](https://packagist.org/packages/dskripchenko/php-docx)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
@@ -618,6 +619,31 @@ HTML (inline styles)
 The same `Document` AST is shared by HTML conversion, programmatic
 construction and DOCX reading — every entry/exit point operates on
 typed value-objects.
+
+---
+
+## Conformance
+
+Every push validates the writer's output externally, not just against
+our own reader:
+
+- **ECMA-376 Transitional XSD** — every WordprocessingML part
+  (document, styles, numbering, headers, footers) is validated with
+  xmllint against the official schemas (fetched from
+  ecma-international.org, SHA-pinned);
+- **LibreOffice headless** converts the reference document to PDF —
+  a real-world consumer, not a mock;
+- **python-docx** opens it and extracts the expected content — an
+  independent reader implementation.
+
+Reproduce locally:
+
+```bash
+bash scripts/fetch-ooxml-schemas.sh
+php scripts/conformance/generate.php
+bash scripts/conformance/xsd-check.sh
+bash scripts/conformance/consumer-smoke.sh   # needs LibreOffice + python-docx
+```
 
 ---
 

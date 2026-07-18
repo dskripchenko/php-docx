@@ -1,0 +1,97 @@
+name: conformance
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  xsd-validation:
+    runs-on: ubuntu-latest
+    name: OOXML schema validation (ECMA-376)
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: dom, mbstring, zip
+          coverage: none
+
+      - name: Install xmllint
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq libxml2-utils
+
+      - name: Install dependencies (locked)
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Cache OOXML schemas
+        uses: actions/cache@v4
+        with:
+          path: .cache/ooxml-xsd
+          key: ooxml-xsd-ecma376-4-5ed
+
+      - name: Fetch schemas
+        run: bash scripts/fetch-ooxml-schemas.sh
+
+      - name: Generate reference document
+        run: php scripts/conformance/generate.php
+
+      - name: Validate against ECMA-376 Transitional XSD
+        run: bash scripts/conformance/xsd-check.sh
+
+      - name: Publish job summary
+        if: always()
+        run: cat build/conformance/summary-xsd.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload reference and reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: conformance-xsd
+          path: build/conformance/
+
+  consumer-smoke:
+    runs-on: ubuntu-latest
+    name: Consumer smoke (LibreOffice + python-docx)
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: dom, mbstring, zip
+          coverage: none
+
+      - name: Install LibreOffice and python-docx
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends libreoffice-writer
+          pip3 install --quiet python-docx
+
+      - name: Install dependencies (locked)
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Generate reference document
+        run: php scripts/conformance/generate.php
+
+      - name: Run consumer smoke
+        run: bash scripts/conformance/consumer-smoke.sh
+
+      - name: Publish job summary
+        if: always()
+        run: cat build/conformance/summary-consumers.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload converted output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: conformance-consumers
+          path: build/conformance/
