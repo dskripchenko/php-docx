@@ -5,6 +5,23 @@ file. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] — 2026-07-18
+
+### Added
+- **`Converter::fromHtmlWithStyles()`** — resolves `<style>` blocks and
+  CSS classes into the inline styles the converter understands before
+  parsing, via the optional suggested `tijsverkoyen/css-to-inline-styles`
+  package. New `HtmlPreprocessor` seam on the `Converter` constructor
+  lets callers plug any preprocessing (the CSS inliner is the default).
+- **Reader-fidelity harness on an external corpus** (`reader-fidelity`
+  CI job, dashboard in `docs/READER-FIDELITY.md`): documents produced by
+  PHPWord, python-docx, LibreOffice and php-docx itself are read to
+  HTML and checked non-circularly — python-docx ground-truth text both
+  directions, re-emitted DOCX validated against the ECMA-376 schemas,
+  and a round-trip fixed-point stability check.
+- Companion positioning in the README: php-docx as the HTML layer next
+  to PHPWord, with a verified file-boundary recipe.
+
 ## [1.1.0] — 2026-07-18
 
 ### Fixed
