@@ -77,6 +77,14 @@ custom XML parts.
 
 ---
 
+## Examples
+
+Runnable scripts with committed output live in
+[`examples/`](examples/README.md): HTML → DOCX with headers and
+watermarks, the fluent builder, DOCX → HTML import, template-variable
+detection and substitution, round-trip stability, CSS inlining, and the
+PHPWord bridge.
+
 ## php-docx and PHPWord
 
 PHPWord is the established library for *building* Word documents in PHP.
