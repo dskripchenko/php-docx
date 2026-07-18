@@ -1,19 +1,7 @@
 parameters:
 	ignoreErrors:
 		-
-			message: '#^Instanceof between Dskripchenko\\PhpDocx\\Element\\BlockElement and Dskripchenko\\PhpDocx\\Element\\BlockElement will always evaluate to true\.$#'
-			identifier: instanceof.alwaysTrue
-			count: 1
-			path: src/Build/DocumentBuilder.php
-
-		-
-			message: '#^Instanceof between Dskripchenko\\PhpDocx\\Element\\BlockElement and Dskripchenko\\PhpDocx\\Element\\BlockElement will always evaluate to true\.$#'
-			identifier: instanceof.alwaysTrue
-			count: 1
-			path: src/Build/SectionContentBuilder.php
-
-		-
-			message: '#^Parameter \#1 \$texts of method Dskripchenko\\PhpDocx\\Build\\TableRowBuilder\:\:cells\(\) expects list\<string\>, array\<mixed\> given\.$#'
+			message: '#^Parameter \#1 \$texts of method Dskripchenko\\PhpDocx\\Build\\TableRowBuilder\:\:cells\(\) expects list\<string\>, list\<object\|string\> given\.$#'
 			identifier: argument.type
 			count: 2
 			path: src/Build/TableBuilder.php

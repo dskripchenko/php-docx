@@ -20,11 +20,11 @@ use Dskripchenko\PhpDocx\Element\ListFormat;
  */
 final class NumberingXmlBuilder
 {
-    public const int BULLET_NUM_ID = 1;
+    public const BULLET_NUM_ID = 1;
 
-    public const int ORDERED_NUM_ID = 2;
+    public const ORDERED_NUM_ID = 2;
 
-    public const int MAX_LEVELS = 3;
+    public const MAX_LEVELS = 3;
 
     /** @var array<string, int> Map "format._startAt" → numId */
     private array $instanceMap = [];

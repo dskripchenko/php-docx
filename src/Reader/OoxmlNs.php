@@ -16,23 +16,23 @@ namespace Dskripchenko\PhpDocx\Reader;
  */
 final class OoxmlNs
 {
-    public const string W = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+    public const W = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
 
-    public const string R = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
+    public const R = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
 
-    public const string A = 'http://schemas.openxmlformats.org/drawingml/2006/main';
+    public const A = 'http://schemas.openxmlformats.org/drawingml/2006/main';
 
-    public const string PIC = 'http://schemas.openxmlformats.org/drawingml/2006/picture';
+    public const PIC = 'http://schemas.openxmlformats.org/drawingml/2006/picture';
 
-    public const string WP = 'http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing';
+    public const WP = 'http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing';
 
-    public const string V = 'urn:schemas-microsoft-com:vml';
+    public const V = 'urn:schemas-microsoft-com:vml';
 
-    public const string O = 'urn:schemas-microsoft-com:office:office';
+    public const O = 'urn:schemas-microsoft-com:office:office';
 
-    public const string M = 'http://schemas.openxmlformats.org/officeDocument/2006/math';
+    public const M = 'http://schemas.openxmlformats.org/officeDocument/2006/math';
 
-    public const string XML = 'http://www.w3.org/XML/1998/namespace';
+    public const XML = 'http://www.w3.org/XML/1998/namespace';
 
     /**
      * Найти все child-элементы конкретного NS+localName в указанной родительской ноде

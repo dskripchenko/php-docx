@@ -13,7 +13,7 @@ use PHPUnit\Framework\TestCase;
 
 final class FigureTest extends TestCase
 {
-    private const string TINY_PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+    private const TINY_PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
 
     #[Test]
     public function figcaption_renders_as_italic_centered_paragraph_after_image(): void

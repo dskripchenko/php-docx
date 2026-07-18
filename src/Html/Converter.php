@@ -48,7 +48,7 @@ use Dskripchenko\PhpDocx\Style\TableStyle;
 final class Converter
 {
     /** Теги, которые превращаются в BlockElement или производят их split. */
-    private const array BLOCK_TAGS = ['p', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'table', 'hr', 'ul', 'ol', 'blockquote', 'pagebreak', 'pre', 'dl', 'figure', 'section', 'article', 'aside', 'header', 'footer', 'nav', 'main'];
+    private const BLOCK_TAGS = ['p', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'table', 'hr', 'ul', 'ol', 'blockquote', 'pagebreak', 'pre', 'dl', 'figure', 'section', 'article', 'aside', 'header', 'footer', 'nav', 'main'];
 
     public function __construct(
         private readonly PageSetup $defaultPageSetup = new PageSetup,

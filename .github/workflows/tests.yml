@@ -29,8 +29,8 @@ jobs:
           extensions: dom, mbstring, zip
           coverage: none
 
-      - name: Install dependencies
-        run: composer update --prefer-dist --no-interaction --no-progress
+      - name: Install dependencies (locked)
+        run: composer install --prefer-dist --no-interaction --no-progress
 
       - name: Run tests
         run: vendor/bin/phpunit
@@ -50,8 +50,8 @@ jobs:
           extensions: dom, mbstring, zip
           coverage: none
 
-      - name: Install dependencies
-        run: composer update --prefer-dist --no-interaction --no-progress
+      - name: Install dependencies (locked)
+        run: composer install --prefer-dist --no-interaction --no-progress
 
       - name: Run PHPStan
         run: composer stan

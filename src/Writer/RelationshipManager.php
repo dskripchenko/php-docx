@@ -32,19 +32,19 @@ final class RelationshipManager
     /** @var array<string, string>  extension → content-type (для Content_Types.xml Default) */
     private array $contentTypeExtensions = [];
 
-    public const string TYPE_IMAGE = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/image';
+    public const TYPE_IMAGE = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/image';
 
-    public const string TYPE_HYPERLINK = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink';
+    public const TYPE_HYPERLINK = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink';
 
-    public const string TYPE_HEADER = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/header';
+    public const TYPE_HEADER = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/header';
 
-    public const string TYPE_FOOTER = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer';
+    public const TYPE_FOOTER = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer';
 
-    public const string TYPE_NUMBERING = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering';
+    public const TYPE_NUMBERING = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering';
 
-    public const string TYPE_STYLES = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles';
+    public const TYPE_STYLES = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles';
 
-    public const string TYPE_SETTINGS = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings';
+    public const TYPE_SETTINGS = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings';
 
     /**
      * Регистрирует image и возвращает rId для использования в `<a:blip r:embed="..."/>`.
