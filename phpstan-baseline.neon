@@ -109,24 +109,6 @@ parameters:
 			path: src/Reader/DocxPackageReader.php
 
 		-
-			message: '#^Parameter \#1 \$xml of method Dskripchenko\\PhpDocx\\Reader\\DocxPackageReader\:\:loadXml\(\) expects string, string\|null given\.$#'
-			identifier: argument.type
-			count: 1
-			path: src/Reader/DocxPackageReader.php
-
-		-
-			message: '#^Parameter \#1 \$xml of method Dskripchenko\\PhpDocx\\Reader\\DocxPackageReader\:\:parseContentTypes\(\) expects string, string\|null given\.$#'
-			identifier: argument.type
-			count: 1
-			path: src/Reader/DocxPackageReader.php
-
-		-
-			message: '#^Parameter \#1 \$xml of method Dskripchenko\\PhpDocx\\Reader\\DocxPackageReader\:\:parseRels\(\) expects string, string\|null given\.$#'
-			identifier: argument.type
-			count: 1
-			path: src/Reader/DocxPackageReader.php
-
-		-
 			message: '#^Instanceof between DOMElement and DOMElement will always evaluate to true\.$#'
 			identifier: instanceof.alwaysTrue
 			count: 1
@@ -137,12 +119,6 @@ parameters:
 			identifier: argument.type
 			count: 1
 			path: src/Reader/NumberingReader.php
-
-		-
-			message: '#^Access to undefined constant Dskripchenko\\PhpDocx\\Style\\Alignment\:\:Both\.$#'
-			identifier: classConstant.notFound
-			count: 1
-			path: src/Reader/OoxmlPropertyParser.php
 
 		-
 			message: '#^Parameter \#1 \$key of function array_key_exists expects int\|string, string\|null given\.$#'

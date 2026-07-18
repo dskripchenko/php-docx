@@ -155,6 +155,9 @@ final class DocxPackageReader
      *
      * @throws DocxException если required=true и entry отсутствует.
      */
+    /**
+     * @phpstan-return ($required is true ? string : ?string)
+     */
     private function readEntry(\ZipArchive $zip, string $entryName, bool $required): ?string
     {
         $bytes = $zip->getFromName($entryName);

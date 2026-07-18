@@ -199,7 +199,8 @@ final class OoxmlPropertyParser
         return match ($val) {
             'center' => Alignment::Center,
             'right', 'end' => Alignment::End,
-            'both', 'distribute' => Alignment::Both,
+            'both' => Alignment::Justify,
+            'distribute' => Alignment::Distribute,
             default => Alignment::Start,
         };
     }

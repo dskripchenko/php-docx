@@ -5,6 +5,25 @@ file. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- **Reader crashed on justified text.** `parseAlignment()` referenced the
+  non-existent `Alignment::Both` enum case, so any document containing
+  `<w:jc w:val="both"/>` — the default alignment of most formal
+  documents, including this library's own output — threw an
+  undefined-constant Error. `both` now maps to `Alignment::Justify` and
+  `distribute` to `Alignment::Distribute`; every alignment case is
+  covered by a write → read round-trip test.
+
+### Changed
+- PHPStan baseline reviewed finding-by-finding (46 → 42 raw errors): the
+  alignment crash above was hiding in it as `classConstant.notFound`;
+  the survivors are DOM-stub and by-ref-closure false positives plus
+  defensive branches, documented as such. `readEntry()` gained a
+  conditional return type so required entries no longer report as
+  nullable.
+
 ## [1.0.1] — 2026-07-18
 
 ### Fixed
