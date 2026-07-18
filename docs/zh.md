@@ -1,5 +1,13 @@
 # dskripchenko/php-docx
 
+[![Tests](https://img.shields.io/github/actions/workflow/status/dskripchenko/php-docx/tests.yml?branch=main&label=tests&logo=github)](https://github.com/dskripchenko/php-docx/actions/workflows/tests.yml)
+[![Conformance](https://img.shields.io/github/actions/workflow/status/dskripchenko/php-docx/conformance.yml?branch=main&label=ECMA-376%20%C2%B7%20LibreOffice&logo=github)](https://github.com/dskripchenko/php-docx/actions/workflows/conformance.yml)
+[![Latest Version](https://img.shields.io/packagist/v/dskripchenko/php-docx?logo=packagist&logoColor=white)](https://packagist.org/packages/dskripchenko/php-docx)
+[![Total Downloads](https://img.shields.io/packagist/dt/dskripchenko/php-docx)](https://packagist.org/packages/dskripchenko/php-docx)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](../LICENSE)
+[![PHP](https://img.shields.io/badge/PHP-8.2%2B-purple.svg)](https://www.php.net)
+
+
 纯 PHP 实现的 DOCX（Office Open XML）库：**HTML ↔ DOCX 双向转换**、
 **流式编程构造器**、**变量检测**、**往返安全的 AST**。除标准 PHP 扩展
 外，无任何外部依赖。
