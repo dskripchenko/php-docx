@@ -95,3 +95,63 @@ jobs:
         with:
           name: conformance-consumers
           path: build/conformance/
+
+  reader-fidelity:
+    runs-on: ubuntu-latest
+    name: Reader fidelity (external corpus)
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: dom, mbstring, zip
+          coverage: none
+
+      - name: Install external producers and validators
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends libreoffice-writer libxml2-utils
+          pip3 install --quiet python-docx
+
+      - name: Install dependencies (locked)
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Install corpus producers (PHPWord)
+        run: composer install --working-dir scripts/corpus --prefer-dist --no-interaction --no-progress
+
+      - name: Cache OOXML schemas
+        uses: actions/cache@v4
+        with:
+          path: .cache/ooxml-xsd
+          key: ooxml-xsd-ecma376-4-5ed
+
+      - name: Fetch schemas
+        run: bash scripts/fetch-ooxml-schemas.sh
+
+      - name: Generate corpus
+        run: |
+          php scripts/corpus/generate-phpword.php
+          python3 scripts/corpus/generate-pydocx.py
+          bash scripts/corpus/generate-libreoffice.sh
+          php scripts/corpus/generate-own.php
+
+      - name: Run reader-fidelity harness
+        run: php scripts/conformance/reader-fidelity.php
+
+      - name: Publish job summary
+        if: always()
+        run: cat build/conformance/summary-fidelity.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload corpus and reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reader-fidelity
+          path: |
+            build/corpus/
+            build/conformance/summary-fidelity.md
+            docs/READER-FIDELITY.md

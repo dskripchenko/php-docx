@@ -7,10 +7,13 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![PHP](https://img.shields.io/badge/PHP-8.2%2B-purple.svg)](https://www.php.net)
 
-Pure-PHP DOCX (Office Open XML) library: **bidirectional HTML ↔ DOCX**
-conversion, **fluent programmatic builder**, **variable detection**,
-**round-trip-safe AST**. No external dependencies beyond standard PHP
-extensions.
+**The HTML layer for your PHPWord pipeline — and a standalone
+DOCX ↔ HTML round-trip library.** Pure-PHP: read arbitrary Word /
+Google Docs / LibreOffice / PHPWord documents into a typed AST, turn
+them into clean HTML, convert HTML into DOCX, detect template variables
+(MERGEFIELD, content controls, `{{placeholders}}`). Works next to
+[PHPWord](https://github.com/PHPOffice/PHPWord), not instead of it. No
+external dependencies beyond standard PHP extensions.
 
 **Read this in other languages:**
 **English** ·
@@ -23,6 +26,7 @@ extensions.
 ## Table of contents
 
 - [Features](#features)
+- [php-docx and PHPWord](#php-docx-and-phpword)
 - [Requirements](#requirements)
 - [Installation](#installation)
 - [Quick start](#quick-start)
@@ -70,6 +74,55 @@ extensions.
 Tracked changes, comments, embedded charts, OLE objects,
 footnotes/endnotes, SmartArt, math equations (OMML), form fields,
 custom XML parts.
+
+---
+
+## php-docx and PHPWord
+
+PHPWord is the established library for *building* Word documents in PHP.
+php-docx does not replace it — it adds the two things PHPWord is weakest
+at: **reading arbitrary DOCX** (with a full style cascade) and
+**HTML in both directions**. Use both, each for what it does best.
+
+What php-docx adds next to PHPWord:
+
+- reading real-world DOCX (Word, Google Docs, LibreOffice, PHPWord
+  output) into a typed AST — verified continuously on an external
+  corpus, see the [reader-fidelity dashboard](docs/READER-FIDELITY.md);
+- DOCX → clean HTML with inline styles (style cascade, theme colours,
+  numbering, merged cells);
+- HTML → DOCX;
+- template-variable detection (MERGEFIELD, SDT content controls,
+  `{{x}}` / `${x}` / `%x%` patterns).
+
+What php-docx deliberately does **not** do (PHPWord or other tools do):
+ODF/RTF/PDF output, tracked changes, comments, footnotes/endnotes,
+charts, OMML math, form fields.
+
+**Zero-integration recipe — works today, no bridge required.** PHPWord
+writes the file, php-docx reads the bytes:
+
+```php
+use PhpOffice\PhpWord\PhpWord;
+use PhpOffice\PhpWord\IOFactory;
+use Dskripchenko\PhpDocx\Reader\DocxReader;
+use Dskripchenko\PhpDocx\Html\Serializer;
+
+$phpWord = new PhpWord;
+$section = $phpWord->addSection();
+$section->addTitle('Quarterly report', 1);
+$section->addText('Built with PHPWord, exported to HTML by php-docx.');
+
+$tmp = tempnam(sys_get_temp_dir(), 'docx');
+IOFactory::createWriter($phpWord, 'Word2007')->save($tmp);
+
+$document = (new DocxReader)->read((string) file_get_contents($tmp));
+$html = (new Serializer)->serialize($document)->bodyHtml;
+```
+
+A typed object-level bridge (`PhpWordBridge::toHtml($phpWord)`, HTML
+import into PHPWord objects, reading straight into PHPWord models) ships
+separately as `dskripchenko/php-docx-phpword`.
 
 ---
 

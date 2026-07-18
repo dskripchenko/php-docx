@@ -8,3 +8,4 @@
 .idea/
 .vscode/
 /.cache
+/scripts/corpus/vendor

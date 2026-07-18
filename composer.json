@@ -1,9 +1,9 @@
 {
     "name": "dskripchenko/php-docx",
-    "description": "Pure-PHP DOCX (OOXML) library: bidirectional HTML ↔ DOCX conversion, full styles cascade, tables with vMerge/gridSpan, lists, images, headers/footers, watermarks, fields, bookmarks. No external dependencies.",
+    "description": "The HTML layer for PHPWord pipelines and a standalone DOCX-HTML round-trip library: read arbitrary Word/Google Docs/LibreOffice/PHPWord documents to a typed AST and clean HTML, convert HTML to DOCX, detect MERGEFIELD/content-control/{{placeholder}} template variables. Pure PHP, zero dependencies.",
     "type": "library",
     "license": "MIT",
-    "keywords": ["docx", "ooxml", "word", "html-to-docx", "docx-to-html", "docx-parser", "docx-reader", "docx-writer"],
+    "keywords": ["docx", "ooxml", "word", "html-to-docx", "docx-to-html", "docx-parser", "docx-reader", "docx-writer", "phpword-alternative", "phpword-html", "mail-merge", "mergefield", "template"],
     "authors": [
         {
             "name": "Denis Skripchenko",

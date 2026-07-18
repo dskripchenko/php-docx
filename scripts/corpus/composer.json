@@ -1,0 +1,15 @@
+{
+    "name": "dskripchenko/php-docx-corpus",
+    "description": "Local-only corpus generators for the reader-fidelity harness. Generates DOCX files with independent producers (PHPWord et al.).",
+    "type": "project",
+    "license": "MIT",
+    "require": {
+        "php": "^8.2",
+        "phpoffice/phpword": "^1.3"
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}
