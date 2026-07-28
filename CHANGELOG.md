@@ -5,6 +5,22 @@ file. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.1] - 2026-07-28
+
+### Fixed
+- Writer: отрицательный `indentFirstLineTwips` (hanging-отступ) писался
+  `w:firstLine="-N"` — невалидно по ECMA-376 (ST_TwipsMeasure unsigned);
+  теперь `w:hanging="N"`. Найдено corpus-харнессом на реальных
+  документах Google Docs / Word.
+
+### Added
+- Ручной corpus заполнен реальными документами: Google Docs,
+  Word Online, Word desktop (Windows + Mac) — все 4 проходят полный
+  reader-fidelity цикл.
+- Харнесс: сравнение текста без пробельных швов (ложные lost на
+  границах ячеек/рунов); ground truth исключает кэшированные значения
+  полей (fldChar separate..end и fldSimple) — PAGE-кэш не текст.
+
 ## [1.2.0] — 2026-07-18
 
 ### Added

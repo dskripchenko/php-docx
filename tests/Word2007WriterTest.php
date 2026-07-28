@@ -9,6 +9,9 @@ use Dskripchenko\PhpDocx\Section;
 use Dskripchenko\PhpDocx\Style\Orientation;
 use Dskripchenko\PhpDocx\Style\PageSetup;
 use Dskripchenko\PhpDocx\Style\PaperSize;
+use Dskripchenko\PhpDocx\Element\Paragraph;
+use Dskripchenko\PhpDocx\Element\Run;
+use Dskripchenko\PhpDocx\Style\ParagraphStyle;
 use Dskripchenko\PhpDocx\Writer\Word2007Writer;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -100,5 +103,32 @@ final class Word2007WriterTest extends TestCase
         // A4 landscape: w=16839 (swapped), orient=landscape
         self::assertStringContainsString('w:w="16839"', $xml);
         self::assertStringContainsString('w:orient="landscape"', $xml);
+    }
+
+    #[Test]
+    public function it_writes_negative_first_line_indent_as_hanging(): void
+    {
+        // ST_TwipsMeasure — unsigned: отрицательный firstLine (наша модель
+        // hanging-отступа) обязан уехать атрибутом w:hanging, иначе
+        // document.xml не проходит ECMA-376 XSD (найдено corpus-харнессом
+        // на реальных документах Google Docs / Word).
+        $doc = new Document(new Section(body: [
+            new Paragraph([new Run('hang')], new ParagraphStyle(indentFirstLineTwips: -360)),
+        ]));
+        $bytes = (new Word2007Writer)->write($doc);
+
+        $tmp = tempnam(sys_get_temp_dir(), 'docx-test-');
+        file_put_contents($tmp, $bytes);
+        try {
+            $zip = new \ZipArchive;
+            $zip->open($tmp);
+            $xml = (string) $zip->getFromName('word/document.xml');
+            $zip->close();
+        } finally {
+            @unlink($tmp);
+        }
+
+        self::assertStringContainsString('w:hanging="360"', $xml);
+        self::assertStringNotContainsString('w:firstLine="-', $xml);
     }
 }

@@ -60,9 +60,12 @@ function groundTruth(string $file): array
 
 function normalizeText(string $html): string
 {
+    // Сравнение БЕЗ пробелов: и границы тегов («…д. 27</p><p>ИНН…»), и
+    // inline-склейки рунов давали ложные lost из-за расхождений в
+    // пробельных швах между python-docx и HTML-сериализацией.
     $text = html_entity_decode(strip_tags($html), ENT_QUOTES | ENT_HTML5, 'UTF-8');
 
-    return (string) preg_replace('/\s+/u', ' ', $text);
+    return (string) preg_replace('/\s+/u', '', $text);
 }
 
 /**
@@ -75,7 +78,7 @@ function missingLines(array $lines, string $haystack): array
 
     return array_values(array_filter(
         $lines,
-        fn (string $line) => ! str_contains($norm, (string) preg_replace('/\s+/u', ' ', $line)),
+        fn (string $line) => ! str_contains($norm, (string) preg_replace('/\s+/u', '', $line)),
     ));
 }
 

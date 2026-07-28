@@ -34,6 +34,10 @@ Per document, four non-circular checks:
 | phpword-lists.docx | ✅ | ✅ 8/8 | ✅ | ✅ | ✅ | — |
 | phpword-table.docx | ✅ | ✅ 10/10 | ✅ | ✅ | ✅ | — |
 | pydocx-features.docx | ✅ | ✅ 15/15 | ✅ | ✅ | ✅ | — |
+| report-images-headings-ru.docx | ✅ | ✅ 10/10 | ✅ | ✅ | ✅ | — |
+| insurance-policy-mac.docx | ✅ | ✅ 33/33 | ✅ | ✅ | ✅ | — |
+| template-images-ru-win.docx | ✅ | ✅ 106/106 | ✅ | ✅ | ✅ | — |
+| plain-document.docx | ✅ | ✅ 18/18 | ✅ | ✅ | ✅ | — |
 
 Out-of-scope content (tracked changes, comments, footnotes, OMML,
 charts) is intentionally dropped by the reader — the honest feature

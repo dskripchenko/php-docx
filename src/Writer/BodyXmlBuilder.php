@@ -180,8 +180,13 @@ final class BodyXmlBuilder
             if ($style->indentRightTwips !== 0) {
                 $attrs[] = 'w:right="'.$style->indentRightTwips.'"';
             }
-            if ($style->indentFirstLineTwips !== 0) {
+            if ($style->indentFirstLineTwips > 0) {
                 $attrs[] = 'w:firstLine="'.$style->indentFirstLineTwips.'"';
+            } elseif ($style->indentFirstLineTwips < 0) {
+                // ST_TwipsMeasure unsigned: отрицательный firstLine (наша
+                // модель hanging-отступа, см. OoxmlPropertyParser) пишется
+                // атрибутом w:hanging с модулем значения.
+                $attrs[] = 'w:hanging="'.(-$style->indentFirstLineTwips).'"';
             }
             $pPr .= '<w:ind '.implode(' ', $attrs).'/>';
         }
