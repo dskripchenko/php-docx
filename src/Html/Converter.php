@@ -977,8 +977,14 @@ final class Converter
             return null;
         }
 
-        $widthPx = (int) ($node->getAttribute('width') ?: 0);
-        $heightPx = (int) ($node->getAttribute('height') ?: 0);
+        // CSS-размер важнее атрибута: он несёт единицу. Атрибут её не несёт
+        // (`width="96"` — всегда css-пиксели), поэтому автор, которому нужны
+        // пункты, задать их атрибутом не может.
+        $css = InlineStyleParser::parse($node->getAttribute('style'));
+        $widthPx = self::cssLengthToPx($css['width'] ?? null)
+            ?? (int) ($node->getAttribute('width') ?: 0);
+        $heightPx = self::cssLengthToPx($css['height'] ?? null)
+            ?? (int) ($node->getAttribute('height') ?: 0);
         if ($widthPx <= 0 || $heightPx <= 0) {
             // Без размеров — пытаемся прочитать из binary.
             $info = @getimagesizefromstring($binary);
@@ -997,6 +1003,21 @@ final class Converter
             heightPx: $heightPx,
             altText: $node->getAttribute('alt') ?: null,
         );
+    }
+
+    /**
+     * CSS-длина → css-пиксели (та единица, в которой Image::fromPx ждёт
+     * размер). Null для процентов, auto и мусора.
+     */
+    private static function cssLengthToPx(?string $value): ?int
+    {
+        $twips = LengthParser::parseTwips($value);
+        if ($twips === null || $twips <= 0) {
+            return null;
+        }
+
+        // 1px = 15 twips (96 dpi).
+        return max(1, (int) round($twips / 15));
     }
 
     private function loadHtml(string $html): \DOMDocument
