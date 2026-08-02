@@ -243,6 +243,7 @@ final class StylesResolver
             superscript: (bool) ($arr['superscript'] ?? false),
             subscript: (bool) ($arr['subscript'] ?? false),
             highlight: $arr['highlight'] ?? null,
+            letterSpacingTwips: isset($arr['letterSpacingTwips']) ? (int) $arr['letterSpacingTwips'] : null,
         );
     }
 
@@ -263,6 +264,7 @@ final class StylesResolver
             lineSpacingTwips: isset($arr['lineSpacingTwips']) ? (int) $arr['lineSpacingTwips'] : null,
             pageBreakAfter: false,
             borders: $borders instanceof BorderSet ? $borders : null,
+            shadingColor: $arr['shadingColor'] ?? null,
         );
     }
 
@@ -286,6 +288,9 @@ final class StylesResolver
         }
         if ($style->highlight !== null) {
             $out['highlight'] = $style->highlight;
+        }
+        if ($style->letterSpacingTwips !== null) {
+            $out['letterSpacingTwips'] = $style->letterSpacingTwips;
         }
         $out['bold'] = $style->bold;
         $out['italic'] = $style->italic;

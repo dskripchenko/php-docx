@@ -158,6 +158,11 @@ final class BodyXmlBuilder
         if ($style->borders !== null) {
             $pPr .= $this->renderBorderSet($style->borders, 'w:pBdr');
         }
+        // Порядок элементов внутри w:pPr фиксирован схемой (CT_PPrBase —
+        // sequence, в отличие от w:rPr): shd стоит между pBdr и spacing.
+        if ($style->shadingColor !== null) {
+            $pPr .= '<w:shd w:val="clear" w:color="auto" w:fill="'.$style->shadingColor.'"/>';
+        }
         if ($style->spaceBeforeTwips !== 0 || $style->spaceAfterTwips !== 0 || $style->lineSpacingTwips !== null) {
             $attrs = [];
             if ($style->spaceBeforeTwips !== 0) {
@@ -285,6 +290,11 @@ final class BodyXmlBuilder
         }
         if ($s->color !== null) {
             $rPr .= '<w:color w:val="'.$s->color.'"/>';
+        }
+        if ($s->letterSpacingTwips !== null) {
+            // Разрядка символов. Тёзка одноимённого элемента в w:pPr, но это
+            // другое свойство: там межстрочные интервалы, здесь межбуквенный.
+            $rPr .= '<w:spacing w:val="'.$s->letterSpacingTwips.'"/>';
         }
         if ($s->sizeHalfPoints !== null) {
             $rPr .= '<w:sz w:val="'.$s->sizeHalfPoints.'"/><w:szCs w:val="'.$s->sizeHalfPoints.'"/>';

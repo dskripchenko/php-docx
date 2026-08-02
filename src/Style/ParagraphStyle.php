@@ -22,6 +22,8 @@ final readonly class ParagraphStyle
         public ?int $lineSpacingTwips = null,
         public bool $pageBreakAfter = false,
         public ?BorderSet $borders = null,
+        /** Заливка абзаца (`<w:shd>` в `w:pPr`) — hex без `#`, например `0f766e`. */
+        public ?string $shadingColor = null,
     ) {}
 
     public function isEmpty(): bool
@@ -34,7 +36,8 @@ final readonly class ParagraphStyle
             && $this->indentFirstLineTwips === 0
             && $this->lineSpacingTwips === null
             && ! $this->pageBreakAfter
-            && $this->borders === null;
+            && $this->borders === null
+            && $this->shadingColor === null;
     }
 
     /**
@@ -51,6 +54,7 @@ final readonly class ParagraphStyle
         ?int $lineSpacingTwips = null,
         ?bool $pageBreakAfter = null,
         ?BorderSet $borders = null,
+        ?string $shadingColor = null,
     ): self {
         return new self(
             alignment: $alignment ?? $this->alignment,
@@ -62,6 +66,7 @@ final readonly class ParagraphStyle
             lineSpacingTwips: $lineSpacingTwips ?? $this->lineSpacingTwips,
             pageBreakAfter: $pageBreakAfter ?? $this->pageBreakAfter,
             borders: $borders ?? $this->borders,
+            shadingColor: $shadingColor ?? $this->shadingColor,
         );
     }
 }

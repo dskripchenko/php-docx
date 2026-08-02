@@ -192,6 +192,13 @@ final class Converter
         $localPara = ParagraphStyleApplier::apply($paraStyle, $css);
         $localRun = RunStyleApplier::apply($runStyle, $css);
 
+        if (in_array($tag, ['p', 'div'], true)) {
+            $marker = $this->blockByClass($node, $localRun, $localPara);
+            if ($marker !== null) {
+                return $marker;
+            }
+        }
+
         return match ($tag) {
             'p', 'div' => $this->parseParagraph($node, $localRun, $localPara, headingLevel: null),
             'h1', 'h2', 'h3', 'h4', 'h5', 'h6' =>
@@ -392,6 +399,14 @@ final class Converter
             'q' => $local->withItalic(),
             default => $local,
         };
+
+        // Маркер классом (`<span class="page-number">`) — вторая запись того
+        // же, что custom-теги ниже. Так поля пишут HTML-редакторы: свой тег
+        // они не сохранят, а класс на span переживает любую чистку разметки.
+        $byClass = $this->fieldByClass($node, $marked);
+        if ($byClass !== null) {
+            return [$byClass];
+        }
 
         return match ($tag) {
             'br' => [new LineBreak],
@@ -803,6 +818,42 @@ final class Converter
         }
 
         return new TableCell($blocks, $cellStyle);
+    }
+
+    /**
+     * Классы разметки для полей: `page-number` / `page-total`. Возвращает
+     * `null`, если у элемента нет такого класса.
+     */
+    private function fieldByClass(\DOMElement $node, RunStyle $style): ?Field
+    {
+        return match (true) {
+            $this->hasClass($node, 'page-number') => Field::page($style),
+            $this->hasClass($node, 'page-total') => Field::pageTotal($style),
+            default => null,
+        };
+    }
+
+    /**
+     * Блочный элемент с классом-маркером: `page-break` даёт разрыв,
+     * `page-number`/`page-total` — абзац с полем. Null, если класса нет.
+     *
+     * @return list<BlockElement>|null
+     */
+    private function blockByClass(\DOMElement $node, RunStyle $runStyle, ParagraphStyle $paraStyle): ?array
+    {
+        if ($this->hasClass($node, 'page-break')) {
+            return [new PageBreak];
+        }
+        $field = $this->fieldByClass($node, $runStyle);
+
+        return $field !== null ? [new Paragraph([$field], $paraStyle)] : null;
+    }
+
+    private function hasClass(\DOMElement $node, string $class): bool
+    {
+        $attr = strtolower($node->getAttribute('class'));
+
+        return in_array($class, preg_split('/\s+/', trim($attr)) ?: [], true);
     }
 
     /**

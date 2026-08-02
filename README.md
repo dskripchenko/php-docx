@@ -247,6 +247,7 @@ CSS-inliner upstream if needed.
 | Tables | `<table>`, `<thead>/<tbody>`, `<tr>`, `<th>/<td>`, `<colgroup>/<col>`, `<caption>`, `colspan`, `rowspan` |
 | Lists | `<ul>`, `<ol type="a/A/i/I" start="N">`, `<li value="N">`, `<dl>/<dt>/<dd>` |
 | Custom tags | `<page-number/>`, `<page-total/>`, `<current-date format="...">`, `<page-break>` |
+| Marker classes | `class="page-number"`, `class="page-total"`, `class="page-break"` — same fields, spelled so an HTML sanitizer keeps them |
 | Layout | `<hr>`, `<br>`, `<figure>/<figcaption>` |
 
 ### Inline styles
@@ -254,9 +255,9 @@ CSS-inliner upstream if needed.
 The converter understands `style="…"` properties:
 
 - Run-level: `font-family`, `font-size`, `font-weight`, `font-style`,
-  `text-decoration`, `color`, `background-color`
+  `text-decoration`, `color`, `background-color`, `letter-spacing`
 - Paragraph-level: `text-align`, `margin`, `text-indent`, `line-height`,
-  `border`, `padding`
+  `border`, `padding`, `background-color`
 - Table-level: `width`, `border`, `border-collapse`
 - Cell-level: `width`, `padding`, `border`, `vertical-align`,
   `background-color`

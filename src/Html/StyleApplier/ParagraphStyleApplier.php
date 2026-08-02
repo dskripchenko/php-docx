@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Dskripchenko\PhpDocx\Html\StyleApplier;
 
+use Dskripchenko\PhpDocx\Html\ColorParser;
 use Dskripchenko\PhpDocx\Html\LengthParser;
 use Dskripchenko\PhpDocx\Style\Alignment;
 use Dskripchenko\PhpDocx\Style\ParagraphStyle;
@@ -18,6 +19,7 @@ use Dskripchenko\PhpDocx\Style\ParagraphStyle;
  *  - margin-left/right → indentLeft/Right
  *  - line-height (multiplier или absolute)
  *  - page-break-after: always
+ *  - background-color / background → заливка абзаца (`<w:shd>`)
  */
 final class ParagraphStyleApplier
 {
@@ -34,6 +36,7 @@ final class ParagraphStyleApplier
         $indentFirst = $base->indentFirstLineTwips;
         $lineSpacing = $base->lineSpacingTwips;
         $pageBreakAfter = $base->pageBreakAfter;
+        $shading = $base->shadingColor;
 
         foreach ($properties as $prop => $value) {
             switch ($prop) {
@@ -101,6 +104,16 @@ final class ParagraphStyleApplier
 
                     break;
 
+                case 'background-color':
+                case 'background':
+                    // Shorthand `background: #fff` без картинки = цвет заливки.
+                    $hex = ColorParser::parse($value);
+                    if ($hex !== null) {
+                        $shading = $hex;
+                    }
+
+                    break;
+
                 case 'page-break-after':
                 case 'break-after':
                     $pageBreakAfter = in_array(strtolower(trim($value)), ['always', 'page'], true);
@@ -119,6 +132,7 @@ final class ParagraphStyleApplier
             lineSpacingTwips: $lineSpacing,
             pageBreakAfter: $pageBreakAfter,
             borders: $base->borders,
+            shadingColor: $shading,
         );
     }
 

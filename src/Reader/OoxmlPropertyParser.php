@@ -30,7 +30,7 @@ final class OoxmlPropertyParser
      *
      * Ключи (если присутствуют): sizeHalfPoints, color, fontFamily,
      * bold, italic, underline, strikethrough, superscript, subscript,
-     * highlight.
+     * highlight, backgroundColor, letterSpacingTwips.
      *
      * @return array<string, mixed>
      */
@@ -56,6 +56,9 @@ final class OoxmlPropertyParser
                 'rFonts' => $out['fontFamily'] = $this->parseFontFamily($node),
                 'highlight' => $out['highlight'] = OoxmlNs::wVal($node),
                 'shd' => $out['backgroundColor'] = $this->parseShdFill($node),
+                // Тёзка pPr/spacing (межстрочный интервал), но здесь это
+                // разрядка символов в twips.
+                'spacing' => $out['letterSpacingTwips'] = $this->parseInt($node),
                 default => null,
             };
         }
@@ -68,8 +71,8 @@ final class OoxmlPropertyParser
      *
      * Ключи: alignment, spaceBeforeTwips, spaceAfterTwips,
      * indentLeftTwips, indentRightTwips, indentFirstLineTwips,
-     * lineSpacingTwips, pageBreakAfter, borders, pStyleId,
-     * numId, ilvl.
+     * lineSpacingTwips, pageBreakAfter, borders, shadingColor,
+     * pStyleId, numId, ilvl.
      *
      * @return array<string, mixed>
      */
@@ -91,6 +94,7 @@ final class OoxmlPropertyParser
                 'spacing' => $this->parseSpacing($node, $out),
                 'pageBreakBefore' => $out['pageBreakBefore'] = OoxmlNs::boolToggle($node),
                 'pBdr' => $out['borders'] = $this->parseBorders($node),
+                'shd' => $out['shadingColor'] = $this->parseShdFill($node),
                 'numPr' => $this->parseNumPr($node, $out),
                 default => null,
             };

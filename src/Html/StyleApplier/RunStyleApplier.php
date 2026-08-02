@@ -17,6 +17,7 @@ use Dskripchenko\PhpDocx\Style\RunStyle;
  *  - font-style (`italic`/`oblique`)
  *  - text-decoration (`underline`/`line-through`)
  *  - vertical-align (`sub`/`super`)
+ *  - letter-spacing (разрядка)
  */
 final class RunStyleApplier
 {
@@ -35,6 +36,7 @@ final class RunStyleApplier
         $strikethrough = $base->strikethrough;
         $superscript = $base->superscript;
         $subscript = $base->subscript;
+        $letterSpacing = $base->letterSpacingTwips;
 
         foreach ($properties as $prop => $value) {
             switch ($prop) {
@@ -97,6 +99,19 @@ final class RunStyleApplier
 
                     break;
 
+                case 'letter-spacing':
+                    if (strtolower(trim($value)) === 'normal') {
+                        $letterSpacing = null;
+
+                        break;
+                    }
+                    $t = LengthParser::parseTwips($value);
+                    if ($t !== null) {
+                        $letterSpacing = $t;
+                    }
+
+                    break;
+
                 case 'vertical-align':
                     $val = strtolower(trim($value));
                     if ($val === 'super') {
@@ -122,6 +137,10 @@ final class RunStyleApplier
             strikethrough: $strikethrough,
             superscript: $superscript,
             subscript: $subscript,
+            // highlight CSS не задаёт — переносим из базы, иначе любой
+            // inline-стиль на вложенном теге стирал подсветку родителя.
+            highlight: $base->highlight,
+            letterSpacingTwips: $letterSpacing,
         );
     }
 

@@ -208,6 +208,9 @@ final class Serializer
         if ($s->sizeHalfPoints !== null) {
             $cssParts[] = 'font-size:'.$this->halfPtToPt($s->sizeHalfPoints).'pt';
         }
+        if ($s->letterSpacingTwips !== null) {
+            $cssParts[] = 'letter-spacing:'.$this->twipsToPt($s->letterSpacingTwips).'pt';
+        }
         if ($cssParts !== []) {
             $open = '<span style="'.implode(';', $cssParts).'">'.$open;
             $close .= '</span>';
@@ -414,6 +417,9 @@ final class Serializer
         }
         if ($s->spaceAfterTwips !== 0) {
             $parts[] = 'margin-bottom:'.$this->twipsToPt($s->spaceAfterTwips).'pt';
+        }
+        if ($s->shadingColor !== null) {
+            $parts[] = 'background-color:#'.$s->shadingColor;
         }
         if ($s->borders !== null) {
             foreach ($this->borderSetCss($s->borders) as $cssLine) {

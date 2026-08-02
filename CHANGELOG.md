@@ -5,6 +5,28 @@ file. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] — 2026-08-02
+
+### Added
+- **Заливка абзаца** — `ParagraphStyle::$shadingColor` → `<w:shd>` в
+  `w:pPr`. Раньше залить можно было только ячейку таблицы, из-за чего
+  цветная плашка на ширину абзаца требовала таблицы ради одной строки.
+  CSS `background-color` / `background` на блочном элементе теперь
+  доезжает до DOCX; читается обратно и сериализуется в HTML.
+- **Разрядка символов** — `RunStyle::$letterSpacingTwips` → `<w:spacing>`
+  в `w:rPr` (отрицательная сжимает). Ввод — CSS `letter-spacing`, чтение
+  и обратная сериализация на месте.
+- **Поля и разрывы, размеченные классом**: `<span class="page-number">`,
+  `page-total`, `<div class="page-break">` понимаются наравне с
+  собственными тегами `<page-number/>` и `<pagebreak/>`. HTML-редакторы
+  чистят разметку по whitelist'у и незнакомый тег теряют, а класс на
+  `span` переживает чистку — и, в отличие от блочного варианта, поле
+  остаётся в строке текста, а не разрывает абзац.
+
+### Fixed
+- `RunStyleApplier` терял `highlight` родителя: любой inline-стиль на
+  вложенном теге снимал подсветку с `<mark>`.
+
 ## [1.2.1] - 2026-07-28
 
 ### Fixed

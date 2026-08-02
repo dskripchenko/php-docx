@@ -25,6 +25,8 @@ final readonly class RunStyle
         public bool $subscript = false,
         /** Named highlight color: `yellow`, `green`, `cyan`, `magenta`, ... — для `<w:highlight>` (16 предопределённых). */
         public ?string $highlight = null,
+        /** Разрядка между символами в twips (`<w:spacing>` в `w:rPr`); отрицательная сжимает. */
+        public ?int $letterSpacingTwips = null,
     ) {}
 
     public static function fromPt(
@@ -98,6 +100,11 @@ final readonly class RunStyle
         return $this->copy(sizeHalfPoints: $halfPts);
     }
 
+    public function withLetterSpacingTwips(int $twips): self
+    {
+        return $this->copy(letterSpacingTwips: $twips);
+    }
+
     private function copy(
         ?int $sizeHalfPoints = null,
         ?string $color = null,
@@ -110,6 +117,7 @@ final readonly class RunStyle
         ?bool $superscript = null,
         ?bool $subscript = null,
         ?string $highlight = null,
+        ?int $letterSpacingTwips = null,
     ): self {
         return new self(
             sizeHalfPoints: $sizeHalfPoints ?? $this->sizeHalfPoints,
@@ -123,6 +131,7 @@ final readonly class RunStyle
             superscript: $superscript ?? $this->superscript,
             subscript: $subscript ?? $this->subscript,
             highlight: $highlight ?? $this->highlight,
+            letterSpacingTwips: $letterSpacingTwips ?? $this->letterSpacingTwips,
         );
     }
 
@@ -133,6 +142,7 @@ final readonly class RunStyle
             && $this->backgroundColor === null
             && $this->fontFamily === null
             && $this->highlight === null
+            && $this->letterSpacingTwips === null
             && ! $this->bold && ! $this->italic && ! $this->underline
             && ! $this->strikethrough && ! $this->superscript && ! $this->subscript;
     }
