@@ -134,6 +134,7 @@ final class ImageReader
             'jpg', 'jpeg' => ImageFormat::Jpeg,
             'gif' => ImageFormat::Gif,
             'bmp' => ImageFormat::Bmp,
+            'tif', 'tiff' => ImageFormat::Tiff,
             default => null,
         };
         if ($byExt !== null) {
@@ -151,6 +152,10 @@ final class ImageReader
         }
         if (str_starts_with($bytes, 'BM')) {
             return ImageFormat::Bmp;
+        }
+        // TIFF: little-endian (II*\0) или big-endian (MM\0*).
+        if (str_starts_with($bytes, "II\x2A\x00") || str_starts_with($bytes, "MM\x00\x2A")) {
+            return ImageFormat::Tiff;
         }
 
         return null;
