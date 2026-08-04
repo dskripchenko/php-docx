@@ -21,6 +21,13 @@ final readonly class Image implements InlineElement, BlockElement
         public int $widthEmu,
         public int $heightEmu,
         public ?string $altText = null,
+        /**
+         * Вертикальное смещение плавающего объекта относительно точки
+         * привязки, EMU. Отрицательное — объект нарисован ВЫШЕ своего абзаца
+         * и налезает на предыдущий текст: так Word ставит печати и подписи
+         * поверх готового блока. Ноль — обычная картинка в потоке.
+         */
+        public int $offsetYEmu = 0,
     ) {}
 
     public static function fromPx(

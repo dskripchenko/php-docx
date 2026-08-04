@@ -53,6 +53,16 @@ final class ImageReader
             }
         }
 
+        // Смещение по вертикали — только у плавающего объекта (wp:anchor).
+        $offsetYEmu = 0;
+        $positionV = OoxmlNs::firstChild($container, OoxmlNs::WP, 'positionV');
+        if ($positionV !== null) {
+            $posOffset = OoxmlNs::firstChild($positionV, OoxmlNs::WP, 'posOffset');
+            if ($posOffset !== null && preg_match('/^-?\d+$/', trim($posOffset->textContent)) === 1) {
+                $offsetYEmu = (int) trim($posOffset->textContent);
+            }
+        }
+
         $docPr = OoxmlNs::firstChild($container, OoxmlNs::WP, 'docPr');
         $altText = null;
         if ($docPr !== null) {
@@ -122,6 +132,7 @@ final class ImageReader
             widthEmu: $widthEmu,
             heightEmu: $heightEmu,
             altText: $altText,
+            offsetYEmu: $offsetYEmu,
         );
     }
 

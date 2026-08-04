@@ -5,6 +5,15 @@ file. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0] — 2026-08-04
+
+### Added
+- **Смещение плавающего объекта** — `Element\Image::$offsetYEmu` из
+  `wp:positionV/wp:posOffset`, в HTML-сериализации — `margin-top` со знаком.
+  Word ставит печати и подписи поверх готового текста, задавая отрицательное
+  смещение относительно точки привязки; без него объект вставал отдельной
+  строкой под абзацем и раздвигал документ.
+
 ## [1.5.0] — 2026-08-04
 
 ### Added

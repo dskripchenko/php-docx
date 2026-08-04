@@ -289,7 +289,17 @@ final class Serializer
         // на admin-storage URL.
         $src = $this->dataUrl($img->binary, $img->format);
 
-        return '<img src="'.$src.'" alt="'.$alt.'" width="'.$widthPx.'" height="'.$heightPx.'" data-media="'.$filename.'"/>';
+        // Смещение якоря — в CSS-отступ. Отрицательный поднимает объект над
+        // предыдущим текстом ровно так, как это делает Word: печать и подпись
+        // ставятся поверх готового блока, а не отдельной строкой под ним.
+        $style = '';
+        if ($img->offsetYEmu !== 0) {
+            $offsetPt = round($img->offsetYEmu / 12700, 2);
+            $style = ' style="margin-top:'.$offsetPt.'pt"';
+        }
+
+        return '<img src="'.$src.'" alt="'.$alt.'" width="'.$widthPx.'" height="'.$heightPx.'"'
+            .$style.' data-media="'.$filename.'"/>';
     }
 
     private function dataUrl(string $bytes, ImageFormat $format): string
