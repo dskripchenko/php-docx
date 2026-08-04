@@ -52,6 +52,12 @@ use Dskripchenko\PhpDocx\Style\VerticalAlign;
  */
 final class Serializer
 {
+    /** Одинарный межстрочный интервал в двадцатых долях пункта (ECMA-376). */
+    private const int SINGLE_LINE_TWIPS = 240;
+
+    /** Во сколько кеглей обходится одинарный интервал у типичного шрифта. */
+    private const float SINGLE_LINE_EM = 1.2;
+
     /** @var array<string, string> filename → binary */
     private array $media = [];
 
@@ -429,6 +435,28 @@ final class Serializer
         }
         if ($s->indentFirstLineTwips !== 0) {
             $parts[] = 'text-indent:'.$this->twipsToPt($s->indentFirstLineTwips).'pt';
+        }
+        if ($s->lineSpacingTwips !== null && $s->lineSpacingTwips > 0) {
+            $rule = $s->lineSpacingRule ?? 'auto';
+
+            if ($rule !== 'auto') {
+                // `exact`/`atLeast` задают высоту строки прямо — переносим как
+                // есть.
+                $parts[] = 'line-height:'.$this->twipsToPt($s->lineSpacingTwips).'pt';
+            } elseif ($s->lineSpacingTwips !== self::SINGLE_LINE_TWIPS) {
+                // `auto` — доля ОДИНАРНОГО интервала, а одинарный у Word это
+                // естественная высота строки шрифта (примерно 1.2 кегля), а не
+                // сам кегль. CSS-множитель считается от кегля, поэтому прямой
+                // перенос 240 → 1.0 сжимал строки против оригинала: на эталоне
+                // это сразу увело последнюю страницу почти в пустоту.
+                //
+                // Одинарный интервал не переносим вовсе: у движка он свой и
+                // ближе к типографской норме, чем любое наше приближение.
+                $parts[] = 'line-height:'.round(
+                    $s->lineSpacingTwips / self::SINGLE_LINE_TWIPS * self::SINGLE_LINE_EM,
+                    3,
+                );
+            }
         }
         if ($s->spaceBeforeTwips !== 0) {
             $parts[] = 'margin-top:'.$this->twipsToPt($s->spaceBeforeTwips).'pt';

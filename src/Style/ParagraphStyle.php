@@ -20,6 +20,11 @@ final readonly class ParagraphStyle
         public int $indentRightTwips = 0,
         public int $indentFirstLineTwips = 0,
         public ?int $lineSpacingTwips = null,
+        /**
+         * Как понимать `lineSpacingTwips`: `auto` — доля от одинарного
+         * интервала (240 = один), `exact`/`atLeast` — высота строки.
+         */
+        public ?string $lineSpacingRule = null,
         public bool $pageBreakAfter = false,
         public ?BorderSet $borders = null,
         /** Заливка абзаца (`<w:shd>` в `w:pPr`) — hex без `#`, например `0f766e`. */
@@ -52,6 +57,7 @@ final readonly class ParagraphStyle
         ?int $indentRightTwips = null,
         ?int $indentFirstLineTwips = null,
         ?int $lineSpacingTwips = null,
+        ?string $lineSpacingRule = null,
         ?bool $pageBreakAfter = null,
         ?BorderSet $borders = null,
         ?string $shadingColor = null,
@@ -64,6 +70,7 @@ final readonly class ParagraphStyle
             indentRightTwips: $indentRightTwips ?? $this->indentRightTwips,
             indentFirstLineTwips: $indentFirstLineTwips ?? $this->indentFirstLineTwips,
             lineSpacingTwips: $lineSpacingTwips ?? $this->lineSpacingTwips,
+            lineSpacingRule: $lineSpacingRule ?? $this->lineSpacingRule,
             pageBreakAfter: $pageBreakAfter ?? $this->pageBreakAfter,
             borders: $borders ?? $this->borders,
             shadingColor: $shadingColor ?? $this->shadingColor,

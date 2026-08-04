@@ -304,6 +304,7 @@ final class StylesResolver
             indentRightTwips: (int) ($arr['indentRightTwips'] ?? 0),
             indentFirstLineTwips: (int) ($arr['indentFirstLineTwips'] ?? 0),
             lineSpacingTwips: isset($arr['lineSpacingTwips']) ? (int) $arr['lineSpacingTwips'] : null,
+            lineSpacingRule: isset($arr['lineSpacingRule']) ? (string) $arr['lineSpacingRule'] : null,
             pageBreakAfter: false,
             borders: $borders instanceof BorderSet ? $borders : null,
             shadingColor: $arr['shadingColor'] ?? null,

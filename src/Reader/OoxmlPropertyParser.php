@@ -248,6 +248,11 @@ final class OoxmlPropertyParser
             $line = (int) $sp->getAttributeNS(OoxmlNs::W, 'line');
             if ($line > 0) {
                 $out['lineSpacingTwips'] = $line;
+                // Без правила число ничего не значит: при `auto` это доля от
+                // одинарного интервала (240 = один), при `exact`/`atLeast` —
+                // высота строки в двадцатых долях пункта.
+                $rule = $sp->getAttributeNS(OoxmlNs::W, 'lineRule');
+                $out['lineSpacingRule'] = $rule !== '' ? $rule : 'auto';
             }
         }
     }
