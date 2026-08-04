@@ -30,6 +30,29 @@ final class StylesResolverTest extends TestCase
     }
 
     #[Test]
+    public function default_style_overrides_doc_defaults(): void
+    {
+        // Каскад ECMA-376: docDefaults → стиль с w:default="1" → именованный →
+        // прямое форматирование. Документы сплошь и рядом задают в docDefaults
+        // одно, а в стиле по умолчанию — другое, и побеждать должно второе.
+        //
+        // Без этого слоя эталонный полис распухал с пяти страниц до семи:
+        // docDefaults обещал 8pt после каждого абзаца, а стиль по умолчанию
+        // сбрасывал их в ноль — и лишние 8pt получал каждый из 246 абзацев.
+        $stylesXml = $this->loadStylesXml(
+            '<w:docDefaults><w:pPrDefault><w:pPr><w:spacing w:after="160"/></w:pPr></w:pPrDefault></w:docDefaults>'.
+            '<w:style w:type="paragraph" w:default="1" w:styleId="a">'.
+            '<w:pPr><w:spacing w:after="0"/></w:pPr></w:style>'
+        );
+        $resolver = new StylesResolver($stylesXml);
+
+        $p = $this->firstParagraph($this->wrapDocument('<w:p><w:r><w:t>x</w:t></w:r></w:p>'));
+        [$paragraphStyle] = $resolver->effectiveStylesForParagraph($p);
+
+        self::assertSame(0, $paragraphStyle->spaceAfterTwips);
+    }
+
+    #[Test]
     public function w_b_val_0_disables_bold_from_inherited_style(): void
     {
         // docDefaults говорят bold:true; direct <w:b w:val="0"/> отключает.

@@ -38,6 +38,21 @@ final class StylesResolver
     /** @var array<string, mixed> docDefaults pPr partial */
     private array $docDefaultsPPr = [];
 
+    /**
+     * Стиль, помеченный `w:default="1"` — тот, что Word применяет к абзацам
+     * без явного `pStyle`.
+     *
+     * Пропустить его нельзя: документы сплошь и рядом задают в docDefaults
+     * одно, а в стиле по умолчанию — другое, и побеждать должно второе. В
+     * эталонном полисе docDefaults обещал 8pt после каждого абзаца, а стиль
+     * по умолчанию сбрасывал их в ноль; без этого слоя каждый из 246 абзацев
+     * получал лишние 8pt, и документ распухал с пяти страниц до семи.
+     */
+    private ?string $defaultParagraphStyleId = null;
+
+    /** То же для рунов: `w:type="character" w:default="1"`. */
+    private ?string $defaultCharacterStyleId = null;
+
     /** @var array<string, array{type: string, basedOn: ?string, pPr: array<string, mixed>, rPr: array<string, mixed>}> */
     private array $stylesById = [];
 
@@ -90,8 +105,22 @@ final class StylesResolver
         $pPrRPrEl = $pPrEl !== null ? OoxmlNs::firstChild($pPrEl, OoxmlNs::W, 'rPr') : null;
         $pPrRPr = $this->parser->parseRunProperties($pPrRPrEl);
 
-        $finalPPr = array_merge($this->docDefaultsPPr, $namedPPr, $direct);
-        $finalRPr = array_merge($this->docDefaultsRPr, $namedRPr, $pPrRPr);
+        // Порядок каскада по ECMA-376: docDefaults → стиль по умолчанию →
+        // именованный стиль → прямое форматирование. Каждый следующий слой
+        // перекрывает предыдущий.
+        $defaultPPr = [];
+        $defaultRPr = [];
+        if ($this->defaultParagraphStyleId !== null) {
+            $resolvedDefault = $this->resolveStyleChain($this->defaultParagraphStyleId);
+            $defaultPPr = $resolvedDefault['pPr'];
+            $defaultRPr = $resolvedDefault['rPr'];
+        }
+        if ($this->defaultCharacterStyleId !== null) {
+            $defaultRPr = array_merge($defaultRPr, $this->resolveStyleChain($this->defaultCharacterStyleId)['rPr']);
+        }
+
+        $finalPPr = array_merge($this->docDefaultsPPr, $defaultPPr, $namedPPr, $direct);
+        $finalRPr = array_merge($this->docDefaultsRPr, $defaultRPr, $namedRPr, $pPrRPr);
 
         return [
             $this->arrayToParagraphStyle($finalPPr),
@@ -182,6 +211,14 @@ final class StylesResolver
             $basedOn = $basedOnEl !== null ? OoxmlNs::wVal($basedOnEl) : null;
             $pPrEl = OoxmlNs::firstChild($styleEl, OoxmlNs::W, 'pPr');
             $rPrEl = OoxmlNs::firstChild($styleEl, OoxmlNs::W, 'rPr');
+
+            if ($styleEl->getAttributeNS(OoxmlNs::W, 'default') === '1') {
+                if ($type === 'paragraph') {
+                    $this->defaultParagraphStyleId ??= $id;
+                } elseif ($type === 'character') {
+                    $this->defaultCharacterStyleId ??= $id;
+                }
+            }
 
             $this->stylesById[$id] = [
                 'type' => $type,
