@@ -24,6 +24,16 @@ final readonly class ImportedDocument
         public string $bodyHtml,
         public ?string $headerHtml = null,
         public ?string $footerHtml = null,
+        /**
+         * Колонтитулы первой страницы, если документ их задаёт отдельно.
+         *
+         * Word держит их отдельными частями, и в них живёт то, что на первой
+         * странице выглядит иначе: шапка с логотипом, титульный блок. Ридер их
+         * читал, а сериализатор отдавал только колонтитул по умолчанию — и
+         * логотип пропадал по дороге, хотя в AST был.
+         */
+        public ?string $firstHeaderHtml = null,
+        public ?string $firstFooterHtml = null,
         public ?string $watermarkText = null,
         public PageSetup $pageSettings = new PageSetup,
         public array $variables = [],

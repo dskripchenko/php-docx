@@ -5,6 +5,16 @@ file. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] — 2026-08-04
+
+### Added
+- **Колонтитулы первой страницы в HTML-импорте** —
+  `ImportedDocument::$firstHeaderHtml` / `$firstFooterHtml`. Ридер их читал и
+  клал в AST, а сериализатор отдавал только колонтитул по умолчанию: шапка с
+  логотипом, которую Word держит отдельной частью документа, пропадала по
+  дороге. В эталонном полисе так терялся логотип страховщика на первой
+  странице.
+
 ## [1.4.1] — 2026-08-04
 
 ### Fixed

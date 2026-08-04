@@ -73,11 +73,19 @@ final class Serializer
         $footerHtml = $document->section->footer !== []
             ? $this->renderBlocks($document->section->footer)
             : null;
+        $firstHeaderHtml = $document->section->firstHeader !== []
+            ? $this->renderBlocks($document->section->firstHeader)
+            : null;
+        $firstFooterHtml = $document->section->firstFooter !== []
+            ? $this->renderBlocks($document->section->firstFooter)
+            : null;
 
         return new ImportedDocument(
             bodyHtml: $bodyHtml,
             headerHtml: $headerHtml,
             footerHtml: $footerHtml,
+            firstHeaderHtml: $firstHeaderHtml,
+            firstFooterHtml: $firstFooterHtml,
             watermarkText: $document->watermarkText,
             pageSettings: $document->section->pageSetup,
             variables: $variables,
