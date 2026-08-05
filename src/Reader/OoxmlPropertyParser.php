@@ -101,6 +101,7 @@ final class OoxmlPropertyParser
                 'ind' => $this->parseIndent($node, $out),
                 'spacing' => $this->parseSpacing($node, $out),
                 'pageBreakBefore' => $out['pageBreakBefore'] = OoxmlNs::boolToggle($node),
+                'keepNext' => $out['keepWithNext'] = OoxmlNs::boolToggle($node),
                 'pBdr' => $out['borders'] = $this->parseBorders($node),
                 'shd' => $out['shadingColor'] = $this->parseShdFill($node),
                 'numPr' => $this->parseNumPr($node, $out),

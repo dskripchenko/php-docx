@@ -308,6 +308,7 @@ final class StylesResolver
             lineSpacingTwips: isset($arr['lineSpacingTwips']) ? (int) $arr['lineSpacingTwips'] : null,
             lineSpacingRule: isset($arr['lineSpacingRule']) ? (string) $arr['lineSpacingRule'] : null,
             pageBreakAfter: false,
+            keepWithNext: (bool) ($arr['keepWithNext'] ?? false),
             borders: $borders instanceof BorderSet ? $borders : null,
             shadingColor: $arr['shadingColor'] ?? null,
         );

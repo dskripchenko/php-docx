@@ -478,6 +478,10 @@ final class Serializer
         if ($s->shadingColor !== null) {
             $parts[] = 'background-color:#'.$s->shadingColor;
         }
+        if ($s->keepWithNext) {
+            // Стандартное CSS-свойство: «не разрывать после этого блока».
+            $parts[] = 'break-after:avoid';
+        }
         if ($s->borders !== null) {
             foreach ($this->borderSetCss($s->borders) as $cssLine) {
                 $parts[] = $cssLine;

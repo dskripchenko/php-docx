@@ -5,6 +5,17 @@ file. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.11.0] — 2026-08-05
+
+### Added
+- **`w:keepNext` is read and serialized** — `ParagraphStyle::$keepWithNext`,
+  emitted to HTML as `break-after: avoid`. A section heading must not be left
+  as the last line of a page; Word moves it to the next page together with
+  what follows.
+
+  Known gap: a list item (`<li>`) does not yet carry its paragraph style, so a
+  heading formatted as a numbered list item loses the property on the way.
+
 ## [1.10.0] — 2026-08-05
 
 ### Fixed

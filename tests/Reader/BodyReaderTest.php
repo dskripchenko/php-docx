@@ -298,4 +298,20 @@ final class BodyReaderTest extends TestCase
         self::assertFalse($p->children[0]->style->smallCaps);
         self::assertTrue($p->children[1]->style->smallCaps);
     }
+
+    #[Test]
+    public function keep_next_reaches_the_paragraph_style(): void
+    {
+        // Заголовок раздела не должен оставаться последней строкой страницы.
+        // Без этого свойства должностная инструкция расходилась с оригиналом
+        // уже на первой странице: Word уносил заголовок вместе с таблицей.
+        $body = $this->loadBody(
+            '<w:p><w:pPr><w:keepNext/></w:pPr><w:r><w:t>1. Требования</w:t></w:r></w:p>'
+            .'<w:p><w:r><w:t>обычный абзац</w:t></w:r></w:p>'
+        );
+        $blocks = (new BodyReader)->read($body);
+
+        self::assertTrue($blocks[0]->style->keepWithNext);
+        self::assertFalse($blocks[1]->style->keepWithNext);
+    }
 }

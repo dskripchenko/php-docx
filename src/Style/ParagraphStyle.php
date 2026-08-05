@@ -26,6 +26,14 @@ final readonly class ParagraphStyle
          */
         public ?string $lineSpacingRule = null,
         public bool $pageBreakAfter = false,
+        /**
+         * `w:keepNext` — «не отрывать от следующего абзаца».
+         *
+         * Заголовок раздела не должен оставаться последней строкой страницы:
+         * если следом за ним ничего не помещается, Word уносит на новую
+         * страницу оба.
+         */
+        public bool $keepWithNext = false,
         public ?BorderSet $borders = null,
         /** Заливка абзаца (`<w:shd>` в `w:pPr`) — hex без `#`, например `0f766e`. */
         public ?string $shadingColor = null,
@@ -41,6 +49,7 @@ final readonly class ParagraphStyle
             && $this->indentFirstLineTwips === 0
             && $this->lineSpacingTwips === null
             && ! $this->pageBreakAfter
+            && ! $this->keepWithNext
             && $this->borders === null
             && $this->shadingColor === null;
     }
@@ -59,6 +68,7 @@ final readonly class ParagraphStyle
         ?int $lineSpacingTwips = null,
         ?string $lineSpacingRule = null,
         ?bool $pageBreakAfter = null,
+        ?bool $keepWithNext = null,
         ?BorderSet $borders = null,
         ?string $shadingColor = null,
     ): self {
@@ -72,6 +82,7 @@ final readonly class ParagraphStyle
             lineSpacingTwips: $lineSpacingTwips ?? $this->lineSpacingTwips,
             lineSpacingRule: $lineSpacingRule ?? $this->lineSpacingRule,
             pageBreakAfter: $pageBreakAfter ?? $this->pageBreakAfter,
+            keepWithNext: $keepWithNext ?? $this->keepWithNext,
             borders: $borders ?? $this->borders,
             shadingColor: $shadingColor ?? $this->shadingColor,
         );
