@@ -239,4 +239,42 @@ final class BodyReaderTest extends TestCase
 
         return $text;
     }
+
+    #[Test]
+    public function complex_script_properties_do_not_style_cyrillic(): void
+    {
+        // `w:bCs`/`w:iCs`/`w:szCs` описывают начертание и размер для СЛОЖНЫХ
+        // письменностей — арабской, ивритской, индийских. Кириллицу и латиницу
+        // Word такими рунами рисует обычным текстом. Пока их принимали за
+        // обычные `b`/`i`/`sz`, заявление страхователя с `<w:bCs/>` на каждом
+        // руне печаталось жирным целиком.
+        $body = $this->loadBody(
+            '<w:p><w:r><w:rPr><w:bCs/><w:iCs/><w:szCs w:val="40"/><w:sz w:val="20"/></w:rPr>'
+            .'<w:t>Прошу СПАО</w:t></w:r></w:p>'
+        );
+        $blocks = (new BodyReader)->read($body);
+
+        /** @var Paragraph $p */
+        $p = $blocks[0];
+        /** @var Run $run */
+        $run = $p->children[0];
+
+        self::assertNotTrue($run->style->bold, 'bCs — не жирный для кириллицы');
+        self::assertNotTrue($run->style->italic, 'iCs — не курсив для кириллицы');
+        self::assertSame(20, $run->style->sizeHalfPoints, 'размер берётся из sz, а не из szCs');
+    }
+
+    #[Test]
+    public function plain_bold_still_applies(): void
+    {
+        $body = $this->loadBody('<w:p><w:r><w:rPr><w:b/></w:rPr><w:t>жирный</w:t></w:r></w:p>');
+        $blocks = (new BodyReader)->read($body);
+
+        /** @var Paragraph $p */
+        $p = $blocks[0];
+        /** @var Run $run */
+        $run = $p->children[0];
+
+        self::assertTrue($run->style->bold);
+    }
 }

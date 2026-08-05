@@ -46,13 +46,19 @@ final class OoxmlPropertyParser
                 continue;
             }
             match ($node->localName) {
-                'b', 'bCs' => $out['bold'] = OoxmlNs::boolToggle($node),
-                'i', 'iCs' => $out['italic'] = OoxmlNs::boolToggle($node),
+                // `bCs`/`iCs`/`szCs` описывают начертание и размер для СЛОЖНЫХ
+                // письменностей (арабской, ивритской, индийских). К латинице
+                // и кириллице они не применяются: Word такой текст рисует
+                // обычным. Пока их принимали за обычные `b`/`i`/`sz`, документ
+                // с `<w:bCs/>` на каждом руне печатался жирным целиком —
+                // именно так выглядело заявление страхователя.
+                'b' => $out['bold'] = OoxmlNs::boolToggle($node),
+                'i' => $out['italic'] = OoxmlNs::boolToggle($node),
                 'u' => $out['underline'] = $this->parseUnderline($node),
                 'strike', 'dstrike' => $out['strikethrough'] = OoxmlNs::boolToggle($node),
                 'vertAlign' => $this->parseVertAlign($node, $out),
                 'color' => $out['color'] = $this->parseColor($node),
-                'sz', 'szCs' => $out['sizeHalfPoints'] = $this->parseInt($node),
+                'sz' => $out['sizeHalfPoints'] = $this->parseInt($node),
                 'rFonts' => $out['fontFamily'] = $this->parseFontFamily($node),
                 'highlight' => $out['highlight'] = OoxmlNs::wVal($node),
                 'shd' => $out['backgroundColor'] = $this->parseShdFill($node),
