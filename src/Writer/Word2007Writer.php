@@ -278,6 +278,16 @@ final class Word2007Writer
             .'</Types>';
     }
 
+    /** Пустой абзац, если XML не заканчивается абзацем (иначе — ничего). */
+    private function trailingParagraph(string $xml): string
+    {
+        if ($xml === '' || str_ends_with($xml, '</w:p>') || str_ends_with($xml, '<w:p/>')) {
+            return '';
+        }
+
+        return '<w:p/>';
+    }
+
     private function renderRootRels(): string
     {
         return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
@@ -352,7 +362,10 @@ final class Word2007Writer
             .' xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"'
             .' xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"'
             .'>'
-            .'<w:body>'.$bodyXml.$sectPr.'</w:body>'
+            // Тело, как и ячейка, обязано заканчиваться абзацем: документ,
+            // последним блоком которого стоит таблица, Word открывает с
+            // предложением восстановить содержимое.
+            .'<w:body>'.$bodyXml.$this->trailingParagraph($bodyXml).$sectPr.'</w:body>'
             .'</w:document>';
     }
 }

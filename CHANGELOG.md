@@ -5,6 +5,16 @@ file. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.13.2] — 2026-08-05
+
+### Fixed
+- **A cell or a document ending with a table made Word offer to recover the
+  file.** Both must end with a paragraph. The existing guard asked whether the
+  cell held *any* paragraph, which a nested table satisfies from the inside
+  while the cell itself still ends with `</w:tbl>`. A closing empty paragraph
+  is now appended where the content does not already end with one — in table
+  cells and at the end of the body.
+
 ## [1.13.1] — 2026-08-05
 
 ### Fixed

@@ -492,9 +492,12 @@ final class BodyXmlBuilder
             $content .= $this->renderBlock($block);
         }
 
-        // OOXML требует чтобы в <w:tc> был хотя бы один <w:p>.
-        if (trim($content) === '' || ! str_contains($content, '<w:p')) {
-            $content = '<w:p/>';
+        // Ячейка обязана ЗАКАНЧИВАТЬСЯ абзацем. Проверять «есть ли внутри
+        // хоть один <w:p>» мало: у вложенной таблицы свои абзацы внутри, а
+        // ячейка при этом кончается на </w:tbl> — Word такой файл открывает
+        // с предложением восстановить содержимое.
+        if (! str_ends_with($content, '</w:p>') && ! str_ends_with($content, '<w:p/>')) {
+            $content .= '<w:p/>';
         }
 
         return '<w:tc>'.$tcPr.$content.'</w:tc>';
