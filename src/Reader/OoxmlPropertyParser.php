@@ -55,6 +55,8 @@ final class OoxmlPropertyParser
                 'b' => $out['bold'] = OoxmlNs::boolToggle($node),
                 'i' => $out['italic'] = OoxmlNs::boolToggle($node),
                 'u' => $out['underline'] = $this->parseUnderline($node),
+                'caps' => $out['allCaps'] = OoxmlNs::boolToggle($node),
+                'smallCaps' => $out['smallCaps'] = OoxmlNs::boolToggle($node),
                 'strike', 'dstrike' => $out['strikethrough'] = OoxmlNs::boolToggle($node),
                 'vertAlign' => $this->parseVertAlign($node, $out),
                 'color' => $out['color'] = $this->parseColor($node),

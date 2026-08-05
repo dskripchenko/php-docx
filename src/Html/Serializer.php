@@ -230,6 +230,12 @@ final class Serializer
         if ($s->letterSpacingTwips !== null) {
             $cssParts[] = 'letter-spacing:'.$this->twipsToPt($s->letterSpacingTwips).'pt';
         }
+        if ($s->allCaps) {
+            $cssParts[] = 'text-transform:uppercase';
+        }
+        if ($s->smallCaps) {
+            $cssParts[] = 'font-variant:small-caps';
+        }
         if ($cssParts !== []) {
             $open = '<span style="'.implode(';', $cssParts).'">'.$open;
             $close .= '</span>';

@@ -277,4 +277,25 @@ final class BodyReaderTest extends TestCase
 
         self::assertTrue($run->style->bold);
     }
+
+    #[Test]
+    public function caps_and_small_caps_reach_the_style(): void
+    {
+        // `w:caps` and `w:smallCaps` are presentation, not content: the text
+        // stays lower-case in the markup while Word draws it in capitals. A
+        // policy heading came out lower-case against an all-caps original
+        // until these were read.
+        $body = $this->loadBody(
+            '<w:p><w:r><w:rPr><w:caps/></w:rPr><w:t>заголовок</w:t></w:r>'
+            .'<w:r><w:rPr><w:smallCaps/></w:rPr><w:t>подзаголовок</w:t></w:r></w:p>'
+        );
+        $blocks = (new BodyReader)->read($body);
+
+        /** @var Paragraph $p */
+        $p = $blocks[0];
+
+        self::assertTrue($p->children[0]->style->allCaps);
+        self::assertFalse($p->children[0]->style->smallCaps);
+        self::assertTrue($p->children[1]->style->smallCaps);
+    }
 }

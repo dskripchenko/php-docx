@@ -27,6 +27,14 @@ final readonly class RunStyle
         public ?string $highlight = null,
         /** Разрядка между символами в twips (`<w:spacing>` в `w:rPr`); отрицательная сжимает. */
         public ?int $letterSpacingTwips = null,
+        /**
+         * `<w:caps/>` — текст рисуется прописными, оставаясь строчным в
+         * разметке. Это оформление, а не содержимое: копирование из
+         * документа отдаёт исходный регистр.
+         */
+        public bool $allCaps = false,
+        /** `<w:smallCaps/>` — капитель: строчные рисуются уменьшенными прописными. */
+        public bool $smallCaps = false,
     ) {}
 
     public static function fromPt(
@@ -118,6 +126,8 @@ final readonly class RunStyle
         ?bool $subscript = null,
         ?string $highlight = null,
         ?int $letterSpacingTwips = null,
+        ?bool $allCaps = null,
+        ?bool $smallCaps = null,
     ): self {
         return new self(
             sizeHalfPoints: $sizeHalfPoints ?? $this->sizeHalfPoints,
@@ -132,6 +142,8 @@ final readonly class RunStyle
             subscript: $subscript ?? $this->subscript,
             highlight: $highlight ?? $this->highlight,
             letterSpacingTwips: $letterSpacingTwips ?? $this->letterSpacingTwips,
+            allCaps: $allCaps ?? $this->allCaps,
+            smallCaps: $smallCaps ?? $this->smallCaps,
         );
     }
 
@@ -144,6 +156,7 @@ final readonly class RunStyle
             && $this->highlight === null
             && $this->letterSpacingTwips === null
             && ! $this->bold && ! $this->italic && ! $this->underline
-            && ! $this->strikethrough && ! $this->superscript && ! $this->subscript;
+            && ! $this->strikethrough && ! $this->superscript && ! $this->subscript
+            && ! $this->allCaps && ! $this->smallCaps;
     }
 }

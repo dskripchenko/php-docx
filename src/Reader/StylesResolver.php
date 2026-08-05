@@ -286,6 +286,8 @@ final class StylesResolver
             subscript: (bool) ($arr['subscript'] ?? false),
             highlight: $arr['highlight'] ?? null,
             letterSpacingTwips: isset($arr['letterSpacingTwips']) ? (int) $arr['letterSpacingTwips'] : null,
+            allCaps: (bool) ($arr['allCaps'] ?? false),
+            smallCaps: (bool) ($arr['smallCaps'] ?? false),
         );
     }
 
@@ -341,6 +343,8 @@ final class StylesResolver
         $out['strikethrough'] = $style->strikethrough;
         $out['superscript'] = $style->superscript;
         $out['subscript'] = $style->subscript;
+        $out['allCaps'] = $style->allCaps;
+        $out['smallCaps'] = $style->smallCaps;
 
         return $out;
     }

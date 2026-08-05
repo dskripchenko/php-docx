@@ -5,6 +5,17 @@ file. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.0] — 2026-08-05
+
+### Added
+- **`w:caps` and `w:smallCaps` are read and serialized** —
+  `RunStyle::$allCaps` / `$smallCaps`, emitted to HTML as
+  `text-transform: uppercase` and `font-variant: small-caps`. These are
+  presentation rather than content: the text stays lower-case in the markup
+  while Word draws it in capitals. Ignoring them left a policy heading in
+  lower case against an all-caps original, and the line was much narrower than
+  it should have been, so everything around it drifted.
+
 ## [1.8.2] — 2026-08-05
 
 ### Fixed
