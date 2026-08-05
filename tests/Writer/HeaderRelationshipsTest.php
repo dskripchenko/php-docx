@@ -109,4 +109,32 @@ final class HeaderRelationshipsTest extends TestCase
             }
         }
     }
+
+    #[Test]
+    public function every_drawing_carries_its_own_number(): void
+    {
+        // Номер рисунка уникален во всём документе: два одинаковых Word
+        // считает поводом объявить файл повреждённым. Раньше номер брался от
+        // номера ссылки, а с собственной нумерацией у каждой части картинка
+        // шапки и первая картинка тела получали один и тот же rId1.
+        $doc = new Document(new Section(
+            body: [new Paragraph([$this->pngImage()]), new Paragraph([$this->pngImage()])],
+            header: [new Paragraph([$this->pngImage()])],
+            footer: [new Paragraph([$this->pngImage()])],
+        ));
+
+        ['parts' => $parts] = $this->unpack((new Word2007Writer)->write($doc));
+
+        $ids = [];
+        foreach ($parts as $name => $xml) {
+            if (preg_match('#^word/(document|header\d+|footer\d+)\.xml$#', $name) !== 1) {
+                continue;
+            }
+            preg_match_all('/<wp:docPr id="(\d+)"/', $xml, $m);
+            $ids = [...$ids, ...$m[1]];
+        }
+
+        self::assertCount(4, $ids, 'не все рисунки напечатались');
+        self::assertSame($ids, array_values(array_unique($ids)), 'номера рисунков повторяются');
+    }
 }

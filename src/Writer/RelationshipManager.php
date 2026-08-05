@@ -23,6 +23,8 @@ final class RelationshipManager
 {
     private int $nextRId = 1;
 
+    private int $nextDrawingId = 1;
+
     /** @var list<array{id: string, type: string, target: string, targetMode?: string}> */
     private array $relationships = [];
 
@@ -61,6 +63,20 @@ final class RelationshipManager
     public const TYPE_STYLES = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles';
 
     public const TYPE_SETTINGS = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings';
+
+    /**
+     * Сквозной номер графического объекта для `wp:docPr`.
+     *
+     * Идентификатор обязан быть уникальным во всём документе: Word объявляет
+     * файл повреждённым, если два рисунка носят один номер. Считать его от
+     * номера ссылки нельзя — с тех пор как у каждой части своя нумерация
+     * ссылок, картинка шапки и первая картинка тела получали один и тот же
+     * `rId1`, а значит и один номер.
+     */
+    public function nextDrawingId(): int
+    {
+        return $this->nextDrawingId++;
+    }
 
     /**
      * Выполняет отрисовку части документа так, чтобы её ссылки попали в её

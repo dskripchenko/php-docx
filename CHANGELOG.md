@@ -5,6 +5,16 @@ file. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.13.3] — 2026-08-05
+
+### Fixed
+- **Two drawings could share one `wp:docPr` id, and Word calls that damaged.**
+  The id was derived from the relationship id, and since each header and
+  footer part got its own relationship numbering in 1.13.1, the image in a
+  header and the first image in the body both ended up as `rId1` — and so with
+  the same drawing number. Drawings are now numbered across the whole
+  document.
+
 ## [1.13.2] — 2026-08-05
 
 ### Fixed

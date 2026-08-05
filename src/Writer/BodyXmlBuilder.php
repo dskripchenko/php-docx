@@ -611,8 +611,9 @@ final class BodyXmlBuilder
         $cy = $img->heightEmu;
         $alt = XmlEscape::attr($img->altText ?? 'image');
         // Простая inline-картинка через <w:drawing><wp:inline>...
-        // docPr id монотонный — используем hash от rId.
-        $docPrId = abs(crc32($rId)) % 1000000 + 1;
+        // Номер рисунка сквозной по документу: Word объявляет файл
+        // повреждённым, если два рисунка носят один номер.
+        $docPrId = $this->rels->nextDrawingId();
 
         return <<<XML
             <w:r><w:drawing>
