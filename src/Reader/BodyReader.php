@@ -267,6 +267,8 @@ final class BodyReader
         // null | 'instr' | 'value'
         $fieldState = null;
         $fieldInstr = '';
+        $fieldDefault = '';
+        $fieldValueSeen = false;
         $fieldStyle = $baseRunStyle;
 
         foreach ($parent->childNodes as $child) {
@@ -329,6 +331,8 @@ final class BodyReader
                     $fieldState,
                     $fieldInstr,
                     $fieldStyle,
+                    $fieldDefault,
+                    $fieldValueSeen,
                 );
                 foreach ($runResult['inlines'] as $i) {
                     $out[] = $i;
@@ -336,6 +340,8 @@ final class BodyReader
                 $fieldState = $runResult['state'];
                 $fieldInstr = $runResult['instr'];
                 $fieldStyle = $runResult['style'];
+                $fieldDefault = $runResult['default'];
+                $fieldValueSeen = $runResult['valueSeen'];
 
                 continue;
             }
@@ -370,9 +376,24 @@ final class BodyReader
     }
 
     /**
+     * Подсказка незаполненного поля формы — `w:ffData/w:textInput/w:default`.
+     */
+    private static function formFieldDefault(\DOMElement $fldChar): string
+    {
+        foreach ($fldChar->getElementsByTagNameNS(OoxmlNs::W, 'default') as $default) {
+            $val = $default->getAttributeNS(OoxmlNs::W, 'val');
+            if ($val !== '') {
+                return $val;
+            }
+        }
+
+        return '';
+    }
+
+    /**
      * Wrapper над readRun который также управляет complex-field state.
      *
-     * @return array{inlines: list<InlineElement>, state: string|null, instr: string, style: RunStyle}
+     * @return array{inlines: list<InlineElement>, state: string|null, instr: string, style: RunStyle, default: string, valueSeen: bool}
      */
     private function readRunWithFieldState(
         \DOMElement $r,
@@ -380,20 +401,38 @@ final class BodyReader
         ?string $state,
         string $instr,
         RunStyle $fieldStyle,
+        string $fieldDefault = '',
+        bool $valueSeen = false,
     ): array {
         $runStyle = $this->styles->effectiveStylesForRun($r, $baseRunStyle);
         $emitted = [];
         $textBuffer = '';
 
-        $flushText = function () use (&$emitted, &$textBuffer, $runStyle, $state): void {
+        // Результат поля — это то, что Word показывает на экране. Подавляем
+        // его только у полей, которые мы отдаём собственным элементом: номер
+        // страницы, дата, MERGEFIELD. У остальных (FORMTEXT, MACROBUTTON,
+        // REF) результат и есть содержимое документа — в анкете страхователя
+        // так терялись подписи «Наименование страхователя», «ИНН».
+        $suppressValue = false;
+        foreach (['PAGE', 'NUMPAGES', 'SECTIONPAGES', 'DATE', 'TIME', 'CREATEDATE', 'SAVEDATE', 'PRINTDATE', 'MERGEFIELD'] as $regenerated) {
+            if (str_starts_with(strtoupper(ltrim($instr)), $regenerated)) {
+                $suppressValue = true;
+
+                break;
+            }
+        }
+
+        $flushText = function () use (&$emitted, &$textBuffer, &$state, &$valueSeen, $suppressValue, $runStyle): void {
             if ($textBuffer === '') {
                 return;
             }
             if ($state === 'value') {
-                // в value-фазе текст подавляется (Word отрендерит сам)
-                $textBuffer = '';
+                if ($suppressValue) {
+                    $textBuffer = '';
 
-                return;
+                    return;
+                }
+                $valueSeen = true;
             }
             $emitted[] = new Run($textBuffer, $runStyle);
             $textBuffer = '';
@@ -411,17 +450,27 @@ final class BodyReader
                         $state = 'instr';
                         $instr = '';
                         $fieldStyle = $runStyle;
+                        $fieldDefault = self::formFieldDefault($child);
+                        $valueSeen = false;
                     } elseif ($type === 'separate') {
                         $flushText();
                         $state = 'value';
                     } elseif ($type === 'end') {
                         $flushText();
                         $cleanInstr = trim($instr);
+                        // Незаполненное поле формы Word показывает подсказкой
+                        // из `w:ffData/w:textInput/w:default` — для читателя
+                        // документа это и есть видимый текст.
+                        if (! $valueSeen && $fieldDefault !== '') {
+                            $emitted[] = new Run($fieldDefault, $fieldStyle);
+                        }
                         if ($cleanInstr !== '') {
                             $emitted[] = new Field($cleanInstr, $fieldStyle);
                         }
                         $state = null;
                         $instr = '';
+                        $fieldDefault = '';
+                        $valueSeen = false;
                     }
                     break;
                 case 'instrText':
@@ -478,6 +527,8 @@ final class BodyReader
             'state' => $state,
             'instr' => $instr,
             'style' => $fieldStyle,
+            'default' => $fieldDefault,
+            'valueSeen' => $valueSeen,
         ];
     }
 

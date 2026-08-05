@@ -242,4 +242,59 @@ final class HyperlinkFieldBookmarkTest extends TestCase
     {
         return (new Word2007Writer)->write((new Converter)->fromHtml($bodyHtml));
     }
+
+    #[Test]
+    public function form_field_placeholder_becomes_text(): void
+    {
+        // Word показывает незаполненное поле формы подсказкой из
+        // `w:ffData/w:textInput/w:default` — для читателя документа это и
+        // есть видимый текст. Пока результат поля подавлялся целиком, в
+        // анкете страхователя пропадали подписи «Наименование страхователя»,
+        // «Юридический адрес», «ИНН».
+        $xml = '<?xml version="1.0"?><w:document xmlns:w="'.OoxmlNs::W.'"><w:body><w:p>'
+            .'<w:r><w:fldChar w:fldCharType="begin"><w:ffData><w:textInput>'
+            .'<w:default w:val="Наименование страхователя"/></w:textInput></w:ffData></w:fldChar></w:r>'
+            .'<w:r><w:instrText xml:space="preserve"> FORMTEXT </w:instrText></w:r>'
+            .'<w:r><w:fldChar w:fldCharType="separate"/></w:r>'
+            .'<w:r><w:fldChar w:fldCharType="end"/></w:r>'
+            .'</w:p></w:body></w:document>';
+
+        $doc = new \DOMDocument;
+        $doc->loadXML($xml);
+        $body = $doc->getElementsByTagNameNS(OoxmlNs::W, 'body')->item(0);
+        self::assertInstanceOf(\DOMElement::class, $body);
+
+        $blocks = (new BodyReader)->read($body);
+        $runs = $this->collectByType($blocks, Run::class);
+
+        $texts = array_map(static fn (Run $r): string => $r->text, $runs);
+        self::assertContains('Наименование страхователя', $texts);
+    }
+
+    #[Test]
+    public function filled_form_field_keeps_its_value(): void
+    {
+        // Заполненное поле показывает своё значение, а не подсказку.
+        $xml = '<?xml version="1.0"?><w:document xmlns:w="'.OoxmlNs::W.'"><w:body><w:p>'
+            .'<w:r><w:fldChar w:fldCharType="begin"><w:ffData><w:textInput>'
+            .'<w:default w:val="подсказка"/></w:textInput></w:ffData></w:fldChar></w:r>'
+            .'<w:r><w:instrText xml:space="preserve"> FORMTEXT </w:instrText></w:r>'
+            .'<w:r><w:fldChar w:fldCharType="separate"/></w:r>'
+            .'<w:r><w:t>ООО «Ромашка»</w:t></w:r>'
+            .'<w:r><w:fldChar w:fldCharType="end"/></w:r>'
+            .'</w:p></w:body></w:document>';
+
+        $doc = new \DOMDocument;
+        $doc->loadXML($xml);
+        $body = $doc->getElementsByTagNameNS(OoxmlNs::W, 'body')->item(0);
+        self::assertInstanceOf(\DOMElement::class, $body);
+
+        $texts = array_map(
+            static fn (Run $r): string => $r->text,
+            $this->collectByType((new BodyReader)->read($body), Run::class),
+        );
+
+        self::assertContains('ООО «Ромашка»', $texts);
+        self::assertNotContains('подсказка', $texts);
+    }
 }

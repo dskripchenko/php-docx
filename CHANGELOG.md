@@ -5,6 +5,19 @@ file. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.10.0] — 2026-08-05
+
+### Fixed
+- **Form-field placeholders no longer vanish.** The result of a complex field
+  was discarded wholesale on the assumption that Word renders it itself. That
+  is true for a page number or a date, which we generate ourselves, and for
+  MERGEFIELD, which becomes a template variable — but for FORMTEXT the result
+  *is* the visible content of the document. An unfilled form field shows the
+  hint from `w:ffData/w:textInput/w:default`, and that is what the reader now
+  returns. In an insurance application this is where the field captions
+  "Наименование страхователя", "Юридический адрес" and "ИНН" disappeared to —
+  5.6% of the reference document's text.
+
 ## [1.9.0] — 2026-08-05
 
 ### Added

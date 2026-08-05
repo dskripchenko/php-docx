@@ -13,6 +13,12 @@ parameters:
 			path: src/Html/Converter.php
 
 		-
+			message: '#^Method Dskripchenko\\PhpDocx\\Reader\\BodyReader\:\:readRunWithFieldState\(\) should return array\{inlines\: list\<Dskripchenko\\PhpDocx\\Element\\InlineElement\>, state\: string\|null, instr\: string, style\: Dskripchenko\\PhpDocx\\Style\\RunStyle, default\: string, valueSeen\: bool\} but returns array\{inlines\: list\<Dskripchenko\\PhpDocx\\Element\\Field\|Dskripchenko\\PhpDocx\\Element\\Image\|Dskripchenko\\PhpDocx\\Element\\LineBreak\|Dskripchenko\\PhpDocx\\Element\\PageBreak\|Dskripchenko\\PhpDocx\\Element\\Run\>, state\: string\|null, instr\: string, style\: Dskripchenko\\PhpDocx\\Style\\RunStyle, default\: string, valueSeen\: bool\}\.$#'
+			identifier: return.type
+			count: 1
+			path: src/Reader/BodyReader.php
+
+		-
 			message: '#^Parameter \#1 \$array \(list\<Dskripchenko\\PhpDocx\\Element\\InlineElement\>\) of array_values is already a list, call has no effect\.$#'
 			identifier: arrayValues.list
 			count: 1
@@ -63,12 +69,6 @@ parameters:
 		-
 			message: '#^Instanceof between Dskripchenko\\PhpDocx\\Element\\ListNode and Dskripchenko\\PhpDocx\\Element\\ListNode will always evaluate to true\.$#'
 			identifier: instanceof.alwaysTrue
-			count: 1
-			path: src/Reader/BodyReader.php
-
-		-
-			message: '#^Method Dskripchenko\\PhpDocx\\Reader\\BodyReader\:\:readRunWithFieldState\(\) should return array\{inlines\: list\<Dskripchenko\\PhpDocx\\Element\\InlineElement\>, state\: string\|null, instr\: string, style\: Dskripchenko\\PhpDocx\\Style\\RunStyle\} but returns array\{inlines\: list\<Dskripchenko\\PhpDocx\\Element\\Field\|Dskripchenko\\PhpDocx\\Element\\Image\|Dskripchenko\\PhpDocx\\Element\\LineBreak\|Dskripchenko\\PhpDocx\\Element\\PageBreak\>, state\: string\|null, instr\: string, style\: Dskripchenko\\PhpDocx\\Style\\RunStyle\}\.$#'
-			identifier: return.type
 			count: 1
 			path: src/Reader/BodyReader.php
 
