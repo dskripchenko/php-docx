@@ -2,6 +2,11 @@ includes:
     - phpstan-baseline.neon
 
 parameters:
+    # Анализируем под МИНИМАЛЬНУЮ поддерживаемую версию: на машине разработчика
+    # стоит 8.5, и синтаксис новее 8.2 проходит локально, а сборка падает
+    # разбором файла. Так и случилось с типизированными константами (8.3+).
+    phpVersion: 80200
+
     ignoreErrors:
         # These fire inside the AddsBlockContent/AddsInlineContent traits;
         # PHPStan attributes trait findings to whichever using class it

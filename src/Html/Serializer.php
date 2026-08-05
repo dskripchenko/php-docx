@@ -52,11 +52,16 @@ use Dskripchenko\PhpDocx\Style\VerticalAlign;
  */
 final class Serializer
 {
-    /** Одинарный межстрочный интервал в двадцатых долях пункта (ECMA-376). */
-    private const int SINGLE_LINE_TWIPS = 240;
+    /**
+     * Одинарный межстрочный интервал в двадцатых долях пункта (ECMA-376).
+     *
+     * Без типа: типизированные константы появились в PHP 8.3, а пакет держит
+     * 8.2 — на локальной 8.5 это проходит, а сборка падает разбором файла.
+     */
+    private const SINGLE_LINE_TWIPS = 240;
 
     /** Во сколько кеглей обходится одинарный интервал у типичного шрифта. */
-    private const float SINGLE_LINE_EM = 1.2;
+    private const SINGLE_LINE_EM = 1.2;
 
     /** @var array<string, string> filename → binary */
     private array $media = [];
