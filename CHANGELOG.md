@@ -5,6 +5,18 @@ file. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.13.1] — 2026-08-05
+
+### Fixed
+- **An image in a header or footer made Word declare the file damaged.** A
+  relationship id inside `header1.xml` resolves against
+  `word/_rels/header1.xml.rels`, but images used there were registered in the
+  document's relationships instead. Word could not resolve them: the logo in
+  the header printed as an empty box with a cross, and opening the file
+  offered to recover it. Each header and footer part now carries its own
+  relationships file, numbered from `rId1` within the part; the media itself
+  stays shared, as `word/media` is a package folder rather than a part's.
+
 ## [1.13.0] — 2026-08-05
 
 ### Added

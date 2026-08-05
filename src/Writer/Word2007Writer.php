@@ -66,7 +66,10 @@ final class Word2007Writer
             $headerCounter++;
             $partName = 'header'.$headerCounter.'.xml';
             $prefix = $type === 'default' ? $watermarkXml : '';
-            $xml = $this->renderHeaderFooterXml($blocks, $rels, $numbering, isHeader: true, prefixXml: $prefix);
+            $xml = $rels->forPart(
+                $partName,
+                fn (): string => $this->renderHeaderFooterXml($blocks, $rels, $numbering, isHeader: true, prefixXml: $prefix),
+            );
             $rId = $rels->registerHeaderFooter($partName, isHeader: true);
             $headerParts[$type] = ['rId' => $rId, 'xml' => $xml, 'partName' => $partName];
         }
@@ -77,7 +80,10 @@ final class Word2007Writer
         foreach ($footers as $type => $blocks) {
             $footerCounter++;
             $partName = 'footer'.$footerCounter.'.xml';
-            $xml = $this->renderHeaderFooterXml($blocks, $rels, $numbering, isHeader: false);
+            $xml = $rels->forPart(
+                $partName,
+                fn (): string => $this->renderHeaderFooterXml($blocks, $rels, $numbering, isHeader: false),
+            );
             $rId = $rels->registerHeaderFooter($partName, isHeader: false);
             $footerParts[$type] = ['rId' => $rId, 'xml' => $xml, 'partName' => $partName];
         }
@@ -145,6 +151,13 @@ final class Word2007Writer
             $zip->addFromString('word/settings.xml', $settingsXml);
         }
         $zip->addFromString('word/styles.xml', $stylesXml);
+
+        // Ссылка внутри колонтитула разрешается относительно rels ЕГО части,
+        // а не документа: без своего файла Word не находит картинку и
+        // объявляет документ повреждённым.
+        foreach ($rels->partRelationships() as $partName => $partRels) {
+            $zip->addFromString('word/_rels/'.$partName.'.rels', $this->renderRelsFile($partRels));
+        }
 
         foreach ($rels->mediaFiles() as $path => $binary) {
             $zip->addFromString($path, $binary);
@@ -275,9 +288,17 @@ final class Word2007Writer
 
     private function renderDocumentRels(RelationshipManager $rels): string
     {
+        return $this->renderRelsFile($rels->relationships());
+    }
+
+    /**
+     * @param  list<array{id: string, type: string, target: string, targetMode?: string}>  $relationships
+     */
+    private function renderRelsFile(array $relationships): string
+    {
         $xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
             .'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">';
-        foreach ($rels->relationships() as $r) {
+        foreach ($relationships as $r) {
             $xml .= '<Relationship Id="'.$r['id'].'" Type="'.$r['type'].'" Target="'.XmlEscape::attr($r['target']).'"';
             if (isset($r['targetMode'])) {
                 $xml .= ' TargetMode="'.$r['targetMode'].'"';

@@ -26,6 +26,22 @@ final class RelationshipManager
     /** @var list<array{id: string, type: string, target: string, targetMode?: string}> */
     private array $relationships = [];
 
+    /**
+     * Текущая часть документа: null — сам `document.xml`.
+     *
+     * Ссылка `r:embed` разрешается относительно rels ТОЙ ЧАСТИ, где она
+     * написана: `header1.xml` смотрит в `word/_rels/header1.xml.rels`.
+     * Пока картинки колонтитула регистрировались в rels документа, Word
+     * не находил их и объявлял файл повреждённым.
+     */
+    private ?string $part = null;
+
+    /** @var array<string, list<array{id: string, type: string, target: string, targetMode?: string}>> */
+    private array $partRelationships = [];
+
+    /** @var array<string, int> */
+    private array $partNextRId = [];
+
     /** @var array<string, string>  filename → binary contents (для word/media/) */
     private array $mediaFiles = [];
 
@@ -47,11 +63,42 @@ final class RelationshipManager
     public const TYPE_SETTINGS = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings';
 
     /**
+     * Выполняет отрисовку части документа так, чтобы её ссылки попали в её
+     * собственный rels-файл, а не в общий документный.
+     *
+     * Медиа-файлы остаются общими: `word/media` — папка пакета, а не части.
+     *
+     * @template T
+     *
+     * @param  \Closure(): T  $render
+     * @return T
+     */
+    public function forPart(string $part, \Closure $render): mixed
+    {
+        $previous = $this->part;
+        $this->part = $part;
+        try {
+            return $render();
+        } finally {
+            $this->part = $previous;
+        }
+    }
+
+    /**
+     * Ссылки частей документа: имя части → её relationships.
+     *
+     * @return array<string, list<array{id: string, type: string, target: string, targetMode?: string}>>
+     */
+    public function partRelationships(): array
+    {
+        return array_filter($this->partRelationships, static fn (array $rels): bool => $rels !== []);
+    }
+
+    /**
      * Регистрирует image и возвращает rId для использования в `<a:blip r:embed="..."/>`.
      */
     public function registerImage(Image $image): string
     {
-        $rId = $this->nextRId();
         $imageIndex = count(array_filter(
             $this->mediaFiles,
             static fn (string $name): bool => str_contains($name, 'image'),
@@ -62,13 +109,7 @@ final class RelationshipManager
         $this->mediaFiles['word/media/'.$filename] = $image->binary;
         $this->contentTypeExtensions[$image->format->extension()] = $image->format->mimeType();
 
-        $this->relationships[] = [
-            'id' => $rId,
-            'type' => self::TYPE_IMAGE,
-            'target' => 'media/'.$filename,
-        ];
-
-        return $rId;
+        return $this->add(self::TYPE_IMAGE, 'media/'.$filename);
     }
 
     /**
@@ -76,15 +117,7 @@ final class RelationshipManager
      */
     public function registerHyperlink(string $href): string
     {
-        $rId = $this->nextRId();
-        $this->relationships[] = [
-            'id' => $rId,
-            'type' => self::TYPE_HYPERLINK,
-            'target' => $href,
-            'targetMode' => 'External',
-        ];
-
-        return $rId;
+        return $this->add(self::TYPE_HYPERLINK, $href, targetMode: 'External');
     }
 
     /**
@@ -92,50 +125,22 @@ final class RelationshipManager
      */
     public function registerHeaderFooter(string $target, bool $isHeader): string
     {
-        $rId = $this->nextRId();
-        $this->relationships[] = [
-            'id' => $rId,
-            'type' => $isHeader ? self::TYPE_HEADER : self::TYPE_FOOTER,
-            'target' => $target,
-        ];
-
-        return $rId;
+        return $this->add($isHeader ? self::TYPE_HEADER : self::TYPE_FOOTER, $target);
     }
 
     public function registerStyles(): string
     {
-        $rId = $this->nextRId();
-        $this->relationships[] = [
-            'id' => $rId,
-            'type' => self::TYPE_STYLES,
-            'target' => 'styles.xml',
-        ];
-
-        return $rId;
+        return $this->add(self::TYPE_STYLES, 'styles.xml');
     }
 
     public function registerNumbering(): string
     {
-        $rId = $this->nextRId();
-        $this->relationships[] = [
-            'id' => $rId,
-            'type' => self::TYPE_NUMBERING,
-            'target' => 'numbering.xml',
-        ];
-
-        return $rId;
+        return $this->add(self::TYPE_NUMBERING, 'numbering.xml');
     }
 
     public function registerSettings(): string
     {
-        $rId = $this->nextRId();
-        $this->relationships[] = [
-            'id' => $rId,
-            'type' => self::TYPE_SETTINGS,
-            'target' => 'settings.xml',
-        ];
-
-        return $rId;
+        return $this->add(self::TYPE_SETTINGS, 'settings.xml');
     }
 
     /**
@@ -162,8 +167,33 @@ final class RelationshipManager
         return $this->contentTypeExtensions;
     }
 
+    /** Записывает ссылку в текущую часть и возвращает её rId. */
+    private function add(string $type, string $target, ?string $targetMode = null): string
+    {
+        $rel = ['id' => $this->nextRId(), 'type' => $type, 'target' => $target];
+        if ($targetMode !== null) {
+            $rel['targetMode'] = $targetMode;
+        }
+
+        if ($this->part === null) {
+            $this->relationships[] = $rel;
+        } else {
+            $this->partRelationships[$this->part][] = $rel;
+        }
+
+        return $rel['id'];
+    }
+
+    /** Нумерация ссылок своя у каждой части: она разрешается внутри части. */
     private function nextRId(): string
     {
-        return 'rId'.$this->nextRId++;
+        if ($this->part === null) {
+            return 'rId'.$this->nextRId++;
+        }
+
+        $next = ($this->partNextRId[$this->part] ?? 0) + 1;
+        $this->partNextRId[$this->part] = $next;
+
+        return 'rId'.$next;
     }
 }
