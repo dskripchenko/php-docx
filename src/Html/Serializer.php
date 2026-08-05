@@ -362,8 +362,10 @@ final class Serializer
     {
         $inner = $this->renderInlines($item->children);
         $nested = $item->nestedList !== null ? $this->renderList($item->nestedList) : '';
+        $css = $this->paragraphStyleCss($item->style);
+        $attrs = $css !== '' ? ' style="'.$css.'"' : '';
 
-        return '<li>'.$inner.$nested.'</li>';
+        return '<li'.$attrs.'>'.$inner.$nested.'</li>';
     }
 
     private function renderTable(Table $t): string

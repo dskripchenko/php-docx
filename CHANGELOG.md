@@ -5,6 +5,16 @@ file. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.12.0] — 2026-08-05
+
+### Added
+- **A list item carries its paragraph style** — `ListItem::$style`, serialized
+  onto `<li>`. In Word a list item is an ordinary paragraph that happens to be
+  numbered, and it carries everything a paragraph carries: alignment, indents,
+  spacing, "keep with next". All of it was dropped on the way, so a section
+  heading formatted as a numbered item lost its formatting and its pagination
+  rules.
+
 ## [1.11.0] — 2026-08-05
 
 ### Added

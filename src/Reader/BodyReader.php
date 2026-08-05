@@ -67,7 +67,7 @@ final class BodyReader
     public function read(\DOMElement $body): array
     {
         $blocks = [];
-        /** @var list<array{numId:int, ilvl:int, inlines:list<InlineElement>}> $pendingList */
+        /** @var list<array{numId:int, ilvl:int, inlines:list<InlineElement>, style:ParagraphStyle}> $pendingList */
         $pendingList = [];
         $pendingNumId = null;
 
@@ -121,11 +121,11 @@ final class BodyReader
      * Если параграф — list-item (numPr+зарегистрированный numId), возвращает
      * descriptor. Иначе null (обычный параграф).
      *
-     * @return array{numId:int, ilvl:int, inlines:list<InlineElement>}|null
+     * @return array{numId:int, ilvl:int, inlines:list<InlineElement>, style:ParagraphStyle}|null
      */
     private function classifyParagraph(\DOMElement $p): ?array
     {
-        [, $runBase, , $numId, $ilvl] = $this->styles->effectiveStylesForParagraph($p);
+        [$paraStyle, $runBase, , $numId, $ilvl] = $this->styles->effectiveStylesForParagraph($p);
         if ($numId === null || ! $this->numbering->hasNumId($numId)) {
             return null;
         }
@@ -141,6 +141,7 @@ final class BodyReader
             'numId' => $numId,
             'ilvl' => max(0, $ilvl ?? 0),
             'inlines' => $cleanInlines,
+            'style' => $paraStyle,
         ];
     }
 
@@ -148,7 +149,7 @@ final class BodyReader
      * Из flat-списка list-items (по возрастанию или ad-hoc ilvl) собирает
      * дерево ListNode/ListItem с nesting'ом.
      *
-     * @param  list<array{numId:int, ilvl:int, inlines:list<InlineElement>}>  $items
+     * @param  list<array{numId:int, ilvl:int, inlines:list<InlineElement>, style:ParagraphStyle}>  $items
      */
     private function buildListNode(array $items, ?int $numId): ListNode
     {
@@ -166,7 +167,7 @@ final class BodyReader
     }
 
     /**
-     * @param  list<array{numId:int, ilvl:int, inlines:list<InlineElement>}>  $items
+     * @param  list<array{numId:int, ilvl:int, inlines:list<InlineElement>, style:ParagraphStyle}>  $items
      */
     private function minIlvl(array $items): int
     {
@@ -185,7 +186,7 @@ final class BodyReader
      * Items с ilvl == depth → siblings в текущем ListNode; items с
      * ilvl > depth → nested внутрь предыдущего siblng'а.
      *
-     * @param  list<array{numId:int, ilvl:int, inlines:list<InlineElement>}>  $items
+     * @param  list<array{numId:int, ilvl:int, inlines:list<InlineElement>, style:ParagraphStyle}>  $items
      */
     private function buildRecursive(array $items, int $from, int $to, int $depth, int $numId): ListNode
     {
@@ -206,7 +207,7 @@ final class BodyReader
                 // Прикрепить как nestedList последнего sibling'а, если есть.
                 if ($siblings !== []) {
                     $last = $siblings[count($siblings) - 1];
-                    $siblings[count($siblings) - 1] = new ListItem($last->children, $nested);
+                    $siblings[count($siblings) - 1] = new ListItem($last->children, $nested, $last->style);
                 } else {
                     // Нет предыдущего sibling'а — оборачиваем в пустой parent-item.
                     $siblings[] = new ListItem([], $nested);
@@ -216,7 +217,7 @@ final class BodyReader
                 continue;
             }
             // ilvl == depth — обычный sibling.
-            $siblings[] = new ListItem($cur['inlines']);
+            $siblings[] = new ListItem($cur['inlines'], null, $cur['style']);
             $i++;
         }
 
