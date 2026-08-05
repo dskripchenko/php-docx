@@ -1,143 +1,145 @@
 # Changelog
 
-## 1.8.2
-
-### Fixed
-- **Свойства сложных письменностей больше не красят кириллицу.** `w:bCs`,
-  `w:iCs` и `w:szCs` описывают начертание и размер для арабской, ивритской и
-  индийских письменностей; латиницу и кириллицу Word такими рунами рисует
-  обычным текстом. Читались они наравне с `w:b`/`w:i`/`w:sz`, поэтому документ
-  с `<w:bCs/>` на каждом руне — обычное дело для форм — приходил жирным
-  целиком. Заявление страхователя на семь страниц печаталось полностью жирным.
-
-
 All notable changes to `dskripchenko/php-docx` are documented in this
 file. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.2] — 2026-08-05
+
+### Fixed
+- **Complex-script properties no longer style Cyrillic.** `w:bCs`, `w:iCs` and
+  `w:szCs` describe weight and size for Arabic, Hebrew and Indic scripts; Word
+  draws Latin and Cyrillic runs carrying them as ordinary text. They were read
+  on a par with `w:b`/`w:i`/`w:sz`, so a document with `<w:bCs/>` on every run
+  — routine in forms — arrived entirely bold. A seven-page insurance
+  application printed bold from top to bottom.
+
 ## [1.8.1] — 2026-08-05
 
 ### Fixed
-- **Сборка падала на PHP 8.2**: в 1.8.0 приехали типизированные константы —
-  синтаксис 8.3, а пакет держит 8.2. На машине разработчика стоит 8.5, поэтому
-  локально всё проходило. Статический анализ теперь идёт под минимальную
-  поддерживаемую версию (`phpVersion: 80200`), и такой разрыв ловится до тега.
+- **The build broke on PHP 8.2**: 1.8.0 shipped typed constants — 8.3 syntax,
+  while the package supports 8.2. The developer machine runs 8.5, so
+  everything passed locally. Static analysis now runs against the minimum
+  supported version (`phpVersion: 80200`), and a gap like this is caught
+  before the tag.
 
 ## [1.8.0] — 2026-08-04
 
 ### Added
-- **Межстрочный интервал доезжает до HTML.** `w:spacing/@w:line` читался в
-  `ParagraphStyle`, но в сериализацию не попадал вовсе: документ с полуторным
-  интервалом печатался плотным. Теперь `exact`/`atLeast` переносятся высотой
-  строки в пунктах, а `auto` — CSS-множителем.
+- **Line spacing reaches the HTML.** `w:spacing/@w:line` was read into
+  `ParagraphStyle` but never made it into serialization at all: a document
+  with one-and-a-half spacing printed tight. `exact`/`atLeast` are now carried
+  as a line height in points, `auto` as a CSS multiplier.
 
-  Одинарный интервал (240) не переносится намеренно: у Word это естественная
-  высота строки шрифта (около 1.2 кегля), а CSS-множитель считается от кегля.
-  Прямой перенос 240 → 1.0 сжимал строки против оригинала — на эталонном
-  полисе это сразу увело последнюю страницу почти в пустоту. У движка печати
-  свой одинарный интервал, и он ближе к типографской норме, чем любое наше
-  приближение.
-- `ParagraphStyle::$lineSpacingRule` — без правила число интервала ничего не
-  значит.
+  Single spacing (240) is deliberately not carried: in Word it is the font's
+  natural line height (about 1.2 em), whereas a CSS multiplier is measured
+  from the font size. Mapping 240 → 1.0 squeezed lines against the original —
+  on a reference policy it immediately left the last page nearly empty. The
+  print engine has its own notion of single spacing, and it is closer to
+  typographic norm than any approximation of ours.
+- `ParagraphStyle::$lineSpacingRule` — without the rule the spacing number
+  means nothing.
 
 ## [1.7.0] — 2026-08-04
 
 ### Fixed
-- **Формат знака абзаца больше не протекает на текст.** `w:pPr/w:rPr`
-  описывает символ ¶ — то, каким будет набранное в конце абзаца; существующие
-  руны Word не трогает. Эти свойства подмешивались в базовый стиль рунов, и
-  любое из них расходилось на весь абзац. В эталонном страховом полисе знак
-  абзаца был помечен жирным — и жирным читался весь документ: строки выходили
-  на 16% шире оригинала, а вёрстка расходилась повсеместно. Найдено сравнением
-  ширины слова с эталонным PDF в printable.
+- **Paragraph-mark formatting no longer leaks into the text.** `w:pPr/w:rPr`
+  describes the ¶ character — how text typed at the end of the paragraph will
+  look; Word does not touch existing runs with it. These properties were mixed
+  into the base run style, and any one of them spread across the whole
+  paragraph. In a reference insurance policy the paragraph mark was flagged
+  bold — and the entire document read as bold: lines came out 16% wider than
+  the original and the layout drifted everywhere. Found by comparing the width
+  of a single word against the reference PDF in printable.
 
 ## [1.6.0] — 2026-08-04
 
 ### Added
-- **Смещение плавающего объекта** — `Element\Image::$offsetYEmu` из
-  `wp:positionV/wp:posOffset`, в HTML-сериализации — `margin-top` со знаком.
-  Word ставит печати и подписи поверх готового текста, задавая отрицательное
-  смещение относительно точки привязки; без него объект вставал отдельной
-  строкой под абзацем и раздвигал документ.
+- **Floating object offset** — `Element\Image::$offsetYEmu` from
+  `wp:positionV/wp:posOffset`, serialized to HTML as a signed `margin-top`.
+  Word places stamps and signatures over finished text by giving them a
+  negative offset from the anchor point; without it the object took a line of
+  its own below the paragraph and pushed the document apart.
 
 ## [1.5.0] — 2026-08-04
 
 ### Added
-- **Колонтитулы первой страницы в HTML-импорте** —
-  `ImportedDocument::$firstHeaderHtml` / `$firstFooterHtml`. Ридер их читал и
-  клал в AST, а сериализатор отдавал только колонтитул по умолчанию: шапка с
-  логотипом, которую Word держит отдельной частью документа, пропадала по
-  дороге. В эталонном полисе так терялся логотип страховщика на первой
-  странице.
+- **First-page headers and footers in the HTML import** —
+  `ImportedDocument::$firstHeaderHtml` / `$firstFooterHtml`. The reader read
+  them into the AST while the serializer emitted only the default header and
+  footer: the letterhead with the logo, which Word keeps as a separate part of
+  the document, was lost on the way. In a reference policy this dropped the
+  insurer's logo from the first page.
 
 ## [1.4.1] — 2026-08-04
 
 ### Fixed
-- **Стиль документа по умолчанию не участвовал в каскаде.** По ECMA-376
-  свойства собираются как docDefaults → стиль с `w:default="1"` → именованный
-  стиль → прямое форматирование, а резолвер пропускал второй слой целиком.
-  Документы сплошь и рядом задают в docDefaults одно, а в стиле по умолчанию
-  другое — и побеждать должно второе. В эталонном страховом полисе docDefaults
-  обещал 8pt после каждого абзаца, а стиль по умолчанию сбрасывал их в ноль:
-  лишние 8pt получал каждый из 246 абзацев, и документ распухал с пяти страниц
-  до семи. Найдено сравнением печати с оригиналом в printable.
+- **The default document style took no part in the cascade.** Per ECMA-376,
+  properties are assembled as docDefaults → the style with `w:default="1"` →
+  the named style → direct formatting, and the resolver skipped the second
+  layer entirely. Documents routinely declare one thing in docDefaults and
+  another in the default style — and the latter must win. In a reference
+  insurance policy docDefaults promised 8pt after every paragraph while the
+  default style reset it to zero: each of the 246 paragraphs gained the extra
+  8pt, and the document swelled from five pages to seven. Found by comparing
+  print output against the original in printable.
 
 ## [1.4.0] — 2026-08-04
 
 ### Added
-- **TIFF читается, а не выбрасывается молча.** `detectFormat` знал png/jpeg/
-  gif/bmp, а Word на macOS кладёт в контейнер именно TIFF — такая картинка
-  исчезала из AST без единого следа, и заметить это можно было только сравнив
-  результат с оригиналом глазами. В эталонном страховом полисе так пропадали
-  логотип и факсимиле подписи. Формат распознаётся и по расширению, и по
-  сигнатуре (`II*\0` / `MM\0*`).
-- `ImageFormat::isWebSafe()` — рисуют ли формат браузеры и PDF-движки. TIFF и
-  BMP в DOCX живут, но за его пределами почти нигде: потребителю нужно знать
-  это заранее, чтобы сконвертировать картинку, а не выяснять по пустому месту
-  в документе.
+- **TIFF is read rather than silently discarded.** `detectFormat` knew
+  png/jpeg/gif/bmp, while Word on macOS puts exactly TIFF into the container —
+  such an image vanished from the AST without a trace, and the only way to
+  notice was to compare the result against the original by eye. In a reference
+  insurance policy this is how the logo and the signature facsimile went
+  missing. The format is recognized both by extension and by signature
+  (`II*\0` / `MM\0*`).
+- `ImageFormat::isWebSafe()` — whether browsers and PDF engines draw the
+  format. TIFF and BMP live happily inside DOCX and almost nowhere outside it:
+  a consumer needs to know that up front, so it can convert the image rather
+  than discover the gap in the finished document.
 
 ## [1.3.0] — 2026-08-02
 
 ### Added
-- **Заливка абзаца** — `ParagraphStyle::$shadingColor` → `<w:shd>` в
-  `w:pPr`. Раньше залить можно было только ячейку таблицы, из-за чего
-  цветная плашка на ширину абзаца требовала таблицы ради одной строки.
-  CSS `background-color` / `background` на блочном элементе теперь
-  доезжает до DOCX; читается обратно и сериализуется в HTML.
-- **Разрядка символов** — `RunStyle::$letterSpacingTwips` → `<w:spacing>`
-  в `w:rPr` (отрицательная сжимает). Ввод — CSS `letter-spacing`, чтение
-  и обратная сериализация на месте.
-- **Поля и разрывы, размеченные классом**: `<span class="page-number">`,
-  `page-total`, `<div class="page-break">` понимаются наравне с
-  собственными тегами `<page-number/>` и `<pagebreak/>`. HTML-редакторы
-  чистят разметку по whitelist'у и незнакомый тег теряют, а класс на
-  `span` переживает чистку — и, в отличие от блочного варианта, поле
-  остаётся в строке текста, а не разрывает абзац.
-
-- **CSS-размер картинки важнее атрибута**: `style="width:96pt"` на `<img>`
-  задаёт размер в любой единице. Атрибут `width` единицу не несёт (по
-  HTML это всегда css-пиксели) и остаётся запасным вариантом.
-
-### Fixed
-- `RunStyleApplier` терял `highlight` родителя: любой inline-стиль на
-  вложенном теге снимал подсветку с `<mark>`.
-
-## [1.2.1] - 2026-07-28
+- **Paragraph shading** — `ParagraphStyle::$shadingColor` → `<w:shd>` in
+  `w:pPr`. Previously only a table cell could be filled, so a coloured band
+  the width of a paragraph required a table for the sake of one line. CSS
+  `background-color` / `background` on a block element now reaches DOCX; it is
+  read back and serialized to HTML.
+- **Letter spacing** — `RunStyle::$letterSpacingTwips` → `<w:spacing>` in
+  `w:rPr` (negative tightens). Input is CSS `letter-spacing`; reading and
+  round-trip serialization are in place.
+- **Fields and breaks marked by class**: `<span class="page-number">`,
+  `page-total` and `<div class="page-break">` are understood on a par with the
+  dedicated `<page-number/>` and `<pagebreak/>` tags. HTML editors sanitize
+  markup against a whitelist and lose an unknown tag, whereas a class on a
+  `span` survives the cleanup — and, unlike the block form, the field stays
+  within the line of text instead of breaking the paragraph.
+- **A CSS image size outweighs the attribute**: `style="width:96pt"` on `<img>`
+  sets the size in any unit. The `width` attribute carries no unit (per HTML
+  it is always CSS pixels) and remains the fallback.
 
 ### Fixed
-- Writer: отрицательный `indentFirstLineTwips` (hanging-отступ) писался
-  `w:firstLine="-N"` — невалидно по ECMA-376 (ST_TwipsMeasure unsigned);
-  теперь `w:hanging="N"`. Найдено corpus-харнессом на реальных
-  документах Google Docs / Word.
+- `RunStyleApplier` lost the parent's `highlight`: any inline style on a
+  nested tag stripped the highlight from `<mark>`.
+
+## [1.2.1] — 2026-07-28
+
+### Fixed
+- Writer: a negative `indentFirstLineTwips` (hanging indent) was written as
+  `w:firstLine="-N"` — invalid per ECMA-376 (ST_TwipsMeasure is unsigned);
+  it is now `w:hanging="N"`. Found by the corpus harness on real Google Docs /
+  Word documents.
 
 ### Added
-- Ручной corpus заполнен реальными документами: Google Docs,
-  Word Online, Word desktop (Windows + Mac) — все 4 проходят полный
-  reader-fidelity цикл.
-- Харнесс: сравнение текста без пробельных швов (ложные lost на
-  границах ячеек/рунов); ground truth исключает кэшированные значения
-  полей (fldChar separate..end и fldSimple) — PAGE-кэш не текст.
+- The manual corpus is filled with real documents: Google Docs, Word Online,
+  Word desktop (Windows + Mac) — all four pass the full reader-fidelity cycle.
+- Harness: text comparison ignores whitespace seams (they produced false
+  "lost" reports at cell and run boundaries); ground truth excludes cached
+  field values (`fldChar` separate..end and `fldSimple`) — a cached PAGE
+  number is not text.
 
 ## [1.2.0] — 2026-07-18
 
