@@ -101,6 +101,7 @@ final class DocxPackageReader
         $numberingXml = null;
         $themeXml = null;
         $settingsXml = null;
+        $footnotesXml = null;
         $headers = [];
         $footers = [];
 
@@ -118,6 +119,7 @@ final class DocxPackageReader
                 Relationship::TYPE_NUMBERING => $numberingXml = $this->loadXml($entryBytes),
                 Relationship::TYPE_THEME => $themeXml = $this->loadXml($entryBytes),
                 Relationship::TYPE_SETTINGS => $settingsXml = $this->loadXml($entryBytes),
+                Relationship::TYPE_FOOTNOTES => $footnotesXml = $this->loadXml($entryBytes),
                 Relationship::TYPE_HEADER => $headers[$absPath] = $this->loadXml($entryBytes),
                 Relationship::TYPE_FOOTER => $footers[$absPath] = $this->loadXml($entryBytes),
                 default => null,
@@ -141,6 +143,7 @@ final class DocxPackageReader
             numberingXml: $numberingXml,
             themeXml: $themeXml,
             settingsXml: $settingsXml,
+            footnotesXml: $footnotesXml,
             headers: $headers,
             footers: $footers,
             relationshipsByPart: $relationshipsByPart,

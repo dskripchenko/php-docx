@@ -8,6 +8,7 @@ use Dskripchenko\PhpDocx\Document;
 use Dskripchenko\PhpDocx\Element\BlockElement;
 use Dskripchenko\PhpDocx\Element\Bookmark;
 use Dskripchenko\PhpDocx\Element\Field;
+use Dskripchenko\PhpDocx\Element\Footnote;
 use Dskripchenko\PhpDocx\Element\HorizontalRule;
 use Dskripchenko\PhpDocx\Element\Hyperlink;
 use Dskripchenko\PhpDocx\Element\Image;
@@ -167,6 +168,7 @@ final class Serializer
             $el instanceof Hyperlink => $this->renderHyperlink($el),
             $el instanceof Image => $this->renderImage($el),
             $el instanceof Bookmark => $this->renderBookmark($el),
+            $el instanceof Footnote => '<span class="footnote">'.$this->escape($el->content).'</span>',
             $el instanceof Field => $this->renderField($el),
             $el instanceof PageBreak => '', // обычно split'ится в Paragraph
             default => '',

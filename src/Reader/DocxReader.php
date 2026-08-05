@@ -42,12 +42,14 @@ final class DocxReader
             throw new DocxException('В word/document.xml отсутствует <w:body>.');
         }
         $bodyImgReader = new ImageReader($pkg, $pkg->documentPartPath);
+        $footnotes = new FootnoteReader($pkg->footnotesXml);
         $bodyReader = new BodyReader(
             $styles,
             $numbering,
             $bodyImgReader,
             $pkg,
             $pkg->documentPartPath,
+            $footnotes,
         );
         $body = $bodyReader->read($bodyEl);
         $pageSetup = (new SectionReader)->readPageSetup($bodyEl);

@@ -8,6 +8,7 @@ use Dskripchenko\PhpDocx\Element\BlockElement;
 use Dskripchenko\PhpDocx\Element\Bookmark;
 use Dskripchenko\PhpDocx\Element\Field;
 use Dskripchenko\PhpDocx\Element\Hyperlink;
+use Dskripchenko\PhpDocx\Element\Footnote;
 use Dskripchenko\PhpDocx\Element\Image;
 use Dskripchenko\PhpDocx\Element\InlineElement;
 use Dskripchenko\PhpDocx\Element\LineBreak;
@@ -50,6 +51,7 @@ final class BodyReader
         private readonly ?ImageReader $imageReader = null,
         private readonly ?DocxPackage $package = null,
         private readonly string $partPath = 'word/document.xml',
+        private readonly ?FootnoteReader $footnotes = null,
     ) {}
 
     /**
@@ -506,6 +508,16 @@ final class BodyReader
                     if ($state !== 'value') {
                         $type = $child->getAttributeNS(OoxmlNs::W, 'type');
                         $emitted[] = $type === 'page' ? new PageBreak : new LineBreak;
+                    }
+                    break;
+                case 'footnoteReference':
+                    $flushText();
+                    if ($this->footnotes !== null && $state !== 'value') {
+                        $id = $child->getAttributeNS(OoxmlNs::W, 'id');
+                        $text = ctype_digit(ltrim($id, '-')) ? $this->footnotes->text((int) $id) : null;
+                        if ($text !== null) {
+                            $emitted[] = new Footnote($text);
+                        }
                     }
                     break;
                 case 'drawing':

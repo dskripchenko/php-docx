@@ -314,4 +314,44 @@ final class BodyReaderTest extends TestCase
         self::assertTrue($blocks[0]->style->keepWithNext);
         self::assertFalse($blocks[1]->style->keepWithNext);
     }
+
+    #[Test]
+    public function footnote_text_is_read_from_the_notes_part(): void
+    {
+        // `word/footnotes.xml` и `w:footnoteReference` проходили мимо, и текст
+        // внизу полосы исчезал без следа.
+        $notes = new \DOMDocument;
+        $notes->loadXML(
+            '<?xml version="1.0"?><w:footnotes xmlns:w="'.OoxmlNs::W.'">'
+            .'<w:footnote w:id="0" w:type="separator"><w:p><w:r><w:t>—</w:t></w:r></w:p></w:footnote>'
+            .'<w:footnote w:id="2"><w:p>'
+            .'<w:r><w:rPr><w:vertAlign w:val="superscript"/></w:rPr><w:t>1</w:t></w:r>'
+            .'<w:r><w:t>Предшествующее состояние — нарушение здоровья.</w:t></w:r>'
+            .'</w:p></w:footnote></w:footnotes>'
+        );
+
+        $body = $this->loadBody('<w:p><w:r><w:t>текст</w:t></w:r>'
+            .'<w:r><w:footnoteReference w:id="2"/></w:r></w:p>');
+
+        $reader = new BodyReader(
+            new StylesResolver,
+            new \Dskripchenko\PhpDocx\Reader\NumberingDefinitions,
+            null,
+            null,
+            'word/document.xml',
+            new \Dskripchenko\PhpDocx\Reader\FootnoteReader($notes),
+        );
+        $blocks = $reader->read($body);
+
+        $footnotes = [];
+        foreach ($blocks[0]->children as $child) {
+            if ($child instanceof \Dskripchenko\PhpDocx\Element\Footnote) {
+                $footnotes[] = $child->content;
+            }
+        }
+
+        self::assertCount(1, $footnotes);
+        // Знак сноски — её номер, его рисует движок печати: «1. 1Текст» не нужно.
+        self::assertSame('Предшествующее состояние — нарушение здоровья.', $footnotes[0]);
+    }
 }

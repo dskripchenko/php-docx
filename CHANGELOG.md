@@ -5,6 +5,16 @@ file. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.13.0] — 2026-08-05
+
+### Added
+- **Footnotes are read** — `Element\Footnote`, serialized to HTML as
+  `<span class="footnote">…</span>`. `word/footnotes.xml` and
+  `w:footnoteReference` were passed over entirely, so the text at the foot of
+  the page disappeared without a trace. The note's own marker is dropped: the
+  number is drawn by whoever renders the page, and keeping it produced
+  "1. 1Text".
+
 ## [1.12.0] — 2026-08-05
 
 ### Added

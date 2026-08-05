@@ -25,6 +25,7 @@ final readonly class DocxPackage
      * @param  \DOMDocument|null  $numberingXml  word/numbering.xml (если есть).
      * @param  \DOMDocument|null  $themeXml  word/theme/theme1.xml (если есть).
      * @param  \DOMDocument|null  $settingsXml  word/settings.xml (если есть).
+     * @param  \DOMDocument|null  $footnotesXml  word/footnotes.xml (если есть).
      * @param  array<string, \DOMDocument>  $headers  partPath → \DOMDocument
      *                                                для `word/header*.xml`.
      * @param  array<string, \DOMDocument>  $footers  partPath → \DOMDocument
@@ -49,6 +50,8 @@ final readonly class DocxPackage
         public ?\DOMDocument $numberingXml = null,
         public ?\DOMDocument $themeXml = null,
         public ?\DOMDocument $settingsXml = null,
+        /** word/footnotes.xml — тексты сносок по их идентификаторам. */
+        public ?\DOMDocument $footnotesXml = null,
         public array $headers = [],
         public array $footers = [],
         public array $relationshipsByPart = [],
