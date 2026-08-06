@@ -5,6 +5,20 @@ file. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.14.0] — 2026-08-06
+
+### Added
+- **Core properties (`docProps/core.xml`).** A written package carried no
+  metadata at all: opened in Word the document was anonymous — no title, no
+  author — and Explorer's Title and Authors columns stayed empty. Pass
+  `CoreProperties` to `Document` and the part is written, declared in
+  `[Content_Types].xml` and related from the **package** rels, where the
+  Open Packaging Conventions put it (a relationship declared from
+  `document.xml` instead leaves the part invisible to Word). Dates carry the
+  `xsi:type="dcterms:W3CDTF"` the schema demands — without it Word offers to
+  repair the document rather than open it. Nothing set means no part at all:
+  an empty properties part is worse than none.
+
 ## [1.13.3] — 2026-08-05
 
 ### Fixed

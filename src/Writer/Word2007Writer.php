@@ -109,6 +109,13 @@ final class Word2007Writer
         $stylesXml = (new StylesXmlBuilder($styles))->render();
         $rels->registerStyles();
 
+        // Core properties: пишутся только когда есть что писать — пустая
+        // часть свойств хуже её отсутствия, это просто лишний шум в пакете.
+        $core = $document->coreProperties;
+        $coreXml = $core !== null && ! $core->isEmpty()
+            ? (new CorePropertiesXmlBuilder($core))->render()
+            : null;
+
         $tmpFile = tempnam(sys_get_temp_dir(), 'docx-');
         if ($tmpFile === false) {
             throw new DocxException('Не удалось создать temp-файл для DOCX.');
@@ -127,8 +134,12 @@ final class Word2007Writer
             hasNumbering: $numberingXml !== null,
             hasStyles: true,
             hasSettings: $settingsXml !== null,
+            hasCoreProperties: $coreXml !== null,
         ));
-        $zip->addFromString('_rels/.rels', $this->renderRootRels());
+        $zip->addFromString('_rels/.rels', $this->renderRootRels($coreXml !== null));
+        if ($coreXml !== null) {
+            $zip->addFromString('docProps/core.xml', $coreXml);
+        }
         $zip->addFromString('word/document.xml', $this->renderDocumentXml(
             $section->pageSetup,
             $bodyXml,
@@ -246,6 +257,7 @@ final class Word2007Writer
         bool $hasNumbering = false,
         bool $hasStyles = false,
         bool $hasSettings = false,
+        bool $hasCoreProperties = false,
     ): string {
         $defaults = '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
             .'<Default Extension="xml" ContentType="application/xml"/>';
@@ -270,6 +282,9 @@ final class Word2007Writer
         if ($hasSettings) {
             $overrides .= '<Override PartName="/word/settings.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml"/>';
         }
+        if ($hasCoreProperties) {
+            $overrides .= '<Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>';
+        }
 
         return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
             .'<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
@@ -288,11 +303,19 @@ final class Word2007Writer
         return '<w:p/>';
     }
 
-    private function renderRootRels(): string
+    private function renderRootRels(bool $hasCoreProperties = false): string
     {
+        // Связь на core.xml объявляется ЗДЕСЬ, в корневых rels, а не в
+        // rels документа: свойства принадлежат пакету, а не главной части.
+        // Объявленная не там, часть остаётся невидимой для Word.
+        $core = $hasCoreProperties
+            ? '<Relationship Id="rIdCore" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/>'
+            : '';
+
         return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
             .'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
             .'<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>'
+            .$core
             .'</Relationships>';
     }
 
