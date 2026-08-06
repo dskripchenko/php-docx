@@ -4,7 +4,7 @@
 [![Conformance](https://img.shields.io/github/actions/workflow/status/dskripchenko/php-docx/conformance.yml?branch=main&label=ECMA-376%20%C2%B7%20LibreOffice&logo=github)](https://github.com/dskripchenko/php-docx/actions/workflows/conformance.yml)
 [![Latest Version](https://img.shields.io/packagist/v/dskripchenko/php-docx?logo=packagist&logoColor=white)](https://packagist.org/packages/dskripchenko/php-docx)
 [![Total Downloads](https://img.shields.io/packagist/dt/dskripchenko/php-docx)](https://packagist.org/packages/dskripchenko/php-docx)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](../LICENSE)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](../../LICENSE)
 [![PHP](https://img.shields.io/badge/PHP-8.2%2B-purple.svg)](https://www.php.net)
 
 
@@ -14,10 +14,10 @@ HTML ↔ DOCX**, **fluent программный builder**, **детекция �
 PHP-расширения.
 
 **Read this in other languages:**
-[English](../README.md) ·
+[English](../../README.md) ·
 **Русский** ·
-[中文](zh.md) ·
-[Deutsch](de.md)
+[中文](../zh/README.md) ·
+[Deutsch](../de/README.md)
 
 ---
 
@@ -631,4 +631,4 @@ composer stan       # phpstan level 8
 
 ## Лицензия
 
-MIT — см. [LICENSE](../LICENSE).
+MIT — см. [LICENSE](../../LICENSE).

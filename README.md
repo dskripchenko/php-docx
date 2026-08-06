@@ -1,5 +1,7 @@
 # dskripchenko/php-docx
 
+> 🌐 **English** · [Deutsch](docs/de/README.md) · [Русский](docs/ru/README.md) · [中文](docs/zh/README.md)
+
 [![Tests](https://img.shields.io/github/actions/workflow/status/dskripchenko/php-docx/tests.yml?branch=main&label=tests&logo=github)](https://github.com/dskripchenko/php-docx/actions/workflows/tests.yml)
 [![Conformance](https://img.shields.io/github/actions/workflow/status/dskripchenko/php-docx/conformance.yml?branch=main&label=ECMA-376%20%C2%B7%20LibreOffice&logo=github)](https://github.com/dskripchenko/php-docx/actions/workflows/conformance.yml)
 [![Latest Version](https://img.shields.io/packagist/v/dskripchenko/php-docx?logo=packagist&logoColor=white)](https://packagist.org/packages/dskripchenko/php-docx)
@@ -17,9 +19,9 @@ external dependencies beyond standard PHP extensions.
 
 **Read this in other languages:**
 **English** ·
-[Русский](docs/ru.md) ·
-[中文](docs/zh.md) ·
-[Deutsch](docs/de.md)
+[Русский](docs/ru/README.md) ·
+[中文](docs/zh/README.md) ·
+[Deutsch](docs/de/README.md)
 
 ---
 
