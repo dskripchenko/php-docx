@@ -101,7 +101,7 @@ final class StylesTest extends TestCase
         self::assertContains('word/styles.xml', $names);
         self::assertStringContainsString('Target="styles.xml"', $rels);
         self::assertStringContainsString('styles+xml', $contentTypes);
-        // Defaults применились
+        // The defaults were applied
         self::assertStringContainsString('w:styleId="Heading1"', $styles);
     }
 
@@ -127,7 +127,7 @@ final class StylesTest extends TestCase
 
         self::assertStringContainsString('w:val="100"', $styles);
         self::assertStringContainsString('w:val="ff0000"', $styles);
-        // Только Heading1 — другие headings caller не передал
+        // Heading1 only — the caller passed no other headings
         self::assertStringNotContainsString('w:styleId="Heading2"', $styles);
     }
 }

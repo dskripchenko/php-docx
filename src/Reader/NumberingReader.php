@@ -9,14 +9,14 @@ use Dskripchenko\PhpDocx\Element\ListFormat;
 /**
  * Phase 5 — NumberingReader.
  *
- * Парсит `word/numbering.xml`:
- *  - `<w:abstractNum w:abstractNumId="N">` с детьми `<w:lvl w:ilvl="0..">`
- *    содержащими `<w:numFmt w:val="decimal|bullet|...">` и
- *    `<w:start w:val="1">`.
- *  - `<w:num w:numId="M"><w:abstractNumId w:val="N"/></w:num>` — concrete
- *    instance с возможными overrides `<w:lvlOverride>/<w:startOverride>`.
+ * Parses `word/numbering.xml`:
+ *  - `<w:abstractNum w:abstractNumId="N">` with `<w:lvl w:ilvl="0..">` children
+ *    holding `<w:numFmt w:val="decimal|bullet|...">` and `<w:start w:val="1">`.
+ *  - `<w:num w:numId="M"><w:abstractNumId w:val="N"/></w:num>` — a concrete
+ *    instance with possible `<w:lvlOverride>/<w:startOverride>` overrides.
  *
- * Resolved-state в NumberingDefinitions: numId → level → {format, startAt}.
+ * The resolved state in NumberingDefinitions: numId → level → {format,
+ * startAt}.
  */
 final class NumberingReader
 {
@@ -71,7 +71,7 @@ final class NumberingReader
                         $absLevels[$ilvl]['startAt'] = (int) $val;
                     }
                 }
-                // <w:lvlOverride><w:lvl>...</w:lvl></w:lvlOverride> — полное переопределение
+                // <w:lvlOverride><w:lvl>...</w:lvl></w:lvlOverride> is a full override
                 $lvlEl = OoxmlNs::firstChild($override, OoxmlNs::W, 'lvl');
                 if ($lvlEl !== null) {
                     $absLevels[$ilvl] = $this->readSingleLevel($lvlEl);

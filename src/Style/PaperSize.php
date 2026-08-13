@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Dskripchenko\PhpDocx\Style;
 
 /**
- * Стандартные форматы бумаги. Значения — в twips (portrait-ориентация).
+ * The standard paper sizes. The values are in twips (portrait orientation).
  */
 enum PaperSize: string
 {

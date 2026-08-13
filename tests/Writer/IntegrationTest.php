@@ -11,7 +11,7 @@ use PHPUnit\Framework\TestCase;
 
 /**
  * Integration tests: HTML → Converter → Document → Word2007Writer → DOCX bytes.
- * Проверяем что весь pipeline собирается end-to-end.
+ * They check that the whole pipeline holds together end to end.
  */
 final class IntegrationTest extends TestCase
 {
@@ -62,7 +62,7 @@ final class IntegrationTest extends TestCase
         $doc = (new Converter)->fromHtml($html);
         $bytes = (new Word2007Writer)->write($doc);
 
-        // Media file присутствует
+        // The media file is there
         $tmp = tempnam(sys_get_temp_dir(), 'docx-int-');
         file_put_contents($tmp, $bytes);
         try {

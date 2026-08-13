@@ -108,10 +108,10 @@ final class Word2007WriterTest extends TestCase
     #[Test]
     public function it_writes_negative_first_line_indent_as_hanging(): void
     {
-        // ST_TwipsMeasure — unsigned: отрицательный firstLine (наша модель
-        // hanging-отступа) обязан уехать атрибутом w:hanging, иначе
-        // document.xml не проходит ECMA-376 XSD (найдено corpus-харнессом
-        // на реальных документах Google Docs / Word).
+        // ST_TwipsMeasure is unsigned: a negative firstLine (our model of a
+        // hanging indent) has to leave as the w:hanging attribute, otherwise
+        // document.xml fails the ECMA-376 XSD (found by the corpus harness on
+        // real Google Docs / Word documents).
         $doc = new Document(new Section(body: [
             new Paragraph([new Run('hang')], new ParagraphStyle(indentFirstLineTwips: -360)),
         ]));

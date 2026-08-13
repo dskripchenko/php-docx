@@ -45,7 +45,7 @@ final class RowSpanTest extends TestCase
 
         // First cell — restart
         self::assertStringContainsString('<w:vMerge w:val="restart"/>', $xml);
-        // Continue cell в row 2 — без val
+        // The continue cell in row 2 carries no val
         self::assertMatchesRegularExpression('/<w:vMerge\/>/', $xml);
     }
 
@@ -79,7 +79,7 @@ final class RowSpanTest extends TestCase
         /** @var Table $t */
         $t = $doc->section->body[0];
 
-        // Row 2 должна стать: R2A, [continue], R2C — 3 cells
+        // Row 2 has to become R2A, [continue], R2C — 3 cells
         self::assertCount(3, $t->rows[1]->cells);
         self::assertFalse($t->rows[1]->cells[0]->style->vMergeContinue, 'R2A regular');
         self::assertTrue($t->rows[1]->cells[1]->style->vMergeContinue, 'middle is continue');

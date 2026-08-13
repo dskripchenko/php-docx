@@ -9,13 +9,14 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Формат знака абзаца не протекает на текст.
+ * The formatting of the paragraph mark does not leak onto the text.
  *
- * `w:pPr/w:rPr` описывает символ ¶ — то, каким будет набранное в конце
- * абзаца. Существующие руны Word не трогает. Раньше эти свойства
- * подмешивались в базовый стиль рунов, и любое из них расходилось на весь
- * абзац: в эталонном страховом полисе знак абзаца был помечен жирным, и
- * жирным печатался весь документ — строки выходили на 16% шире оригинала.
+ * `w:pPr/w:rPr` describes the ¶ character — what anything typed at the end of
+ * the paragraph will look like. Word does not touch the existing runs. These
+ * properties used to be mixed into the base run style, and any one of them
+ * spread across the whole paragraph: in the reference insurance policy the
+ * paragraph mark was flagged bold, and the entire document printed bold — the
+ * lines came out 16% wider than the original.
  */
 final class ParagraphMarkFormattingTest extends TestCase
 {

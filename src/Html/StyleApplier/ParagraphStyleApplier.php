@@ -10,16 +10,16 @@ use Dskripchenko\PhpDocx\Style\Alignment;
 use Dskripchenko\PhpDocx\Style\ParagraphStyle;
 
 /**
- * Применяет CSS к ParagraphStyle (`<w:pPr>`).
+ * Applies CSS to a ParagraphStyle (`<w:pPr>`).
  *
- * Поддерживает:
+ * Supported:
  *  - text-align (start/center/end/justify)
  *  - margin / margin-top / margin-bottom → spaceBefore/After
  *  - text-indent → indentFirstLine
  *  - margin-left/right → indentLeft/Right
- *  - line-height (multiplier или absolute)
+ *  - line-height (a multiplier or an absolute value)
  *  - page-break-after: always
- *  - background-color / background → заливка абзаца (`<w:shd>`)
+ *  - background-color / background → the paragraph fill (`<w:shd>`)
  */
 final class ParagraphStyleApplier
 {
@@ -106,7 +106,7 @@ final class ParagraphStyleApplier
 
                 case 'background-color':
                 case 'background':
-                    // Shorthand `background: #fff` без картинки = цвет заливки.
+                    // The shorthand `background: #fff` without an image is a fill colour.
                     $hex = ColorParser::parse($value);
                     if ($hex !== null) {
                         $shading = $hex;
@@ -148,7 +148,7 @@ final class ParagraphStyleApplier
     }
 
     /**
-     * CSS shorthand `margin: top right bottom left` → 4 значения в twips.
+     * The CSS shorthand `margin: top right bottom left` → 4 values in twips.
      *
      * @return array{?int, ?int, ?int, ?int}
      */
@@ -168,10 +168,11 @@ final class ParagraphStyleApplier
 
     /**
      * CSS line-height:
-     *   - число без единиц («1.5») → multiplier
-     *   - с единицами («18pt») → absolute
-     *   - проценты («150%») → multiplier × 1%
-     * Возвращает значение в twips (для `<w:spacing w:line="..." w:lineRule="exact"/>`).
+     *   - a unitless number ("1.5") → a multiplier
+     *   - one with units ("18pt") → an absolute value
+     *   - a percentage ("150%") → a multiplier × 1%
+     * Returns the value in twips (for
+     * `<w:spacing w:line="..." w:lineRule="exact"/>`).
      */
     private static function parseLineHeight(string $value): ?int
     {

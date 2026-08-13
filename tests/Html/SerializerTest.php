@@ -141,7 +141,7 @@ final class SerializerTest extends TestCase
         $html = (new Serializer)->serialize($doc)->bodyHtml;
         self::assertStringContainsString('rowspan="2"', $html);
         self::assertStringContainsString('colspan="2"', $html);
-        // vMergeContinue cell должен быть dropped в HTML.
+        // A vMergeContinue cell has to be dropped in the HTML.
         self::assertStringNotContainsString('vMergeContinue', $html);
     }
 
@@ -211,15 +211,15 @@ final class SerializerTest extends TestCase
         $doc = (new DocxReader)->read($bytes);
         $imported = (new Serializer)->serialize($doc);
 
-        // bodyHtml должен содержать ключевые элементы (с возможным
-        // style-атрибутом — поэтому ищем prefix без `>`).
+        // bodyHtml has to contain the key elements (possibly with a style
+        // attribute — hence the prefix search without the `>`).
         self::assertStringContainsString('<h1', $imported->bodyHtml);
         self::assertStringContainsString('<strong>Bold</strong>', $imported->bodyHtml);
         self::assertStringContainsString('<em>italic</em>', $imported->bodyHtml);
         self::assertStringContainsString('<ul>', $imported->bodyHtml);
         self::assertStringContainsString('<table', $imported->bodyHtml);
-        // Cell content; semantic th/td может потеряться без <thead>-обёртки
-        // в исходном HTML (Converter limitation, не Serializer).
+        // Cell content; a semantic th/td can be lost without a <thead> wrapper in
+        // the source HTML (a converter limitation, not a serializer one).
         self::assertStringContainsString('>X<', $imported->bodyHtml);
     }
 

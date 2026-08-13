@@ -59,11 +59,11 @@ final class OrderedListExtrasTest extends TestCase
         $doc = (new Converter)->fromHtml('<ol type="A" start="3"><li>x</li></ol>');
         $bodyXml = $builder->render($doc->section->body);
 
-        // numId должен быть > 2 (выше стандартных bullet=1, decimal=2).
+        // The numId has to be > 2 (above the standard bullet=1, decimal=2).
         self::assertMatchesRegularExpression('/<w:numId w:val="([3-9]|\d{2,})"\/>/', $bodyXml);
 
         $numXml = $numbering->render();
-        // Должен содержать upperLetter formatting + start=3.
+        // It has to carry the upperLetter formatting and start=3.
         self::assertStringContainsString('<w:numFmt w:val="upperLetter"/>', $numXml);
         self::assertStringContainsString('<w:start w:val="3"/>', $numXml);
     }
@@ -74,7 +74,7 @@ final class OrderedListExtrasTest extends TestCase
         $numbering = new NumberingXmlBuilder;
         self::assertSame(1, $numbering->instanceFor(ListFormat::Bullet));
         self::assertSame(2, $numbering->instanceFor(ListFormat::Decimal, 1));
-        // Декимал с start>1 — уже custom.
+        // Decimal with start>1 is already a custom instance.
         $custom = $numbering->instanceFor(ListFormat::Decimal, 5);
         self::assertGreaterThan(2, $custom);
     }

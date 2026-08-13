@@ -28,7 +28,7 @@ final class LengthTest extends TestCase
         // 1pt = 20 twips
         self::assertSame(20, Length::pt(1));
         self::assertSame(200, Length::pt(10));
-        // Половина пункта округляется к ближайшему twip
+        // Half a point is rounded to the nearest twip
         self::assertSame(10, Length::pt(0.5));
     }
 
@@ -194,7 +194,7 @@ final class LengthTest extends TestCase
     #[Test]
     public function length_helpers_usable_standalone(): void
     {
-        // Length::cm(1) можно использовать как параметр для widthTwips
+        // Length::cm(1) can be passed as the widthTwips argument
         $doc = DocumentBuilder::new()
             ->table(fn (TableBuilder $t) => $t
                 ->columns(Length::cm(3), Length::cm(5))

@@ -5,14 +5,15 @@ declare(strict_types=1);
 namespace Dskripchenko\PhpDocx\Reader;
 
 /**
- * OOXML namespaces — обёртка над DOMElement для работы с tag namespaces.
+ * OOXML namespaces — a wrapper over DOMElement for working with tag
+ * namespaces.
  *
- * `<w:p>`-теги используют namespace `urn:schemas-...wordprocessingml...`,
- * `<a:srgbClr>` — DrawingML, etc. DOMElement::getElementsByTagName()
- * принимает префиксное имя, getElementsByTagNameNS — namespace URI.
+ * `<w:p>` tags live in the `urn:schemas-...wordprocessingml...` namespace,
+ * `<a:srgbClr>` in DrawingML, and so on. DOMElement::getElementsByTagName()
+ * takes a prefixed name, getElementsByTagNameNS() a namespace URI.
  *
- * Используем NS URIs т.к. некоторые DOCX-генераторы используют разные
- * префиксы (`w` vs `ns0`).
+ * The NS URIs are used because DOCX generators differ in the prefixes they
+ * pick (`w` versus `ns0`).
  */
 final class OoxmlNs
 {
@@ -35,8 +36,8 @@ final class OoxmlNs
     public const XML = 'http://www.w3.org/XML/1998/namespace';
 
     /**
-     * Найти все child-элементы конкретного NS+localName в указанной родительской ноде
-     * (не рекурсивно — только прямые потомки).
+     * Finds every child element with the given NS+localName in the given parent
+     * node (not recursively — direct children only).
      *
      * @return list<\DOMElement>
      */
@@ -55,7 +56,7 @@ final class OoxmlNs
     }
 
     /**
-     * Первый ребёнок с заданным NS+localName, или null.
+     * The first child with the given NS+localName, or null.
      */
     public static function firstChild(\DOMElement $parent, string $ns, string $localName): ?\DOMElement
     {
@@ -72,7 +73,7 @@ final class OoxmlNs
 
     /**
      * `<w:b w:val="0"/>` → false; `<w:b/>` → true; `<w:b w:val="1"/>` → true.
-     * Default — true (отсутствие val = on).
+     * The default is true (a missing val means on).
      */
     public static function boolToggle(?\DOMElement $el): bool
     {
@@ -91,7 +92,7 @@ final class OoxmlNs
     }
 
     /**
-     * Получает атрибут `w:val` (или null).
+     * Reads the `w:val` attribute (or null).
      */
     public static function wVal(\DOMElement $el): ?string
     {

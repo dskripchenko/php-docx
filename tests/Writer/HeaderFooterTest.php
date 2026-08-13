@@ -80,13 +80,13 @@ final class HeaderFooterTest extends TestCase
         $bytes = (new Word2007Writer)->write($doc);
 
         $headerXml = self::extract($bytes, 'word/header1.xml');
-        // VML shape с textpath, rotation, transparency, абсолютным позиционированием.
+        // A VML shape with textpath, rotation, transparency and absolute positioning.
         self::assertStringContainsString('<v:shapetype id="_x0000_t136"', $headerXml);
         self::assertStringContainsString('type="#_x0000_t136"', $headerXml);
         self::assertStringContainsString('rotation:315', $headerXml);
         self::assertStringContainsString('opacity=".5"', $headerXml);
         self::assertStringContainsString('string="ОБРАЗЕЦ"', $headerXml);
-        // VML namespaces в <w:hdr>
+        // The VML namespaces in <w:hdr>
         self::assertStringContainsString('xmlns:v="urn:schemas-microsoft-com:vml"', $headerXml);
         self::assertStringContainsString('xmlns:o="urn:schemas-microsoft-com:office:office"', $headerXml);
     }
@@ -117,7 +117,7 @@ final class HeaderFooterTest extends TestCase
         $bytes = (new Word2007Writer)->write($doc);
         $headerXml = self::extract($bytes, 'word/header1.xml');
 
-        // Оба должны присутствовать; watermark идёт первым
+        // Both have to be present; the watermark comes first
         self::assertStringContainsString('DRAFT', $headerXml);
         self::assertStringContainsString('real header', $headerXml);
         $watermarkPos = strpos($headerXml, 'DRAFT');

@@ -7,16 +7,17 @@ namespace Dskripchenko\PhpDocx\Element;
 use Dskripchenko\PhpDocx\Style\ParagraphStyle;
 
 /**
- * Параграф — `<w:p>` в OOXML. Содержит inline-элементы (Run/LineBreak/Hyperlink).
+ * A paragraph — `<w:p>` in OOXML. It holds inline elements
+ * (Run/LineBreak/Hyperlink).
  *
- * Heading-level 1..6 опционально: эмиттер выберет соответствующий
- * paragraph-style (Heading1..Heading6) и применит default-стили.
+ * The heading level 1..6 is optional: the emitter picks the matching paragraph
+ * style (Heading1..Heading6) and applies the default styles.
  */
 final readonly class Paragraph implements BlockElement
 {
     /**
      * @param  list<InlineElement>  $children
-     * @param  int|null  $headingLevel  1..6 если это заголовок, иначе null
+     * @param  int|null  $headingLevel  1..6 when this is a heading, null otherwise
      */
     public function __construct(
         public array $children,

@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace Dskripchenko\PhpDocx\Writer;
 
 /**
- * Генерирует `word/settings.xml` с document-level settings.
+ * Generates `word/settings.xml` with the document-level settings.
  *
- * Минимальный set — только `<w:evenAndOddHeaders/>` если включены
- * even-headers/footers. Остальные настройки (zoom, autoHyphenation,
- * defaultTabStop и т.д.) пока не покрываем.
+ * The set is minimal — only `<w:evenAndOddHeaders/>`, and only when the
+ * even-page headers or footers are on. The other settings (zoom,
+ * autoHyphenation, defaultTabStop and so on) are not covered yet.
  */
 final class SettingsXmlBuilder
 {

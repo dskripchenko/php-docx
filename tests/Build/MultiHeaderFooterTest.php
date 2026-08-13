@@ -124,7 +124,7 @@ final class MultiHeaderFooterTest extends TestCase
         $pkg = (new DocxPackageReader)->read($bytes);
         self::assertCount(3, $pkg->headers);
 
-        // В sectPr должны быть 3 <w:headerReference>.
+        // sectPr has to hold 3 <w:headerReference> entries.
         $xml = $pkg->documentXml->saveXML();
         self::assertNotFalse($xml);
         self::assertStringContainsString('w:type="default"', $xml);
@@ -168,7 +168,7 @@ final class MultiHeaderFooterTest extends TestCase
     #[Test]
     public function watermark_with_first_header_works(): void
     {
-        // Watermark идёт в default header; first-header — отдельный.
+        // The watermark goes into the default header; the first-page one is separate.
         $bytes = DocumentBuilder::new()
             ->watermark('DRAFT')
             ->firstHeader(fn ($h) => $h->paragraph('Title page'))

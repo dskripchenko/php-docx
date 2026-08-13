@@ -11,12 +11,12 @@ use Dskripchenko\PhpDocx\Style\CellStyle;
 use Dskripchenko\PhpDocx\Style\VerticalAlign;
 
 /**
- * Fluent builder для одной ячейки таблицы. Внутри ячейки можно класть
- * любые блоки (paragraph/heading/table/list/image) через trait
- * AddsBlockContent — ячейки — это полноценные section-containers.
+ * A fluent builder for a single table cell. Any block
+ * (paragraph/heading/table/list/image) can go inside a cell through the
+ * AddsBlockContent trait — cells are full-blown section containers.
  *
- * Используется как `$row->cell(fn(TableCellBuilder $c) => $c->paragraph('A'))`
- * или короткой формой `$row->cell('A')` (создаёт ячейку с одним paragraph'ом).
+ * Used as `$row->cell(fn(TableCellBuilder $c) => $c->paragraph('A'))`, or in
+ * the short form `$row->cell('A')` (which makes a cell with one paragraph).
  */
 final class TableCellBuilder
 {
@@ -73,8 +73,8 @@ final class TableCellBuilder
     }
 
     /**
-     * Ширина в процентах. 0..100 — convenience-форма (внутренне умножается
-     * на 50 чтобы получить OOXML-friendly значение pct=N*50).
+     * The width as a percentage. 0..100 is the convenience form (multiplied by
+     * 50 internally to get the OOXML-friendly pct=N*50 value).
      */
     public function widthPercent(int $percent): self
     {
@@ -85,8 +85,8 @@ final class TableCellBuilder
     }
 
     /**
-     * Padding всех сторон в twips. Если передано 1 значение — применяется
-     * ко всем сторонам.
+     * The padding of every side in twips. A single value is applied to all
+     * four sides.
      */
     public function padding(int $top, ?int $right = null, ?int $bottom = null, ?int $left = null): self
     {
@@ -187,7 +187,7 @@ final class TableCellBuilder
     {
         $children = $this->buildBlocks();
         if ($children === []) {
-            // OOXML schema требует хотя бы один <w:p> в <w:tc>.
+            // The OOXML schema requires at least one <w:p> inside <w:tc>.
             $children = [new Paragraph([])];
         }
 

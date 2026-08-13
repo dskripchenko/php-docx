@@ -11,10 +11,10 @@ use Dskripchenko\PhpDocx\Style\PaperSize;
 /**
  * Phase 8 — SectionReader: `<w:sectPr>` → PageSetup.
  *
- * Word документ может иметь несколько `<w:sectPr>` (по одному на section);
- * мы берём ПОСЛЕДНИЙ в body (он определяет дефолт для всех страниц до
- * следующего sectPr выше). Multi-section разные orientation/margins —
- * out of scope (ADR-015), warn upstream.
+ * A Word document may have several `<w:sectPr>` (one per section); we take the
+ * LAST one in the body (it defines the default for every page up to the next
+ * sectPr above). Multi-section documents with differing orientation or margins
+ * are out of scope (ADR-015) — warn upstream.
  */
 final class SectionReader
 {
@@ -91,8 +91,8 @@ final class SectionReader
                 $last = $c;
             }
         }
-        // Также проверяем последний <w:p>/<w:pPr>/<w:sectPr> (Word иногда
-        // кладёт sectPr внутрь pPr последнего параграфа).
+        // Also check the last <w:p>/<w:pPr>/<w:sectPr> (Word sometimes puts the
+        // sectPr inside the pPr of the final paragraph).
         if ($last === null) {
             $paragraphs = $body->getElementsByTagNameNS(OoxmlNs::W, 'p');
             for ($i = $paragraphs->length - 1; $i >= 0; $i--) {
@@ -119,8 +119,8 @@ final class SectionReader
         if ($w === null || $h === null) {
             return PaperSize::A4;
         }
-        // Normalize — для landscape считаем что в OOXML w/h уже swapped,
-        // тогда сравниваем "длинную сторону".
+        // Normalize: for landscape we assume OOXML has already swapped w/h, so
+        // the comparison is against the "long side".
         $longSide = max($w, $h);
         $shortSide = min($w, $h);
         // Tolerance ~50 twips (~0.9mm).

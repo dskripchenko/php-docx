@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Dskripchenko\PhpDocx\Style;
 
 /**
- * Набор бордеров (top/right/bottom/left) для table/cell/paragraph.
+ * A set of borders (top/right/bottom/left) for a table, cell or paragraph.
  */
 final readonly class BorderSet
 {
@@ -19,7 +19,7 @@ final readonly class BorderSet
     ) {}
 
     /**
-     * Все 4 стороны (включая insideH/V для table) одного типа.
+     * All four sides (plus insideH/V for a table) of the same kind.
      */
     public static function all(Border $border, bool $withInside = true): self
     {

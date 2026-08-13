@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Dskripchenko\PhpDocx\Element;
 
 /**
- * Inline-перенос строки (`<w:br/>`). Не путать с `PageBreak` (block-level).
+ * An inline line break (`<w:br/>`). Not to be confused with `PageBreak`, which
+ * is block-level.
  */
 final readonly class LineBreak implements InlineElement {}

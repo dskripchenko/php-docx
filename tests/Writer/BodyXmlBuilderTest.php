@@ -237,7 +237,7 @@ final class BodyXmlBuilderTest extends TestCase
     #[Test]
     public function it_emits_empty_cell_as_single_paragraph(): void
     {
-        // Пустая cell (без children) — OOXML требует хотя бы один <w:p>
+        // An empty cell (no children) — OOXML requires at least one <w:p>
         $xml = (new BodyXmlBuilder)->render([
             new Table([
                 new TableRow([

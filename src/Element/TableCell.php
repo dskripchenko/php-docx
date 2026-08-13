@@ -7,8 +7,8 @@ namespace Dskripchenko\PhpDocx\Element;
 use Dskripchenko\PhpDocx\Style\CellStyle;
 
 /**
- * Ячейка таблицы — `<w:tc>`.
- * Содержит block-elements (несколько `<w:p>` для multi-paragraph cells).
+ * A table cell — `<w:tc>`.
+ * It holds block elements (several `<w:p>` for multi-paragraph cells).
  */
 final readonly class TableCell
 {

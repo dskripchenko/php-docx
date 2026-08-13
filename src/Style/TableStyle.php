@@ -7,12 +7,12 @@ namespace Dskripchenko\PhpDocx\Style;
 final readonly class TableStyle
 {
     /**
-     * @param  int|null  $widthTwips  Ширина в twips (`w:type="dxa"`).
-     * @param  int|null  $widthPercent  Ширина в % × 50 (`w:type="pct"`).
-     *                                  Если оба null — Word рендерит auto-width.
-     * @param  bool  $fixedLayout  true → `<w:tblLayout w:type="fixed"/>` —
-     *                             cell widths применяются буквально без
-     *                             Word'овской авто-фит'илизации.
+     * @param  int|null  $widthTwips  Width in twips (`w:type="dxa"`).
+     * @param  int|null  $widthPercent  Width as % × 50 (`w:type="pct"`). When
+     *                                  both are null, Word renders auto width.
+     * @param  bool  $fixedLayout  true → `<w:tblLayout w:type="fixed"/>`: the
+     *                             cell widths are applied literally, without
+     *                             Word's auto-fitting.
      */
     public function __construct(
         public ?int $widthTwips = null,

@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace Dskripchenko\PhpDocx\Style;
 
 /**
- * Параметры страницы (paper size, orientation, margins).
+ * The page setup (paper size, orientation, margins).
  *
- * Размеры — в twips (1pt = 20 twips, 1mm ≈ 56.7 twips). Хранятся как twips
- * чтобы конверсия в OOXML была без округления.
+ * The sizes are in twips (1pt = 20 twips, 1mm ≈ 56.7 twips). They are kept as
+ * twips so that converting into OOXML involves no rounding.
  */
 final readonly class PageSetup
 {
@@ -44,7 +44,7 @@ final readonly class PageSetup
     }
 
     /**
-     * Ширина области контента (для расчёта ширин ячеек таблицы).
+     * The width of the content area (for computing table cell widths).
      */
     public function contentWidthTwips(): int
     {

@@ -9,15 +9,15 @@ use Dskripchenko\PhpDocx\Html\LengthParser;
 use Dskripchenko\PhpDocx\Style\RunStyle;
 
 /**
- * Применяет CSS-properties к RunStyle (`<w:rPr>`).
+ * Applies CSS properties to a RunStyle (`<w:rPr>`).
  *
- * Поддерживает inline-стили которые имеют смысл на run-уровне:
+ * It supports the inline styles that make sense at run level:
  *  - font-size, font-family, color, background-color
  *  - font-weight (`bold`/`700`/`bolder` → bold)
  *  - font-style (`italic`/`oblique`)
  *  - text-decoration (`underline`/`line-through`)
  *  - vertical-align (`sub`/`super`)
- *  - letter-spacing (разрядка)
+ *  - letter-spacing
  */
 final class RunStyleApplier
 {
@@ -58,7 +58,7 @@ final class RunStyleApplier
 
                 case 'background-color':
                 case 'background':
-                    // CSS shorthand `background: red` (без image) = background-color.
+                    // The CSS shorthand `background: red` (no image) is a background-color.
                     $hex = ColorParser::parse($value);
                     if ($hex !== null) {
                         $bgColor = $hex;
@@ -67,8 +67,8 @@ final class RunStyleApplier
                     break;
 
                 case 'font-family':
-                    // CSS список «Inter, Helvetica, sans-serif» → берём первый
-                    // не-generic font name.
+                    // From a CSS list «Inter, Helvetica, sans-serif» take the first
+                    // non-generic font name.
                     $first = trim(explode(',', $value)[0] ?? '');
                     $first = trim($first, '\'"');
                     if ($first !== '') {
@@ -137,8 +137,9 @@ final class RunStyleApplier
             strikethrough: $strikethrough,
             superscript: $superscript,
             subscript: $subscript,
-            // highlight CSS не задаёт — переносим из базы, иначе любой
-            // inline-стиль на вложенном теге стирал подсветку родителя.
+            // CSS does not set the highlight, so carry it over from the base;
+            // otherwise any inline style on a nested tag erased the parent's
+            // highlighting.
             highlight: $base->highlight,
             letterSpacingTwips: $letterSpacing,
         );

@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace Dskripchenko\PhpDocx\Style;
 
 /**
- * Registry именованных стилей (Heading1..6, ListParagraph, custom).
+ * A registry of named styles (Heading1..6, ListParagraph, custom ones).
  *
- * Caller передаёт в Word2007Writer; если не передан — используется
- * `StyleRegistry::defaults()`. Если caller хочет полностью свои стили,
- * может начать с пустого `new StyleRegistry` и регистрировать только нужное.
+ * The caller passes it into Word2007Writer; when it does not,
+ * `StyleRegistry::defaults()` is used. A caller that wants entirely its own
+ * styles can start from an empty `new StyleRegistry` and register only what it
+ * needs.
  */
 final class StyleRegistry
 {
@@ -17,8 +18,8 @@ final class StyleRegistry
     private array $styles = [];
 
     /**
-     * Регистрирует heading-стиль уровня 1..6.
-     * Mapping: paragraph style с w:styleId="Heading{level}".
+     * Registers a heading style of level 1..6.
+     * It maps to a paragraph style with w:styleId="Heading{level}".
      */
     public function heading(int $level, RunStyle $runStyle, ?ParagraphStyle $paragraphStyle = null): self
     {
@@ -46,12 +47,12 @@ final class StyleRegistry
     }
 
     /**
-     * Дефолтный набор Heading1..6 + ListParagraph.
+     * The default set: Heading1..6 plus ListParagraph.
      */
     public static function defaults(): self
     {
         $r = new self;
-        // Размеры в half-points: 44=22pt, 36=18pt, 28=14pt, 24=12pt, 22=11pt, 20=10pt
+        // Sizes in half-points: 44=22pt, 36=18pt, 28=14pt, 24=12pt, 22=11pt, 20=10pt
         $sizes = [1 => 44, 2 => 36, 3 => 28, 4 => 24, 5 => 22, 6 => 20];
         $colors = [1 => '0f172a', 2 => '0f172a', 3 => '1f2937', 4 => '1f2937', 5 => '374151', 6 => '374151'];
         foreach ($sizes as $lvl => $size) {
@@ -64,13 +65,13 @@ final class StyleRegistry
                 ),
             );
         }
-        // ListParagraph — для elements c bullet/numbering.
+        // ListParagraph is for the elements carrying bullets or numbering.
         $r->paragraph(
             'ListParagraph',
             new RunStyle,
             new ParagraphStyle(indentLeftTwips: 720),
         );
-        // Caption — для подписей таблиц / figcaption / etc.
+        // Caption is for table captions, figcaption and the like.
         $r->paragraph(
             'Caption',
             new RunStyle(sizeHalfPoints: 20, color: '6b7280', italic: true),

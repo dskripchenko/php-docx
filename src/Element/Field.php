@@ -7,18 +7,18 @@ namespace Dskripchenko\PhpDocx\Element;
 use Dskripchenko\PhpDocx\Style\RunStyle;
 
 /**
- * Word "field code" inline element — динамическое содержимое, вычисляемое
- * рендерером. Мапится в `<w:fldSimple w:instr="..."/>`.
+ * A Word "field code" inline element — dynamic content computed by the
+ * renderer. It maps to `<w:fldSimple w:instr="..."/>`.
  *
- * Типичные FieldType:
- *   - `PAGE`     — номер текущей страницы
- *   - `NUMPAGES` — всего страниц в документе
- *   - `DATE`     — текущая дата
- *   - `TIME`     — текущее время
- *   - `AUTHOR`   — автор из docProps
- *   - `TITLE`    — заголовок из docProps
+ * The usual FieldTypes:
+ *   - `PAGE`     — the number of the current page
+ *   - `NUMPAGES` — the total number of pages in the document
+ *   - `DATE`     — the current date
+ *   - `TIME`     — the current time
+ *   - `AUTHOR`   — the author from docProps
+ *   - `TITLE`    — the title from docProps
  *
- * Custom HTML-теги в Converter:
+ * The custom HTML tags in the converter:
  *   <page-number/>    → Field::page()
  *   <page-total/>     → Field::pageTotal()
  *   <current-date/>   → Field::date()

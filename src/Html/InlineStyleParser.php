@@ -5,15 +5,15 @@ declare(strict_types=1);
 namespace Dskripchenko\PhpDocx\Html;
 
 /**
- * Разбирает значение `style="..."` атрибута в associative-массив
- * `[property => value]`. Не парсит CSS-rules — только flat declarations.
+ * Parses the value of a `style="..."` attribute into an associative array
+ * `[property => value]`. It does not parse CSS rules — flat declarations only.
  *
  *   parse('color: red; font-size: 12pt;')
  *     → ['color' => 'red', 'font-size' => '12pt']
  *
- * Multi-value properties (`background: red`) сохраняются raw; конверсия
- * shorthand в long-form (`padding: 4pt 8pt` → top/right/bottom/left)
- * делается в StyleApplier'ах.
+ * Multi-value properties (`background: red`) are kept raw; converting a
+ * shorthand into the long form (`padding: 4pt 8pt` → top/right/bottom/left) is
+ * done in the style appliers.
  */
 final class InlineStyleParser
 {

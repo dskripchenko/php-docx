@@ -5,12 +5,13 @@ declare(strict_types=1);
 namespace Dskripchenko\PhpDocx\Element;
 
 /**
- * Картинка. Может быть inline (внутри Run) или block (отдельным параграфом).
+ * An image. It can be inline (inside a run) or a block (its own paragraph).
  *
- * binary — сырые байты файла. Хранится в word/media/imageN.ext, связывается
- * с документом через _rels/document.xml.rels.
+ * binary holds the raw bytes of the file. It is stored in
+ * word/media/imageN.ext and tied to the document through
+ * _rels/document.xml.rels.
  *
- * Размеры в EMU (English Metric Units): 1 inch = 914400 EMU,
+ * Sizes are in EMU (English Metric Units): 1 inch = 914400 EMU,
  * 1 cm = 360000 EMU, 1 px (@96 DPI) = 9525 EMU.
  */
 final readonly class Image implements InlineElement, BlockElement
@@ -22,10 +23,11 @@ final readonly class Image implements InlineElement, BlockElement
         public int $heightEmu,
         public ?string $altText = null,
         /**
-         * Вертикальное смещение плавающего объекта относительно точки
-         * привязки, EMU. Отрицательное — объект нарисован ВЫШЕ своего абзаца
-         * и налезает на предыдущий текст: так Word ставит печати и подписи
-         * поверх готового блока. Ноль — обычная картинка в потоке.
+         * The vertical offset of a floating object from its anchor point, in
+         * EMU. A negative value means the object is drawn ABOVE its paragraph
+         * and overlaps the preceding text: that is how Word places stamps and
+         * signatures over a finished block. Zero is an ordinary image in the
+         * flow.
          */
         public int $offsetYEmu = 0,
     ) {}

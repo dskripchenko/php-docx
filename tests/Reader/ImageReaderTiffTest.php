@@ -8,11 +8,12 @@ use Dskripchenko\PhpDocx\Element\ImageFormat;
 use PHPUnit\Framework\TestCase;
 
 /**
- * TIFF — то, что Word на macOS кладёт в контейнер по умолчанию.
+ * TIFF is what Word on macOS puts into the container by default.
  *
- * Раньше такой формат ридер отбрасывал молча: документ приходил без логотипа и
- * подписи, а понять это можно было только сравнив результат с оригиналом
- * глазами. Найдено сравнением печати с эталонным документом в printable.
+ * Such a format used to be dropped by the reader silently: the document arrived
+ * without its logo and signature, and the only way to notice was comparing the
+ * result against the original by eye. Found by comparing the print against a
+ * reference document in printable.
  */
 final class ImageReaderTiffTest extends TestCase
 {
@@ -24,8 +25,8 @@ final class ImageReaderTiffTest extends TestCase
 
     public function test_tiff_is_not_web_safe(): void
     {
-        // Word его показывает, браузеры и PDF-движки — нет. Потребитель должен
-        // узнать это заранее, а не по пустому месту в документе.
+        // Word displays it, browsers and PDF engines do not. The consumer has to
+        // learn that up front rather than from a blank spot in the document.
         $this->assertFalse(ImageFormat::Tiff->isWebSafe());
         $this->assertFalse(ImageFormat::Bmp->isWebSafe());
         $this->assertTrue(ImageFormat::Png->isWebSafe());

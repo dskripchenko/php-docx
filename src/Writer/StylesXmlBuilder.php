@@ -10,11 +10,11 @@ use Dskripchenko\PhpDocx\Style\RunStyle;
 use Dskripchenko\PhpDocx\Style\StyleRegistry;
 
 /**
- * Генерирует `word/styles.xml` из StyleRegistry. Каждый stylId → <w:style>
- * с w:type="paragraph" + w:styleId + nested <w:rPr>/<w:pPr>.
+ * Generates `word/styles.xml` out of a StyleRegistry. Every styleId becomes a
+ * <w:style> with w:type="paragraph" + w:styleId + nested <w:rPr>/<w:pPr>.
  *
- * Также эмитит обязательные docDefaults (для Word, чтобы default-text
- * имел разумные значения).
+ * It also emits the mandatory docDefaults, so that default text has sensible
+ * values in Word.
  */
 final class StylesXmlBuilder
 {
@@ -69,12 +69,12 @@ final class StylesXmlBuilder
         $rPr = $this->renderRunProperties($def['run']);
         $pPr = $type === 'paragraph' ? $this->renderParagraphProperties($def['paragraph']) : '';
 
-        // Heading-стили — основаны на Normal с next=Normal.
+        // The heading styles are based on Normal with next=Normal.
         $baseAndNext = str_starts_with($styleId, 'Heading') || $styleId === 'ListParagraph'
             ? '<w:basedOn w:val="Normal"/><w:next w:val="Normal"/>'
             : '';
 
-        // qFormat — отметка для Word UI как «primary» style (показывается в галерее).
+        // qFormat marks the style as primary for the Word UI (it shows in the gallery).
         $qFormat = str_starts_with($styleId, 'Heading') ? '<w:qFormat/>' : '';
 
         return '<w:style w:type="'.$type.'" w:styleId="'.$styleId.'">'

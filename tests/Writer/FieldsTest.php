@@ -31,7 +31,7 @@ final class FieldsTest extends TestCase
         $xml = (new BodyXmlBuilder)->render([
             new Paragraph([Field::date('dd MMMM yyyy')]),
         ]);
-        // Кавычки эскейпятся в XML-атрибут как &quot;.
+        // Quotes are escaped into the XML attribute as &quot;.
         self::assertStringContainsString('DATE \\@ &quot;dd MMMM yyyy&quot;', $xml);
     }
 

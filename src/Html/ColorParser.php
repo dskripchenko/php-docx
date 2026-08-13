@@ -5,14 +5,14 @@ declare(strict_types=1);
 namespace Dskripchenko\PhpDocx\Html;
 
 /**
- * CSS color → OOXML hex string (6 chars uppercase or lowercase, без `#`).
+ * CSS color → an OOXML hex string (6 chars, upper or lower case, without `#`).
  *
- * Поддерживает:
+ * Supported:
  *  - `#fff`, `#FFFFFF` — hex
- *  - `rgb(255,255,255)`, `rgb(255, 255, 255)` — rgb function
- *  - named colors (минимальный set из CSS Level 1)
+ *  - `rgb(255,255,255)`, `rgb(255, 255, 255)` — the rgb function
+ *  - named colors (the minimal set from CSS Level 1)
  *
- * `transparent`/`inherit`/`initial` → null (caller игнорирует).
+ * `transparent`/`inherit`/`initial` → null (the caller ignores it).
  */
 final class ColorParser
 {

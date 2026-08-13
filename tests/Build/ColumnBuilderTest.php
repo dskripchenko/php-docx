@@ -80,7 +80,7 @@ final class ColumnBuilderTest extends TestCase
     #[Test]
     public function columns_short_form_replaces_previous_columns(): void
     {
-        // columns(int ...) — заменяет, не добавляет.
+        // columns(int ...) replaces rather than appends.
         $doc = DocumentBuilder::new()
             ->table(fn (TableBuilder $t) => $t
                 ->column(fn (ColumnBuilder $c) => $c->widthCm(3))
@@ -104,7 +104,7 @@ final class ColumnBuilderTest extends TestCase
     #[Test]
     public function mixed_column_short_then_append(): void
     {
-        // columns() replaces, потом column() append'ит.
+        // columns() replaces, then column() appends.
         $doc = DocumentBuilder::new()
             ->table(fn (TableBuilder $t) => $t
                 ->columns(1000, 2000)

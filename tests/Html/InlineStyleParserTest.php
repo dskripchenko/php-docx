@@ -48,8 +48,9 @@ final class InlineStyleParserTest extends TestCase
     #[Test]
     public function it_preserves_inline_url_without_semicolons(): void
     {
-        // Простые url() (без `;` внутри) — ОК. CSS data-URLs со `;` не в
-        // scope парсера (caller использует <img src> для картинок).
+        // A plain url() (with no `;` inside) is fine. CSS data URLs containing
+        // `;` are out of the parser's scope (the caller uses <img src> for
+        // images).
         $out = InlineStyleParser::parse("background: url('icon.png')");
         self::assertSame(['background' => "url('icon.png')"], $out);
     }

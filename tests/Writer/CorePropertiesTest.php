@@ -14,13 +14,14 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
 /**
- * `docProps/core.xml` — то, что Word показывает в File → Info, а проводник
- * Windows в колонках «Название» и «Авторы». Без этой части документ
- * открывается анонимным: ни автора, ни заголовка.
+ * `docProps/core.xml` is what Word shows under File → Info and what Windows
+ * Explorer shows in the «Название» and «Авторы» columns. Without this part the
+ * document opens anonymous: no author, no title.
  *
- * Проверяется не только наличие текста, но и обвязка пакета: часть,
- * объявленная не в том месте, для Word не существует, а с неверным типом
- * даты — повод предложить восстановление документа.
+ * The test checks not only that the text is there but the packaging around it:
+ * a part declared in the wrong place does not exist as far as Word is
+ * concerned, and a wrong date type is reason enough for it to offer document
+ * recovery.
  */
 final class CorePropertiesTest extends TestCase
 {
@@ -39,15 +40,16 @@ final class CorePropertiesTest extends TestCase
         self::assertStringContainsString('<dc:creator>ООО «Ромашка»</dc:creator>', $core);
         self::assertStringContainsString('<cp:keywords>счёт, оплата</cp:keywords>', $core);
 
-        // Дата обязана нести xsi:type, иначе Word предлагает восстановить
-        // документ вместо того, чтобы его открыть.
+        // The date has to carry xsi:type, otherwise Word offers to recover the
+        // document instead of opening it.
         self::assertStringContainsString(
             '<dcterms:created xsi:type="dcterms:W3CDTF">2026-08-06T09:00:00Z</dcterms:created>',
             $core,
         );
 
-        // Часть должна быть объявлена в типах содержимого и связана из
-        // КОРНЕВЫХ rels: свойства принадлежат пакету, а не document.xml.
+        // The part has to be declared in the content types and referenced from
+        // the ROOT rels: the properties belong to the package, not to
+        // document.xml.
         self::assertStringContainsString(
             '<Override PartName="/docProps/core.xml"',
             $this->part($docx, '[Content_Types].xml'),

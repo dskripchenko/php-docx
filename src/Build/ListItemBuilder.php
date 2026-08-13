@@ -9,8 +9,8 @@ use Dskripchenko\PhpDocx\Element\ListNode;
 use Dskripchenko\PhpDocx\Style\RunStyle;
 
 /**
- * Fluent builder для отдельного `<li>`. Inline-content API через
- * AddsInlineContent (тот же что у ParagraphBuilder); плюс optional
+ * A fluent builder for a single `<li>`. The inline-content API comes from
+ * AddsInlineContent (the same one ParagraphBuilder has), plus an optional
  * nested list.
  */
 final class ListItemBuilder

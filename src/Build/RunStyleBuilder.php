@@ -7,15 +7,15 @@ namespace Dskripchenko\PhpDocx\Build;
 use Dskripchenko\PhpDocx\Style\RunStyle;
 
 /**
- * Fluent builder для RunStyle.
+ * A fluent builder for RunStyle.
  *
- * Используется в `->styled('text', fn(RunStyleBuilder $s) => $s->color('ff0000'))`
- * для одноразовой настройки стиля runa.
+ * Used in `->styled('text', fn(RunStyleBuilder $s) => $s->color('ff0000'))` to
+ * configure the style of a single run.
  *
- * Также можно использовать standalone: `RunStyleBuilder::new()->bold()->build()`
- * → готовый RunStyle для передачи в ->text($text, RunStyle).
+ * It also works standalone: `RunStyleBuilder::new()->bold()->build()` gives a
+ * ready RunStyle to pass into ->text($text, RunStyle).
  *
- * Размеры — pt; цвета — hex (с `#` или без).
+ * Sizes are in pt; colours are hex (with or without the `#`).
  */
 final class RunStyleBuilder
 {
@@ -47,7 +47,7 @@ final class RunStyleBuilder
     }
 
     /**
-     * Стартовать с уже существующего RunStyle (для добавочной модификации).
+     * Starts from an existing RunStyle (to modify it incrementally).
      */
     public static function from(RunStyle $base): self
     {
@@ -112,7 +112,7 @@ final class RunStyleBuilder
     }
 
     /**
-     * Цвет в hex (с `#` или без, lowercase или upper).
+     * A colour in hex (with or without the `#`, lower or upper case).
      */
     public function color(string $hex): self
     {
@@ -136,7 +136,7 @@ final class RunStyleBuilder
     }
 
     /**
-     * Размер в пунктах (pt). Конвертируется в OOXML half-points.
+     * The size in points (pt). Converted into the half-points of OOXML.
      */
     public function fontSizePt(float $pt): self
     {
@@ -146,7 +146,7 @@ final class RunStyleBuilder
     }
 
     /**
-     * Названный highlight (yellow|green|cyan|magenta|blue|red|darkBlue|
+     * A named highlight (yellow|green|cyan|magenta|blue|red|darkBlue|
      * darkCyan|darkGreen|darkMagenta|darkRed|darkYellow|darkGray|lightGray|
      * black|none).
      */

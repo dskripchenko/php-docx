@@ -5,20 +5,21 @@ declare(strict_types=1);
 namespace Dskripchenko\PhpDocx\Element;
 
 /**
- * Гиперссылка — внешняя (URL) или внутренняя (anchor → bookmark).
+ * A hyperlink — external (a URL) or internal (an anchor → a bookmark).
  *
- * Внешняя: `<w:hyperlink r:id="rIdN"/>` + entry в document.xml.rels.
- * Внутренняя: `<w:hyperlink w:anchor="bookmarkName"/>` (без rel).
+ * External: `<w:hyperlink r:id="rIdN"/>` plus an entry in document.xml.rels.
+ * Internal: `<w:hyperlink w:anchor="bookmarkName"/>` (no rel).
  *
- * Внутренняя ссылка работает только если в документе есть Bookmark
- * с соответствующим name (см. Element\Bookmark).
+ * An internal link works only when the document holds a Bookmark with the
+ * matching name (see Element\Bookmark).
  */
 final readonly class Hyperlink implements InlineElement
 {
     /**
-     * @param  string|null  $href  Внешний URL. Null если ссылка внутренняя.
-     * @param  list<InlineElement>  $children  Контент внутри ссылки.
-     * @param  string|null  $anchor  Имя bookmark'а (без `#`). Null для внешней.
+     * @param  string|null  $href  The external URL. Null for an internal link.
+     * @param  list<InlineElement>  $children  The content inside the link.
+     * @param  string|null  $anchor  The bookmark name (without the `#`). Null
+     *                               for an external link.
      */
     public function __construct(
         public ?string $href,
@@ -32,7 +33,7 @@ final readonly class Hyperlink implements InlineElement
     }
 
     /**
-     * Конструктор для внутренней ссылки на bookmark.
+     * The constructor for an internal link to a bookmark.
      *
      * @param  list<InlineElement>  $children
      */

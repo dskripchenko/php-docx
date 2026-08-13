@@ -7,21 +7,23 @@ namespace Dskripchenko\PhpDocx\Element;
 use Dskripchenko\PhpDocx\Style\TableStyle;
 
 /**
- * Таблица — `<w:tbl>`.
+ * A table — `<w:tbl>`.
  *
- * gridCols вычисляются автоматически по cell widths первого ряда —
- * если не передан explicit `$gridColumnsTwips` (например, из <colgroup>).
+ * The gridCols are computed automatically from the cell widths of the first
+ * row, unless an explicit `$gridColumnsTwips` is passed in (from `<colgroup>`,
+ * for instance).
  *
- * Если cells не имеют explicit width — все колонки делятся поровну.
+ * When the cells carry no explicit width, all the columns share the space
+ * equally.
  *
- * `$caption` — опциональный текст подписи, эмитится отдельным paragraph'ом
- * перед таблицей со стилем Caption.
+ * `$caption` is the optional caption text, emitted as a separate paragraph
+ * before the table with the Caption style.
  */
 final readonly class Table implements BlockElement
 {
     /**
      * @param  list<TableRow>  $rows
-     * @param  list<int>|null  $gridColumnsTwips  Override для <w:tblGrid> (из <colgroup>)
+     * @param  list<int>|null  $gridColumnsTwips  An override for <w:tblGrid> (from <colgroup>)
      */
     public function __construct(
         public array $rows,

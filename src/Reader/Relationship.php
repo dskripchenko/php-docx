@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace Dskripchenko\PhpDocx\Reader;
 
 /**
- * Relationship из `*.rels`-файла. Зеркало структуры, которую регистрирует
- * Writer\RelationshipManager.
+ * A relationship from a `*.rels` file. A mirror of the structure that
+ * Writer\RelationshipManager registers.
  *
- * Tip: Type-константы для удобства матчинга — те же URI что в writer'е,
- * скопированы здесь чтобы Reader был автономным.
+ * The TYPE_* constants are there for convenient matching — the same URIs as in
+ * the writer, copied here to keep the reader self-contained.
  */
 final readonly class Relationship
 {
@@ -39,10 +39,11 @@ final readonly class Relationship
 
     /**
      * @param  string  $id  Relationship ID (rId1, rId2, ...).
-     * @param  string  $type  URI типа (см. TYPE_*-константы).
-     * @param  string  $target  Путь относительно part'а, который владеет
-     *                          этим .rels-файлом. Для external — абсолютный URL.
-     * @param  string|null  $targetMode  `External` для гиперссылок; null = internal.
+     * @param  string  $type  The type URI (see the TYPE_* constants).
+     * @param  string  $target  A path relative to the part that owns this .rels
+     *                          file. For an external one, an absolute URL.
+     * @param  string|null  $targetMode  `External` for hyperlinks; null means
+     *                                   internal.
      */
     public function __construct(
         public string $id,

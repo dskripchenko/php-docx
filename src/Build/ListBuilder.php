@@ -9,17 +9,17 @@ use Dskripchenko\PhpDocx\Element\ListItem;
 use Dskripchenko\PhpDocx\Element\ListNode;
 
 /**
- * Fluent builder для списка (`<ul>`/`<ol>`).
+ * A fluent builder for a list (`<ul>`/`<ol>`).
  *
- * Используется через `$doc->bulletList(fn($l) => ...)` или
+ * Used through `$doc->bulletList(fn($l) => ...)` or
  * `$doc->orderedList(fn($l) => $l->format(ListFormat::LowerLetter)->...)`.
  *
  * Item nesting:
  *   $l->item('First')
  *     ->item('Second', fn($nested) => $nested->item('Sub A')->item('Sub B'))
  *
- * Nested list по умолчанию наследует $ordered от parent'а; внутри nested
- * builder'а можно поменять format/startAt.
+ * A nested list inherits $ordered from its parent by default; format and
+ * startAt can be changed inside the nested builder.
  */
 final class ListBuilder
 {
@@ -35,14 +35,14 @@ final class ListBuilder
     ) {}
 
     /**
-     * Добавить пункт списка.
+     * Adds a list item.
      *
      * @param  string|callable(ListItemBuilder): void  $contentOrBuilder
-     *         string — short-form (один Run с текстом)
-     *         callable — full builder для item content'а
+     *         a string is the short form (a single run of text)
+     *         a callable is the full builder for the item content
      * @param  callable(ListBuilder): void|null  $nestedCallback
-     *         Если задан — для item создаётся nested list (по умолчанию
-     *         наследует ordered от parent'а).
+     *         when given, a nested list is created for the item (inheriting
+     *         ordered from the parent by default).
      */
     public function item(string|callable $contentOrBuilder, ?callable $nestedCallback = null): self
     {

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Dskripchenko\PhpDocx\Element;
 
 /**
- * Format-стиль ordered-списка. Соответствует HTML `<ol type="...">` и
+ * The format of an ordered list. It matches the HTML `<ol type="...">` and the
  * OOXML `<w:numFmt w:val="...">`.
  */
 enum ListFormat: string

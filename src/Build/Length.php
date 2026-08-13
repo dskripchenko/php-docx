@@ -5,29 +5,30 @@ declare(strict_types=1);
 namespace Dskripchenko\PhpDocx\Build;
 
 /**
- * Длиновые конверсии в OOXML-нативные twips.
+ * Length conversions into the twips OOXML speaks natively.
  *
- * OOXML использует twips (1/20 пункта) как универсальную единицу для
- * margin/padding/width/spacing. Этот класс — единая точка перевода
- * привычных единиц в twips.
+ * OOXML uses twips (1/20 of a point) as the universal unit for
+ * margin/padding/width/spacing. This class is the single place where familiar
+ * units are converted into twips.
  *
- * Коэффициенты:
+ * The factors:
  *  - 1 pt = 20 twips
  *  - 1 in = 72 pt = 1440 twips
  *  - 1 cm = 72 / 2.54 pt = 56.6929... × 10 = 566.929 twips
  *  - 1 mm = 56.6929 twips (1/10 cm)
  *  - 1 px (@96 DPI, CSS standard) = 0.75 pt = 15 twips
  *
- * EMU-related (для wp:extent в drawings): 1 in = 914400 EMU; 1 px = 9525 EMU.
- * Здесь не покрываем — для drawings есть Image::fromPx.
+ * EMU-related (for wp:extent in drawings): 1 in = 914400 EMU; 1 px = 9525 EMU.
+ * Not covered here — drawings have Image::fromPx.
  *
- * Используется через TableBuilder/TableCellBuilder/ParagraphBuilder
- * `*Mm/*Cm/*Pt/*Inches`-методы или напрямую: `Length::cm(2.5)`.
+ * Used through the `*Mm/*Cm/*Pt/*Inches` methods of
+ * TableBuilder/TableCellBuilder/ParagraphBuilder, or directly:
+ * `Length::cm(2.5)`.
  */
 final class Length
 {
     /**
-     * Identity — int twips сразу.
+     * Identity — twips as an int already.
      */
     public static function twips(int $twips): int
     {

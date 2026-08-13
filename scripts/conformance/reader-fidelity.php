@@ -60,9 +60,9 @@ function groundTruth(string $file): array
 
 function normalizeText(string $html): string
 {
-    // Сравнение БЕЗ пробелов: и границы тегов («…д. 27</p><p>ИНН…»), и
-    // inline-склейки рунов давали ложные lost из-за расхождений в
-    // пробельных швах между python-docx и HTML-сериализацией.
+    // Compare WITHOUT whitespace: both tag boundaries («…д. 27</p><p>ИНН…»)
+    // and the gluing of inline runs produced false losses, because the
+    // whitespace seams differ between python-docx and the HTML serialization.
     $text = html_entity_decode(strip_tags($html), ENT_QUOTES | ENT_HTML5, 'UTF-8');
 
     return (string) preg_replace('/\s+/u', '', $text);

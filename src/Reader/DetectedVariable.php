@@ -5,20 +5,20 @@ declare(strict_types=1);
 namespace Dskripchenko\PhpDocx\Reader;
 
 /**
- * Обнаруженная переменная — IR между reader'ом и importer'ом
- * на стороне application (printable).
+ * A detected variable — the IR between the reader and the importer on the
+ * application side (printable).
  *
- * Importer сам решает как этот IR конвертировать в свой синтаксис
- * placeholder'ов (`{{name}}`, `<var data-name>`, etc.).
+ * The importer decides on its own how to convert this IR into its placeholder
+ * syntax (`{{name}}`, `<var data-name>`, etc.).
  */
 final readonly class DetectedVariable
 {
     public function __construct(
         public string $name,
         public VariableSource $source,
-        /** Plain-text placeholder, как он встречается в документе (для замены). */
+        /** The plain-text placeholder as it occurs in the document (for replacement). */
         public string $placeholder,
-        /** Sample-value, отрисованный Word'ом (для preview в admin UI). */
+        /** The sample value as rendered by Word (for the preview in the admin UI). */
         public ?string $sampleValue = null,
     ) {}
 }

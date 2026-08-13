@@ -25,7 +25,7 @@ final class FigureTest extends TestCase
         $doc = (new Converter)->fromHtml($html);
         $blocks = $doc->section->body;
 
-        // Должен быть хотя бы один блок с image и один с caption (Figure 1).
+        // There has to be at least one block with the image and one with the caption (Figure 1).
         $captionFound = false;
         foreach ($blocks as $b) {
             if (! $b instanceof Paragraph) {

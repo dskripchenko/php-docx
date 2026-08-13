@@ -121,7 +121,7 @@ final class VariableDetectorTest extends TestCase
     #[Test]
     public function text_pattern_spread_across_runs(): void
     {
-        // Word часто разбивает текст на несколько runs при редактировании.
+        // Word often splits the text across several runs while editing.
         $pkg = $this->loadPackage(
             '<w:p>'
             .'<w:r><w:t xml:space="preserve">Hello {{</w:t></w:r>'
@@ -185,7 +185,7 @@ final class VariableDetectorTest extends TestCase
 
     private function loadPackage(string $bodyInner): \Dskripchenko\PhpDocx\Reader\DocxPackage
     {
-        // Создаём DocxPackage напрямую с custom body для unit-тестов.
+        // Build a DocxPackage directly, with a custom body, for the unit tests.
         $doc = new \DOMDocument;
         $doc->loadXML(
             '<w:document xmlns:w="'.OoxmlNs::W.'">'

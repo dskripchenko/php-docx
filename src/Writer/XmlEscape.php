@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace Dskripchenko\PhpDocx\Writer;
 
 /**
- * Минимальный helper для XML-escape'инга text content и attribute values.
+ * A minimal helper for XML-escaping text content and attribute values.
  *
- * OOXML XML — UTF-8, нужно эскейпить `& < > " '` в content/attr-values.
+ * OOXML XML is UTF-8; `& < > " '` need escaping in content and attribute
+ * values.
  */
 final class XmlEscape
 {

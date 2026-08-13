@@ -80,7 +80,7 @@ final class ListBuilderTest extends TestCase
         $list = $doc->section->body[0];
 
         self::assertCount(3, $list->items);
-        // 2-й item имеет nested
+        // The 2nd item has a nested list
         $second = $list->items[1];
         self::assertNotNull($second->nestedList);
         self::assertFalse($second->nestedList->ordered); // унаследовал bullet

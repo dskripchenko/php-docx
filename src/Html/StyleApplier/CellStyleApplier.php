@@ -12,18 +12,18 @@ use Dskripchenko\PhpDocx\Style\CellStyle;
 use Dskripchenko\PhpDocx\Style\VerticalAlign;
 
 /**
- * Применяет CSS к CellStyle. Парсит:
- *  - width (% или абсолют)
- *  - padding shorthand + per-side
+ * Applies CSS to a CellStyle. It parses:
+ *  - width (a percentage or an absolute value)
+ *  - the padding shorthand and the per-side properties
  *  - background-color
  *  - vertical-align
- *  - border shorthand + per-side
+ *  - the border shorthand and the per-side properties
  */
 final class CellStyleApplier
 {
     /**
      * @param  array<string, string>  $properties
-     * @param  array<string, string>  $attrs  HTML атрибуты td/th (colspan, rowspan, width, valign, bgcolor)
+     * @param  array<string, string>  $attrs  The HTML attributes of td/th (colspan, rowspan, width, valign, bgcolor)
      */
     public static function apply(CellStyle $base, array $properties, array $attrs = []): CellStyle
     {

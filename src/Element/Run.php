@@ -7,8 +7,8 @@ namespace Dskripchenko\PhpDocx\Element;
 use Dskripchenko\PhpDocx\Style\RunStyle;
 
 /**
- * Run — непрерывный кусок текста с одинаковым оформлением.
- * Маппится в `<w:r><w:rPr/><w:t>...</w:t></w:r>`.
+ * A run — a contiguous piece of text with uniform formatting.
+ * It maps to `<w:r><w:rPr/><w:t>...</w:t></w:r>`.
  */
 final readonly class Run implements InlineElement
 {

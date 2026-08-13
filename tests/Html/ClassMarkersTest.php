@@ -12,11 +12,11 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Поля и разрывы, размеченные классом, а не своим тегом.
+ * Fields and breaks marked up with a class rather than a tag of their own.
  *
- * Собственные теги (`<page-number/>`) переживают не всякий редактор: чистка
- * разметки по whitelist'у выбрасывает незнакомый тег, а класс на `span`
- * остаётся. Поэтому обе записи равноправны.
+ * Custom tags (`<page-number/>`) do not survive every editor: a whitelist-based
+ * markup cleanup throws an unknown tag away, while a class on a `span` stays.
+ * That is why both notations are equal citizens.
  */
 final class ClassMarkersTest extends TestCase
 {
@@ -27,7 +27,7 @@ final class ClassMarkersTest extends TestCase
             '<p>Стр. <span class="page-number"></span> из <span class="page-total"></span></p>',
         );
 
-        // Один абзац — поля остаются в строке текста, а не рвут её.
+        // A single paragraph: the fields stay in the line of text instead of breaking it.
         self::assertCount(1, $doc->section->body);
         $paragraph = $doc->section->body[0];
         self::assertInstanceOf(Paragraph::class, $paragraph);

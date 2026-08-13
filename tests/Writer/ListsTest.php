@@ -29,7 +29,7 @@ final class ListsTest extends TestCase
         self::assertStringContainsString('<w:abstractNum w:abstractNumId="1">', $xml); // ordered
         self::assertStringContainsString('<w:num w:numId="1">', $xml);                  // bullet inst
         self::assertStringContainsString('<w:num w:numId="2">', $xml);                  // ordered inst
-        // Уровни
+        // The levels
         self::assertStringContainsString('w:ilvl="0"', $xml);
         self::assertStringContainsString('w:ilvl="1"', $xml);
         self::assertStringContainsString('w:ilvl="2"', $xml);

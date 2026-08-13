@@ -199,7 +199,7 @@ final class DocumentBuilderTest extends TestCase
     #[Test]
     public function paragraph_builder_callback_does_not_lose_heading_level(): void
     {
-        // Callback мог бы сбросить headingLevel — проверим что heading() restore'ит.
+        // The callback could reset headingLevel — check that heading() restores it.
         $doc = DocumentBuilder::new()
             ->heading(3, fn (ParagraphBuilder $p) => $p
                 ->bold('Important')

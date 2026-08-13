@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Dskripchenko\PhpDocx\Style;
 
 /**
- * Стиль линии бордера. Значения соответствуют `<w:val>` атрибуту
- * в OOXML border-элементах.
+ * The line style of a border. The values match the `<w:val>` attribute of the
+ * OOXML border elements.
  */
 enum BorderStyle: string
 {

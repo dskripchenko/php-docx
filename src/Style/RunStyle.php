@@ -5,10 +5,11 @@ declare(strict_types=1);
 namespace Dskripchenko\PhpDocx\Style;
 
 /**
- * Стиль run'а (`<w:rPr>` в OOXML) — атрибуты непрерывного куска текста.
+ * A run style (`<w:rPr>` in OOXML) — the attributes of a contiguous piece of
+ * text.
  *
- * Размеры шрифта — в half-points (OOXML native: `<w:sz w:val="32"/>` = 16pt).
- * Цвета — RGB hex без `#`, lowercase (`14b8a6`).
+ * Font sizes are in half-points (as OOXML has them: `<w:sz w:val="32"/>` =
+ * 16pt). Colours are RGB hex without the `#`, lower case (`14b8a6`).
  */
 final readonly class RunStyle
 {
@@ -23,17 +24,17 @@ final readonly class RunStyle
         public bool $strikethrough = false,
         public bool $superscript = false,
         public bool $subscript = false,
-        /** Named highlight color: `yellow`, `green`, `cyan`, `magenta`, ... — для `<w:highlight>` (16 предопределённых). */
+        /** Named highlight color: `yellow`, `green`, `cyan`, `magenta`, ... — for `<w:highlight>` (16 predefined ones). */
         public ?string $highlight = null,
-        /** Разрядка между символами в twips (`<w:spacing>` в `w:rPr`); отрицательная сжимает. */
+        /** Character spacing in twips (`<w:spacing>` in `w:rPr`); a negative value tightens it. */
         public ?int $letterSpacingTwips = null,
         /**
-         * `<w:caps/>` — текст рисуется прописными, оставаясь строчным в
-         * разметке. Это оформление, а не содержимое: копирование из
-         * документа отдаёт исходный регистр.
+         * `<w:caps/>` — the text is drawn in capitals while staying lower
+         * case in the markup. This is presentation, not content: copying it
+         * out of the document yields the original case.
          */
         public bool $allCaps = false,
-        /** `<w:smallCaps/>` — капитель: строчные рисуются уменьшенными прописными. */
+        /** `<w:smallCaps/>` — small caps: lower case is drawn as reduced capitals. */
         public bool $smallCaps = false,
     ) {}
 

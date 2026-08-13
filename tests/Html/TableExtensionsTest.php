@@ -30,13 +30,13 @@ final class TableExtensionsTest extends TestCase
         $doc = (new Converter)->fromHtml('<table><caption>Sales 2026</caption><tr><td>x</td></tr></table>');
         $xml = (new BodyXmlBuilder)->render($doc->section->body);
 
-        // Caption-paragraph должен идти ПЕРЕД <w:tbl>.
+        // The caption paragraph has to come BEFORE <w:tbl>.
         $capPos = strpos($xml, 'Sales 2026');
         $tblPos = strpos($xml, '<w:tbl>');
         self::assertNotFalse($capPos);
         self::assertNotFalse($tblPos);
         self::assertLessThan($tblPos, $capPos);
-        // Caption использует стиль "Caption"
+        // The caption uses the "Caption" style
         self::assertStringContainsString('<w:pStyle w:val="Caption"/>', $xml);
     }
 
@@ -60,7 +60,7 @@ final class TableExtensionsTest extends TestCase
         /** @var Table $t */
         $t = $doc->section->body[0];
 
-        // width=100 без unit → px → 1500 twips
+        // width=100 without a unit → px → 1500 twips
         self::assertSame([1500, 4500, 3000], $t->gridColumnsTwips);
     }
 
@@ -95,7 +95,7 @@ final class TableExtensionsTest extends TestCase
     #[Test]
     public function caption_inside_tr_does_not_confuse_row_parser(): void
     {
-        // <caption> в child'ах <table> не должен превратиться в TableRow.
+        // A <caption> among the children of <table> must not become a TableRow.
         $doc = (new Converter)->fromHtml('<table><caption>x</caption><tr><td>A</td></tr></table>');
         /** @var Table $t */
         $t = $doc->section->body[0];

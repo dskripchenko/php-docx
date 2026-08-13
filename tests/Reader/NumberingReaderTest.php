@@ -158,7 +158,7 @@ final class NumberingReaderTest extends TestCase
         $list = $lists[0];
         // Topmost: 2 items.
         self::assertGreaterThanOrEqual(1, count($list->items));
-        // Первый item должен иметь nested list с 2 children.
+        // The first item has to have a nested list with 2 children.
         $firstItem = $list->items[0];
         self::assertNotNull($firstItem->nestedList);
         self::assertCount(2, $firstItem->nestedList->items);

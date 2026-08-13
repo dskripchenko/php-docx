@@ -5,14 +5,14 @@ declare(strict_types=1);
 namespace Dskripchenko\PhpDocx\Build;
 
 /**
- * Fluent builder для одной table-column (`<w:gridCol>`).
+ * A fluent builder for a single table column (`<w:gridCol>`).
  *
- * Сегодня хранит только ширину (`build(): int twips`). Создан как
- * отдельный класс чтобы будущие расширения (например, column-level
- * стили: hidden, expression, default-cell-style) могли быть добавлены
- * без breaking change'а на TableBuilder::columns(int...) API.
+ * Today it holds nothing but the width (`build(): int twips`). It exists as a
+ * separate class so that future extensions (column-level styles: hidden,
+ * expression, a default cell style) can be added without breaking the
+ * TableBuilder::columns(int...) API.
  *
- * Используется через `TableBuilder::column(fn(ColumnBuilder) => $c->widthCm(3))`.
+ * Used through `TableBuilder::column(fn(ColumnBuilder) => $c->widthCm(3))`.
  */
 final class ColumnBuilder
 {

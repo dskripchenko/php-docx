@@ -7,10 +7,10 @@ namespace Dskripchenko\PhpDocx;
 use Dskripchenko\PhpDocx\Style\CoreProperties;
 
 /**
- * Корневая модель DOCX-документа. v1 — одна Section на документ.
+ * The root model of a DOCX document. In v1 there is one Section per document.
  *
- * Watermark — простой текст, отрендерится по центру header'а (rotate -45°,
- * серым полупрозрачным). Если null — не добавляется.
+ * The watermark is plain text, rendered in the centre of the header (rotated
+ * -45°, semi-transparent grey). Null means none is added.
  */
 final readonly class Document
 {

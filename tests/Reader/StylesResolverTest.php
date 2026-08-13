@@ -32,13 +32,15 @@ final class StylesResolverTest extends TestCase
     #[Test]
     public function default_style_overrides_doc_defaults(): void
     {
-        // Каскад ECMA-376: docDefaults → стиль с w:default="1" → именованный →
-        // прямое форматирование. Документы сплошь и рядом задают в docDefaults
-        // одно, а в стиле по умолчанию — другое, и побеждать должно второе.
+        // The ECMA-376 cascade: docDefaults → the style with w:default="1" →
+        // the named style → direct formatting. Documents routinely say one
+        // thing in docDefaults and another in the default style, and the
+        // second one has to win.
         //
-        // Без этого слоя эталонный полис распухал с пяти страниц до семи:
-        // docDefaults обещал 8pt после каждого абзаца, а стиль по умолчанию
-        // сбрасывал их в ноль — и лишние 8pt получал каждый из 246 абзацев.
+        // Without this layer the reference policy swelled from five pages to
+        // seven: docDefaults promised 8pt after every paragraph while the
+        // default style reset them to zero — and each of the 246 paragraphs
+        // got the extra 8pt.
         $stylesXml = $this->loadStylesXml(
             '<w:docDefaults><w:pPrDefault><w:pPr><w:spacing w:after="160"/></w:pPr></w:pPrDefault></w:docDefaults>'.
             '<w:style w:type="paragraph" w:default="1" w:styleId="a">'.
@@ -55,7 +57,7 @@ final class StylesResolverTest extends TestCase
     #[Test]
     public function w_b_val_0_disables_bold_from_inherited_style(): void
     {
-        // docDefaults говорят bold:true; direct <w:b w:val="0"/> отключает.
+        // docDefaults say bold:true; a direct <w:b w:val="0"/> turns it off.
         $stylesXml = $this->loadStylesXml(
             '<w:docDefaults><w:rPrDefault><w:rPr><w:b/></w:rPr></w:rPrDefault></w:docDefaults>'
         );
@@ -271,7 +273,7 @@ final class StylesResolverTest extends TestCase
         $p = $this->firstParagraph($xml);
         [$pStyle] = $resolver->effectiveStylesForParagraph($p);
 
-        // Без infinite loop'а, какой-то результат
+        // Some result, and no infinite loop
         self::assertSame(Alignment::Center, $pStyle->alignment);
     }
 

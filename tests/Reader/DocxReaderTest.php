@@ -69,7 +69,7 @@ final class DocxReaderTest extends TestCase
         $doc = (new DocxReader)->read($bytes);
 
         self::assertSame('DRAFT', $doc->watermarkText);
-        // header.blocks не должны содержать "DRAFT" текст.
+        // header.blocks must not contain the "DRAFT" text.
         $headerText = '';
         foreach ($doc->section->header as $b) {
             if ($b instanceof Paragraph) {
@@ -102,7 +102,7 @@ final class DocxReaderTest extends TestCase
         $bytes = $this->writeDocx(body: $original);
         $doc = (new DocxReader)->read($bytes);
 
-        // Должны быть Heading1 paragraph + paragraph + table + list + paragraph.
+        // There has to be a Heading1 paragraph + paragraph + table + list + paragraph.
         $body = $doc->section->body;
         self::assertGreaterThanOrEqual(4, count($body));
 
@@ -120,7 +120,7 @@ final class DocxReaderTest extends TestCase
     #[Test]
     public function reader_can_be_fed_back_into_writer(): void
     {
-        // Round-trip: bytes → AST → bytes — должно работать без exception.
+        // The round trip bytes → AST → bytes has to work without an exception.
         $bytes = $this->writeDocx(body: '<h1>X</h1><p>y</p>');
         $doc = (new DocxReader)->read($bytes);
         $re = (new Word2007Writer)->write($doc);

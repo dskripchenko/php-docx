@@ -14,10 +14,11 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Заливка абзаца и разрядка символов.
+ * Paragraph shading and character spacing.
  *
- * Заливка у ячеек была всегда, у абзаца — нет, хотя цветная плашка на всю
- * ширину абзаца встречается в бланках чаще, чем таблица ради одной строки.
+ * Cells always had shading, paragraphs did not — even though a coloured plate
+ * spanning the paragraph width occurs in forms more often than a table made for
+ * a single line.
  */
 final class ShadingAndSpacingTest extends TestCase
 {
@@ -34,8 +35,8 @@ final class ShadingAndSpacingTest extends TestCase
     #[Test]
     public function shd_stands_between_pbdr_and_spacing(): void
     {
-        // CT_PPrBase — sequence, порядок элементов внутри w:pPr не свободный
-        // (в отличие от w:rPr): shd обязан идти после pBdr и до spacing.
+        // CT_PPrBase is a sequence: unlike w:rPr, the order of elements inside
+        // w:pPr is not free — shd has to come after pBdr and before spacing.
         $xml = (new BodyXmlBuilder)->render([
             new Paragraph([new Run('текст')], new ParagraphStyle(
                 spaceBeforeTwips: 120,
@@ -86,7 +87,7 @@ final class ShadingAndSpacingTest extends TestCase
     #[Test]
     public function inline_style_no_longer_wipes_inherited_highlight(): void
     {
-        // <mark> ставит подсветку, вложенный span со своим стилем её сохраняет.
+        // <mark> sets the highlight, and a nested span with its own style keeps it.
         $doc = (new Converter)->fromHtml('<p><mark>жёлтый <span style="color:#111">и тёмный</span></mark></p>');
 
         $runs = $doc->section->body[0]->children;

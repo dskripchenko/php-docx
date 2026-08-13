@@ -7,8 +7,8 @@ namespace Dskripchenko\PhpDocx\Reader;
 use Dskripchenko\PhpDocx\Element\ListFormat;
 
 /**
- * Definitions из `numbering.xml` — резолвнутые от concrete numId через
- * abstractNumId до уровневой структуры.
+ * The definitions from `numbering.xml`, resolved from the concrete numId
+ * through abstractNumId down to the per-level structure.
  *
  * Map numId → level → { format, startAt }
  */

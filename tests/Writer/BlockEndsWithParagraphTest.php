@@ -17,13 +17,13 @@ use PHPUnit\Framework\TestCase;
 use ZipArchive;
 
 /**
- * Ячейка и тело документа обязаны заканчиваться абзацем.
+ * A cell and the document body have to end with a paragraph.
  *
- * Word открывает такой файл с предложением «восстановить содержимое», если
- * последним блоком стоит таблица. Проверять «есть ли внутри хоть один
- * абзац» мало: у вложенной таблицы свои абзацы внутри, а ячейка при этом
- * кончается на `</w:tbl>` — ровно так печаталась плашка с кодом, у которой
- * ширина по содержимому сделана вложенной таблицей.
+ * Word opens such a file offering to «восстановить содержимое» when the last
+ * block is a table. Checking whether there is any paragraph inside is not
+ * enough: a nested table has paragraphs of its own while the cell still ends on
+ * `</w:tbl>` — which is exactly how the code plate printed, the one whose
+ * shrink-to-content width is done with a nested table.
  */
 final class BlockEndsWithParagraphTest extends TestCase
 {

@@ -14,10 +14,10 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Межстрочный интервал доезжает до HTML.
+ * The line spacing makes it all the way into the HTML.
  *
- * Раньше он терялся вовсе: документ с полуторным интервалом печатался
- * плотным, и расхождение с оригиналом копилось к концу.
+ * It used to be lost entirely: a document set one-and-a-half printed tight, and
+ * the divergence from the original accumulated towards the end.
  */
 final class LineSpacingTest extends TestCase
 {
@@ -31,8 +31,8 @@ final class LineSpacingTest extends TestCase
     #[Test]
     public function one_and_a_half_spacing_becomes_a_css_multiplier(): void
     {
-        // 360/240 = полтора одинарных; в CSS множитель считается от кегля,
-        // поэтому одинарный берётся за 1.2 кегля.
+        // 360/240 = one and a half of single; in CSS the multiplier counts from
+        // the font size, so single is taken as 1.2 of it.
         $html = $this->html(new ParagraphStyle(lineSpacingTwips: 360, lineSpacingRule: 'auto'));
 
         self::assertStringContainsString('line-height:1.8', $html);
@@ -41,8 +41,9 @@ final class LineSpacingTest extends TestCase
     #[Test]
     public function single_spacing_is_not_carried_at_all(): void
     {
-        // У движка печати свой одинарный интервал, и он ближе к типографской
-        // норме, чем любое наше приближение: перенос 240 → 1.0 сжимал строки.
+        // The print engine has its own idea of single spacing, and it is closer
+        // to the typographic norm than any approximation of ours: mapping
+        // 240 → 1.0 squeezed the lines.
         $html = $this->html(new ParagraphStyle(lineSpacingTwips: 240, lineSpacingRule: 'auto'));
 
         self::assertStringNotContainsString('line-height', $html);

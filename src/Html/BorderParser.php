@@ -8,8 +8,8 @@ use Dskripchenko\PhpDocx\Style\Border;
 use Dskripchenko\PhpDocx\Style\BorderStyle;
 
 /**
- * Парсит CSS `border: <width> <style> <color>` (в любом порядке) в Border VO.
- * `none`/`0` → Border со стилем None.
+ * Parses the CSS `border: <width> <style> <color>` (in any order) into a Border
+ * value object. `none`/`0` gives a Border with the None style.
  */
 final class BorderParser
 {
@@ -35,7 +35,7 @@ final class BorderParser
             if (preg_match('/^(\d+(?:\.\d+)?)(px|pt)?$/', $p, $m) === 1) {
                 $num = (float) $m[1];
                 $unit = $m[2] ?? 'px';
-                // 1pt = 8 восьмых; 1px ≈ 0.75pt → 6 восьмых.
+                // 1pt = 8 eighths; 1px ≈ 0.75pt → 6 eighths.
                 $size = $unit === 'pt' ? (int) round($num * 8) : (int) round($num * 6);
 
                 continue;

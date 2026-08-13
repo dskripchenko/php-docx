@@ -11,7 +11,7 @@ use Dskripchenko\PhpDocx\Style\BorderSet;
 use Dskripchenko\PhpDocx\Style\TableStyle;
 
 /**
- * Применяет CSS к TableStyle. Парсит width/border-collapse/table-layout.
+ * Applies CSS to a TableStyle. It parses width/border-collapse/table-layout.
  */
 final class TableStyleApplier
 {

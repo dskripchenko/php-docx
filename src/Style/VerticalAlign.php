@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Dskripchenko\PhpDocx\Style;
 
 /**
- * Вертикальное выравнивание ячейки (`<w:vAlign w:val="..."/>`).
+ * The vertical alignment of a cell (`<w:vAlign w:val="..."/>`).
  */
 enum VerticalAlign: string
 {

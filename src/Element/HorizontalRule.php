@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Dskripchenko\PhpDocx\Element;
 
 /**
- * Горизонтальная разделительная линия. Маппится в параграф с
- * border-bottom (single thin grey) — стандартный OOXML паттерн.
+ * A horizontal rule. It maps to a paragraph with a bottom border (single, thin,
+ * grey) — the standard OOXML pattern.
  */
 final readonly class HorizontalRule implements BlockElement {}

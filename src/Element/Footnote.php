@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace Dskripchenko\PhpDocx\Element;
 
 /**
- * Сноска — знак в строке и её текст внизу полосы.
+ * A footnote — the mark in the line and its text at the foot of the page.
  *
- * В контейнере это две разные части: `w:footnoteReference` в тексте и сам
- * текст в `word/footnotes.xml`. Здесь они уже сведены: потребителю нужна
- * сноска целиком, а не ссылка на неё.
+ * In the container these are two different parts: `w:footnoteReference` in the
+ * text and the text itself in `word/footnotes.xml`. Here they are already
+ * brought together: the consumer needs the whole footnote, not a reference to
+ * it.
  */
 final readonly class Footnote implements InlineElement
 {

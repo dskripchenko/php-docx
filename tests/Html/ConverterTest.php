@@ -146,7 +146,7 @@ final class ConverterTest extends TestCase
 
         self::assertTrue($t->rows[0]->isHeader);
         self::assertFalse($t->rows[1]->isHeader);
-        // th's по дефолту bold
+        // th cells are bold by default
         self::assertTrue($t->rows[0]->cells[0]->children[0]->children[0]->style->bold);
     }
 
@@ -188,7 +188,7 @@ final class ConverterTest extends TestCase
         /** @var Table $t */
         $t = $doc->section->body[0];
 
-        // Пустая ячейка должна иметь как минимум один (пустой) paragraph.
+        // An empty cell has to hold at least one (empty) paragraph.
         self::assertCount(1, $t->rows[0]->cells[0]->children);
         self::assertInstanceOf(Paragraph::class, $t->rows[0]->cells[0]->children[0]);
     }

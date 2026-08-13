@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace Dskripchenko\PhpDocx\Build;
 
 /**
- * Минимальный wrapper над AddsBlockContent — используется для header/
- * footer/cell контекстов где нужно «container со всеми block-adder'ами»
- * без специфичной document-level логики (pageSetup/watermark).
+ * A minimal wrapper over AddsBlockContent — used for the header, footer and
+ * cell contexts, which need a container with all the block adders but none of
+ * the document-level specifics (pageSetup, watermark).
  *
- * Например: `$doc->header(fn(SectionContentBuilder $h) => $h->paragraph('Acme Inc.'))`.
+ * For example: `$doc->header(fn(SectionContentBuilder $h) => $h->paragraph('Acme Inc.'))`.
  */
 final class SectionContentBuilder
 {

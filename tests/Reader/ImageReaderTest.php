@@ -48,7 +48,7 @@ final class ImageReaderTest extends TestCase
         // 20px → 20 * 9525 = 190500 EMU
         self::assertSame(190500, $img->widthEmu);
         self::assertSame(190500, $img->heightEmu);
-        // Binary не пустой и начинается с PNG-magic.
+        // The binary is non-empty and starts with the PNG magic.
         self::assertStringStartsWith("\x89PNG", $img->binary);
     }
 
@@ -129,7 +129,7 @@ final class ImageReaderTest extends TestCase
 
         $images = $this->findImages($reader->read($body));
         self::assertCount(1, $images);
-        // Writer пишет "image" если alt отсутствует — это валидно
+        // The writer writes "image" when there is no alt — that is valid
         self::assertNotNull($images[0]->altText);
     }
 

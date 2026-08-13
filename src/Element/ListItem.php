@@ -7,8 +7,8 @@ namespace Dskripchenko\PhpDocx\Element;
 use Dskripchenko\PhpDocx\Style\ParagraphStyle;
 
 /**
- * Элемент списка `<li>`. Содержит inline content + опциональный nested
- * ListNode (для вложенных uls).
+ * A list item `<li>`. It holds inline content plus an optional nested ListNode
+ * (for nested lists).
  */
 final readonly class ListItem
 {
@@ -19,13 +19,13 @@ final readonly class ListItem
         public array $children,
         public ?ListNode $nestedList = null,
         /**
-         * Стиль абзаца пункта.
+         * The paragraph style of the item.
          *
-         * Пункт списка в Word — обычный абзац с нумерацией, и он несёт всё то
-         * же: выравнивание, отступы, интервалы, «не отрывать от следующего».
-         * Пока стиль терялся, заголовки разделов, оформленные номерным
-         * списком, теряли и `w:keepNext` — документ расходился с оригиналом
-         * по разбивке на страницы.
+         * A list item in Word is an ordinary paragraph carrying numbering, and
+         * it holds all the same things: alignment, indents, spacing, "keep with
+         * the next". While the style was dropped, section headings formatted as
+         * a numbered list lost their `w:keepNext` too — and the document
+         * diverged from the original in how it broke into pages.
          */
         public ParagraphStyle $style = new ParagraphStyle,
     ) {}

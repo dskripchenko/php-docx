@@ -10,13 +10,13 @@ use Dskripchenko\PhpDocx\Exception\DocxException;
 use Dskripchenko\PhpDocx\Section;
 
 /**
- * Phase 8 — высокоуровневый facade.
+ * Phase 8 — the high-level facade.
  *
- * DOCX bytes → Document (AST). Координирует все reader'ы Phase 1-8.
+ * DOCX bytes → Document (the AST). It coordinates every reader of phases 1-8.
  *
- * Header/footer типы (default/first/even) детектируются по
- * `<w:headerReference w:type="X" r:id="Y">` в sectPr — pkg->headers
- * mapping (path→DOM) сам по себе типа не несёт.
+ * Header/footer types (default/first/even) are detected from
+ * `<w:headerReference w:type="X" r:id="Y">` in sectPr — the pkg->headers
+ * mapping (path→DOM) carries no type on its own.
  */
 final class DocxReader
 {
@@ -54,7 +54,7 @@ final class DocxReader
         $body = $bodyReader->read($bodyEl);
         $pageSetup = (new SectionReader)->readPageSetup($bodyEl);
 
-        // Маппинг path → type через sectPr-references.
+        // Map path → type through the sectPr references.
         $headerTypes = $this->resolveHeaderTypes($bodyEl, $pkg, isFooter: false);
         $footerTypes = $this->resolveHeaderTypes($bodyEl, $pkg, isFooter: true);
 
@@ -72,8 +72,8 @@ final class DocxReader
 
         foreach ($pkg->headers as $partPath => $headerDoc) {
             $type = $headerTypes[$partPath] ?? 'default';
-            // Watermark — обычно в default header'е; экстрагируем из любого
-            // (первый найденный побеждает) чтобы не дублировать в HTML.
+            // A watermark usually sits in the default header; extract it from any
+            // one (the first found wins) so that HTML does not get duplicates.
             $watermarkText ??= (new WatermarkExtractor)->extract($headerDoc);
 
             $headerRoot = $headerDoc->documentElement;
@@ -112,8 +112,8 @@ final class DocxReader
     }
 
     /**
-     * Парсит `<w:headerReference>`/`<w:footerReference>` в sectPr и
-     * возвращает map<partPath, type>.
+     * Parses `<w:headerReference>`/`<w:footerReference>` in sectPr and returns
+     * a map<partPath, type>.
      *
      * @return array<string, string>
      */

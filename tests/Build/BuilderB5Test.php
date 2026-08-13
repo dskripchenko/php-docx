@@ -45,7 +45,7 @@ final class BuilderB5Test extends TestCase
         self::assertNotEmpty($doc->section->footer);
         self::assertSame('Acme Inc.', $doc->section->header[0]->children[0]->text);
 
-        // footer должен содержать PAGE и NUMPAGES field codes.
+        // The footer has to contain the PAGE and NUMPAGES field codes.
         /** @var Paragraph $fp */
         $fp = $doc->section->footer[0];
         $fields = array_values(array_filter($fp->children, fn ($c) => $c instanceof Field));
@@ -255,7 +255,7 @@ final class BuilderB5Test extends TestCase
     #[Test]
     public function kitchen_sink_emits_valid_docx(): void
     {
-        // Все B1-B5 фичи в одном документе.
+        // Every B1-B5 feature in a single document.
         $bytes = DocumentBuilder::new()
             ->watermark('DRAFT')
             ->header(fn ($h) => $h->paragraph('Acme Inc.'))
@@ -296,12 +296,12 @@ final class BuilderB5Test extends TestCase
     }
 
     /**
-     * Bookmark на document-level (без paragraph closure).
+     * A bookmark at document level (without a paragraph closure).
      */
     #[Test]
     public function bookmark_at_document_level_via_paragraph(): void
     {
-        // Bookmark — inline; на document-level — кладём в одно-runовый параграф.
+        // A bookmark is inline; at document level it goes into a single-run paragraph.
         $doc = DocumentBuilder::new()
             ->paragraph(fn (ParagraphBuilder $p) => $p->bookmark('anchor1', 'X'))
             ->build();

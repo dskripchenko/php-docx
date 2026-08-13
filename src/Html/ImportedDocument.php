@@ -8,10 +8,10 @@ use Dskripchenko\PhpDocx\Reader\DetectedVariable;
 use Dskripchenko\PhpDocx\Style\PageSetup;
 
 /**
- * Результат импорта DOCX (ADR-015 Phase 10).
+ * The result of a DOCX import (ADR-015 Phase 10).
  *
- * Передаётся в application-уровень (printable\Importer) который маппит
- * это в свою Template-структуру.
+ * It is handed to the application level (printable\Importer), which maps it
+ * onto its own Template structure.
  */
 final readonly class ImportedDocument
 {
@@ -25,12 +25,14 @@ final readonly class ImportedDocument
         public ?string $headerHtml = null,
         public ?string $footerHtml = null,
         /**
-         * Колонтитулы первой страницы, если документ их задаёт отдельно.
+         * The first-page header and footer, when the document defines them
+         * separately.
          *
-         * Word держит их отдельными частями, и в них живёт то, что на первой
-         * странице выглядит иначе: шапка с логотипом, титульный блок. Ридер их
-         * читал, а сериализатор отдавал только колонтитул по умолчанию — и
-         * логотип пропадал по дороге, хотя в AST был.
+         * Word keeps them as separate parts, and what looks different on the
+         * first page lives there: the letterhead with the logo, the title
+         * block. The reader read them, but the serializer emitted only the
+         * default header — and the logo went missing on the way, even though
+         * it was in the AST.
          */
         public ?string $firstHeaderHtml = null,
         public ?string $firstFooterHtml = null,

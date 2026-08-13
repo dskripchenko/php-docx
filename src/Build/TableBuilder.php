@@ -11,9 +11,9 @@ use Dskripchenko\PhpDocx\Style\BorderSet;
 use Dskripchenko\PhpDocx\Style\TableStyle;
 
 /**
- * Fluent builder для таблицы.
+ * A fluent builder for a table.
  *
- * Использование:
+ * Usage:
  *   $doc->table(fn(TableBuilder $t) => $t
  *       ->columns(2000, 1500, 1500)   // gridColumnsTwips
  *       ->caption('Sales 2026')
@@ -58,7 +58,8 @@ final class TableBuilder
     private int $cellMarginLeftTwips = 80;
 
     /**
-     * Header-row — короткая форма со списком строк или длинная с RowBuilder.
+     * A header row — the short form with a list of strings, or the long one
+     * with a RowBuilder.
      *
      * @param  list<string>|callable(TableRowBuilder): void  $textsOrBuilder
      */
@@ -78,7 +79,8 @@ final class TableBuilder
     }
 
     /**
-     * Обычная строка. Короткая — array<string>; длинная — closure.
+     * An ordinary row. The short form is an array<string>, the long one a
+     * closure.
      *
      * @param  list<string>|callable(TableRowBuilder): void  $textsOrBuilder
      */
@@ -110,9 +112,10 @@ final class TableBuilder
     }
 
     /**
-     * Explicit grid columns (для <colgroup>-like контроля над шириной).
+     * Explicit grid columns (for `<colgroup>`-like control over the widths).
      *
-     * Заменяет ВСЕ ранее объявленные колонки. Для appending одной — см. `column()`.
+     * It replaces EVERY column declared before. To append a single one, see
+     * `column()`.
      */
     public function columns(int ...$widthsTwips): self
     {
@@ -122,8 +125,9 @@ final class TableBuilder
     }
 
     /**
-     * Append одну колонку через ColumnBuilder. Позволяет использовать
-     * widthMm/widthCm/widthPt/widthInches/widthPx вместо ручного math.
+     * Appends a single column through a ColumnBuilder. It allows
+     * widthMm/widthCm/widthPt/widthInches/widthPx instead of doing the maths by
+     * hand.
      *
      * @param  callable(ColumnBuilder): void  $builderCallback
      */
@@ -166,7 +170,7 @@ final class TableBuilder
     }
 
     /**
-     * 0..100 → внутренне умножается на 50 для OOXML pct.
+     * 0..100 → multiplied by 50 internally for the OOXML pct.
      */
     public function widthPercent(int $percent): self
     {

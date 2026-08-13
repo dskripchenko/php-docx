@@ -12,13 +12,13 @@ use Dskripchenko\PhpDocx\Style\ParagraphStyle;
 use Dskripchenko\PhpDocx\Style\RunStyle;
 
 /**
- * Mutable fluent builder для одного Paragraph.
+ * A mutable fluent builder for a single Paragraph.
  *
- * Inline-content API через `AddsInlineContent` trait: text/bold/italic/
- * underline/strike/sup/sub/lineBreak/styled/link/internalLink/bookmark/
+ * The inline-content API comes from the `AddsInlineContent` trait: text/bold/
+ * italic/underline/strike/sup/sub/lineBreak/styled/link/internalLink/bookmark/
  * pageNumber/totalPages/currentDate/currentTime/mergeField/image*.
  *
- * Paragraph-level — alignment/indent/spacing/borders/headingLevel.
+ * At paragraph level: alignment/indent/spacing/borders/headingLevel.
  */
 final class ParagraphBuilder
 {

@@ -8,9 +8,9 @@ use Dskripchenko\PhpDocx\Element\TableCell;
 use Dskripchenko\PhpDocx\Element\TableRow;
 
 /**
- * Fluent builder для строки таблицы.
+ * A fluent builder for a table row.
  *
- * Использование:
+ * Usage:
  *   $table->row(fn(TableRowBuilder $r) => $r
  *       ->cell('A')
  *       ->cell(fn(TableCellBuilder $c) => $c
@@ -19,7 +19,7 @@ use Dskripchenko\PhpDocx\Element\TableRow;
  *       )
  *   )
  *
- * Короткая форма (string-array) поддерживается на уровне TableBuilder.
+ * The short form (an array of strings) is supported at TableBuilder level.
  */
 final class TableRowBuilder
 {
@@ -54,7 +54,7 @@ final class TableRowBuilder
     }
 
     /**
-     * Convenience для длинных рядов: array<string>.
+     * A convenience for long rows: array<string>.
      *
      * @param  list<string>  $texts
      */

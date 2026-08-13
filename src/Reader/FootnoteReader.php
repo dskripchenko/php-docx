@@ -5,10 +5,11 @@ declare(strict_types=1);
 namespace Dskripchenko\PhpDocx\Reader;
 
 /**
- * Тексты сносок из `word/footnotes.xml` по их идентификаторам.
+ * The footnote texts from `word/footnotes.xml`, by their identifiers.
  *
- * Форматирование сноски не переносится намеренно: внизу полосы она набирается
- * своим кеглем, и разметка исходного абзаца там ничего не решает. Нужен текст.
+ * The formatting of a footnote is deliberately not carried over: at the foot of
+ * the page it is set in its own size, and the markup of the source paragraph
+ * decides nothing there. What is needed is the text.
  */
 final class FootnoteReader
 {
@@ -22,8 +23,8 @@ final class FootnoteReader
         }
 
         foreach ($footnotesXml->getElementsByTagNameNS(OoxmlNs::W, 'footnote') as $footnote) {
-            // Разделители (`separator`, `continuationSeparator`) — служебные
-            // части оформления, текста в них нет.
+            // The separators (`separator`, `continuationSeparator`) are internal
+            // presentation parts and carry no text.
             $type = $footnote->getAttributeNS(OoxmlNs::W, 'type');
             if ($type !== '') {
                 continue;
@@ -37,9 +38,10 @@ final class FootnoteReader
             $parts = [];
             $first = true;
             foreach ($footnote->getElementsByTagNameNS(OoxmlNs::W, 'r') as $run) {
-                // Знак сноски — её номер. Word ставит его либо служебным
-                // `w:footnoteRef`, либо просто верхним индексом первым руном.
-                // Нумерацию рисует движок печати, иначе выйдет «1. 1Текст».
+                // A footnote mark is its number. Word places it either with the
+                // internal `w:footnoteRef` or simply as a superscript in the
+                // first run. The print engine draws the numbering — otherwise
+                // the result reads «1. 1Текст».
                 $isMarker = $run->getElementsByTagNameNS(OoxmlNs::W, 'footnoteRef')->length > 0
                     || ($first && $this->isSuperscript($run));
                 $first = false;

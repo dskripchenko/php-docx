@@ -12,7 +12,7 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Тесты на inline-теги добавленные в Phase «12 priority items» batch 1:
+ * Tests for the inline tags added in batch 1 of the «12 priority items» phase:
  *   <small>, <mark>, <code>, <kbd>, <samp>, <var>, <cite>, <dfn>, <q>,
  *   <pre> + image alt.
  */
@@ -68,7 +68,7 @@ final class InlineTagsTest extends TestCase
         /** @var Paragraph $p */
         $p = $body[0];
         self::assertInstanceOf(Run::class, $p->children[0]);
-        // Whitespace сохранён (newlines + multi-space)
+        // The whitespace is preserved (newlines and multiple spaces)
         self::assertStringContainsString("\n    line2", $p->children[0]->text);
         self::assertSame('Courier New', $p->children[0]->style->fontFamily);
     }

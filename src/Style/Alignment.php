@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Dskripchenko\PhpDocx\Style;
 
 /**
- * Выравнивание параграфа/ячейки. Имена value-string соответствуют
- * OOXML `<w:jc w:val="..."/>` literal-значениям.
+ * The alignment of a paragraph or a cell. The value strings match the literal
+ * values of OOXML `<w:jc w:val="..."/>`.
  */
 enum Alignment: string
 {

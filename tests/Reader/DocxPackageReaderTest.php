@@ -16,8 +16,8 @@ use PHPUnit\Framework\TestCase;
 /**
  * Phase 1 tests — DocxPackageReader.
  *
- * Стратегия: writer-roundtrip — Writer\Word2007Writer создаёт DOCX,
- * Reader должен его открыть и corretto разобрать parts.
+ * The strategy is a writer round-trip: Writer\Word2007Writer creates a DOCX,
+ * and the reader has to open it and take the parts apart correctly.
  */
 final class DocxPackageReaderTest extends TestCase
 {
@@ -32,7 +32,7 @@ final class DocxPackageReaderTest extends TestCase
         self::assertInstanceOf(DocxPackage::class, $pkg);
         self::assertSame('word/document.xml', $pkg->documentPartPath);
         self::assertNotNull($pkg->documentXml);
-        // Минимальный writer-DOCX генерит styles.xml всегда.
+        // A minimal writer DOCX always generates styles.xml.
         self::assertNotNull($pkg->stylesXml);
     }
 
@@ -66,7 +66,7 @@ final class DocxPackageReaderTest extends TestCase
 
         $rels = $pkg->documentRelationships();
         self::assertNotEmpty($rels);
-        // Writer всегда добавляет styles.xml relationship.
+        // The writer always adds the styles.xml relationship.
         $stylesRels = array_filter($rels, fn (Relationship $r) => $r->type === Relationship::TYPE_STYLES);
         self::assertNotEmpty($stylesRels);
     }
@@ -82,7 +82,7 @@ final class DocxPackageReaderTest extends TestCase
         self::assertStringStartsWith('word/media/image', $firstMedia);
         self::assertNotSame('', $pkg->mediaBytes($firstMedia));
 
-        // image relationship зарегистрирован для документа.
+        // The image relationship is registered for the document.
         $imageRels = array_filter(
             $pkg->documentRelationships(),
             fn (Relationship $r) => $r->type === Relationship::TYPE_IMAGE,
@@ -140,7 +140,7 @@ final class DocxPackageReaderTest extends TestCase
             }
         }
         self::assertNotNull($imageRel);
-        // Target — относительный (media/image1.png).
+        // The target is relative (media/image1.png).
         $abs = $pkg->resolveMediaPath($pkg->documentPartPath, $imageRel->target);
         self::assertSame('word/media/image1.png', $abs);
     }
@@ -161,12 +161,12 @@ final class DocxPackageReaderTest extends TestCase
         $bytes = $this->writeDocx('<p>x</p>');
         $pkg = (new DocxPackageReader)->read($bytes);
 
-        // Default rels/xml — writer всегда эмитит.
+        // The writer always emits the rels/xml defaults.
         self::assertSame(
             'application/vnd.openxmlformats-package.relationships+xml',
             $pkg->defaultContentTypes['rels'],
         );
-        // Override на document.xml — мандатный.
+        // The override for document.xml is mandatory.
         self::assertArrayHasKey('word/document.xml', $pkg->overrideContentTypes);
         self::assertSame(
             'application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml',
