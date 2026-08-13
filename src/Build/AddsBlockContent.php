@@ -14,12 +14,12 @@ use Dskripchenko\PhpDocx\Style\ParagraphStyle;
 use Dskripchenko\PhpDocx\Style\RunStyle;
 
 /**
- * Trait shared между всеми builder'ами, которые накапливают block-content:
+ * A trait shared by every builder that accumulates block content:
  *  - DocumentBuilder (body)
  *  - HeaderFooterBuilder
  *  - TableCellBuilder
  *
- * Реализует все блок-adder'ы единообразно — сохраняет state в `$this->blocks`.
+ * It implements all the block adders uniformly, keeping state in `$this->blocks`.
  */
 trait AddsBlockContent
 {
@@ -27,9 +27,9 @@ trait AddsBlockContent
     private array $blocks = [];
 
     /**
-     * Параграф. Короткая форма — просто строка text:
+     * A paragraph. The short form is just a text string:
      *   `->paragraph('Hello')`
-     * Расширенная форма — callback с ParagraphBuilder:
+     * The extended form is a callback taking a ParagraphBuilder:
      *   `->paragraph(fn($p) => $p->text('Hello ')->bold('world'))`
      */
     public function paragraph(string|callable $textOrBuilder): self
@@ -46,7 +46,7 @@ trait AddsBlockContent
     }
 
     /**
-     * Заголовок уровня 1..6. Короткая и длинная формы как у paragraph().
+     * A heading of level 1..6. Short and long forms as in paragraph().
      */
     public function heading(int $level, string|callable $textOrBuilder): self
     {
@@ -80,7 +80,7 @@ trait AddsBlockContent
     }
 
     /**
-     * Таблица — closure с TableBuilder.
+     * A table, as a closure taking a TableBuilder.
      *
      * @param  callable(TableBuilder): void  $builderCallback
      */
@@ -94,7 +94,7 @@ trait AddsBlockContent
     }
 
     /**
-     * Bullet-список — `<ul>`-equivalent.
+     * A bullet list, the equivalent of `<ul>`.
      *
      * @param  callable(ListBuilder): void  $builderCallback
      */
@@ -108,8 +108,8 @@ trait AddsBlockContent
     }
 
     /**
-     * Ordered-список — `<ol>`-equivalent. Format/startAt задаются
-     * внутри builder'а: `$l->format(ListFormat::LowerLetter)->startAt(3)`.
+     * An ordered list, the equivalent of `<ol>`. Format and startAt are set
+     * inside the builder: `$l->format(ListFormat::LowerLetter)->startAt(3)`.
      *
      * @param  callable(ListBuilder): void  $builderCallback
      */
@@ -123,8 +123,8 @@ trait AddsBlockContent
     }
 
     /**
-     * Картинка-блок (отдельным параграфом). Каркас вокруг inline image
-     * (Image сама по себе — InlineElement, но и BlockElement).
+     * A block image (as its own paragraph). A wrapper around the inline image
+     * (Image is an InlineElement, but a BlockElement as well).
      */
     public function image(Image $image): self
     {
@@ -134,7 +134,7 @@ trait AddsBlockContent
     }
 
     /**
-     * Каркас вокруг Image::fromPx для byte-based image-блока.
+     * A wrapper around Image::fromPx for a byte-based image block.
      */
     public function imageFromBytes(
         string $binary,
@@ -151,7 +151,7 @@ trait AddsBlockContent
     }
 
     /**
-     * Image из файла (формат и размеры авто-детект).
+     * An image from a file (format and dimensions are auto-detected).
      */
     public function imageFromFile(
         string $path,
@@ -159,9 +159,9 @@ trait AddsBlockContent
         ?int $heightPx = null,
         ?string $altText = null,
     ): self {
-        // Делегируем через временный ParagraphBuilder который имеет ту же
-        // imageFromFile в AddsInlineContent. Затем достаём из него Image
-        // и кладём как block.
+        // Delegate through a temporary ParagraphBuilder, which has the same
+        // imageFromFile in AddsInlineContent. Then take the Image out of it and
+        // put it in as a block.
         $temp = new ParagraphBuilder;
         $temp->imageFromFile($path, $widthPx, $heightPx, $altText);
         $inlines = $temp->buildInlines();
@@ -175,8 +175,8 @@ trait AddsBlockContent
     }
 
     /**
-     * Append pre-built BlockElement (или несколько). Удобно для интеграции
-     * с AST-кодом — например, вставить Paragraph, собранный извне.
+     * Appends a pre-built BlockElement (or several). Convenient for integrating
+     * with AST code — inserting a Paragraph assembled elsewhere, for example.
      *
      * @param  iterable<BlockElement>|BlockElement  $block
      */
@@ -197,8 +197,8 @@ trait AddsBlockContent
     }
 
     /**
-     * Пустая строка (empty paragraph) — удобный shortcut для вертикальных
-     * gaps в layout'е.
+     * An empty line (an empty paragraph) — a handy shortcut for vertical gaps
+     * in the layout.
      */
     public function emptyLine(): self
     {
@@ -208,7 +208,7 @@ trait AddsBlockContent
     }
 
     /**
-     * Накопленные блоки.
+     * The accumulated blocks.
      *
      * @return list<BlockElement>
      */
@@ -218,7 +218,7 @@ trait AddsBlockContent
     }
 
     /**
-     * Очистить буфер блоков (для reuse builder'а в loop'ах).
+     * Clears the block buffer (to reuse the builder in loops).
      */
     public function clearBlocks(): self
     {

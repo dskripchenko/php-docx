@@ -5,14 +5,15 @@ declare(strict_types=1);
 namespace Dskripchenko\PhpDocx\Element;
 
 /**
- * Форматы картинок, поддерживаемые DOCX. PNG/JPEG — самые надёжные;
- * GIF/BMP — для legacy; TIFF — то, что кладёт Word на macOS. SVG лучше
- * rasterize'ить upstream.
+ * The image formats DOCX supports. PNG and JPEG are the most reliable; GIF and
+ * BMP are legacy; TIFF is what Word on macOS produces. SVG is better
+ * rasterized upstream.
  *
- * Незнакомый формат ридер отбрасывал молча: документ приходил без логотипа и
- * подписи, и понять это можно было только сравнив результат с оригиналом
- * глазами. Читать формат и отдавать его дальше — честнее: показать картинку
- * или отказаться от неё вслух решает потребитель.
+ * An unknown format used to be dropped by the reader silently: the document
+ * arrived without its logo and signature, and the only way to notice was
+ * comparing the result against the original by eye. Reading the format and
+ * passing it on is more honest — whether to show the image or decline it out
+ * loud is for the consumer to decide.
  */
 enum ImageFormat: string
 {
@@ -34,11 +35,12 @@ enum ImageFormat: string
     }
 
     /**
-     * Рисуют ли этот формат браузеры и PDF-движки.
+     * Whether browsers and PDF engines draw this format.
      *
-     * TIFF в DOCX жив и Word его показывает, но ни один браузер и почти ни
-     * один PDF-эмиттер — нет. Потребителю нужно знать это заранее, чтобы
-     * сконвертировать картинку, а не выяснять по пустому месту в документе.
+     * TIFF is alive in DOCX and Word displays it, but no browser and almost no
+     * PDF emitter does. The consumer needs to know that up front, so it can
+     * convert the image instead of finding out from a blank spot in the
+     * document.
      */
     public function isWebSafe(): bool
     {

@@ -5,19 +5,21 @@ declare(strict_types=1);
 namespace Dskripchenko\PhpDocx\Reader;
 
 /**
- * Резолв theme color/font references.
+ * Resolves theme colour and font references.
  *
- * В OOXML атрибуты типа `<w:color w:themeColor="accent1"/>` ссылаются на
- * `theme1.xml` `<a:clrScheme>/<a:accent1>` — там либо `<a:srgbClr val="14B8A6"/>`
- * либо `<a:sysClr val="windowText" lastClr="000000"/>`.
+ * In OOXML attributes such as `<w:color w:themeColor="accent1"/>` point at
+ * `theme1.xml` `<a:clrScheme>/<a:accent1>`, which holds either
+ * `<a:srgbClr val="14B8A6"/>` or `<a:sysClr val="windowText" lastClr="000000"/>`.
  *
- * Аналогично для fonts: `w:asciiTheme="majorAscii"` → `<a:majorFont>/<a:latin typeface="…"/>`.
+ * Fonts work the same way: `w:asciiTheme="majorAscii"` →
+ * `<a:majorFont>/<a:latin typeface="…"/>`.
  *
- * Если theme1.xml отсутствует или ссылка не разрешается — возвращаем null.
+ * When theme1.xml is missing or the reference does not resolve, null is
+ * returned.
  */
 final class ThemeResolver
 {
-    /** @var array<string, string> Map themeColorKey → hex (без #) */
+    /** @var array<string, string> Map themeColorKey → hex (without the #) */
     private array $colorMap = [];
 
     /** @var array<string, string> Map themeFontKey → typeface name */
@@ -31,8 +33,8 @@ final class ThemeResolver
     }
 
     /**
-     * Резолв `<w:color w:themeColor="accent1">` → "14B8A6".
-     * Если themeKey не найден — возвращает null.
+     * Resolves `<w:color w:themeColor="accent1">` → "14B8A6".
+     * Returns null when the themeKey is not found.
      */
     public function resolveColor(string $themeKey): ?string
     {
@@ -71,8 +73,9 @@ final class ThemeResolver
 
     private function loadColorScheme(\DOMElement $clrScheme): void
     {
-        // Дети — <a:dk1>/<a:lt1>/<a:dk2>/<a:lt2>/<a:accent1..6>/<a:hlink>/<a:folHlink>.
-        // Внутри каждого — <a:srgbClr val="…"/> или <a:sysClr val="…" lastClr="…"/>.
+        // The children are <a:dk1>/<a:lt1>/<a:dk2>/<a:lt2>/<a:accent1..6>/
+        // <a:hlink>/<a:folHlink>, each holding either <a:srgbClr val="…"/> or
+        // <a:sysClr val="…" lastClr="…"/>.
         foreach ($clrScheme->childNodes as $child) {
             if (! $child instanceof \DOMElement || $child->namespaceURI !== OoxmlNs::A) {
                 continue;
@@ -113,7 +116,7 @@ final class ThemeResolver
 
     private function loadFontScheme(\DOMElement $fontScheme): void
     {
-        // <a:majorFont> и <a:minorFont>, внутри <a:latin typeface="…"/>.
+        // <a:majorFont> and <a:minorFont>, holding <a:latin typeface="…"/>.
         foreach (['majorFont' => 'majorAscii', 'minorFont' => 'minorAscii'] as $local => $key) {
             $node = OoxmlNs::firstChild($fontScheme, OoxmlNs::A, $local);
             if ($node === null) {
@@ -126,7 +129,7 @@ final class ThemeResolver
             $face = $latin->getAttribute('typeface');
             if ($face !== '') {
                 $this->fontMap[strtolower($key)] = $face;
-                // Также alias-ы для CS/EA-вариантов того же шрифта.
+                // Aliases for the CS/EA variants of the same font as well.
                 $this->fontMap[str_replace('Ascii', 'HAnsi', $key) ?: ''] = $face;
             }
         }

@@ -15,11 +15,11 @@ use Dskripchenko\PhpDocx\Element\Run;
 use Dskripchenko\PhpDocx\Style\RunStyle;
 
 /**
- * Shared trait для builder'ов, которые накапливают inline-content:
+ * A trait shared by the builders that accumulate inline content:
  *  - ParagraphBuilder
  *  - ListItemBuilder
  *
- * Реализует full inline-API: text/bold/italic/underline/strike/sup/sub/
+ * It implements the full inline API: text/bold/italic/underline/strike/sup/sub/
  * lineBreak/styled/link/internalLink/bookmark/image helpers/fields.
  */
 trait AddsInlineContent
@@ -81,7 +81,7 @@ trait AddsInlineContent
     }
 
     /**
-     * Run с custom-style через RunStyleBuilder closure.
+     * A run with a custom style, via a RunStyleBuilder closure.
      *
      *   ->styled('Important', fn($s) => $s->color('ff0000')->bold())
      */
@@ -94,8 +94,8 @@ trait AddsInlineContent
     }
 
     /**
-     * Меняет default RunStyle для последующих text/bold/etc — для
-     * установки базового font/size на весь параграф/item.
+     * Changes the default RunStyle for the following text/bold/etc — used to
+     * set the base font or size for the whole paragraph or item.
      */
     public function withRunStyle(RunStyle $style): self
     {
@@ -107,8 +107,8 @@ trait AddsInlineContent
     // ─────────── Hyperlinks ──────────────────────────────────────────────
 
     /**
-     * Внешняя ссылка. Content — строка (short-form Run) или closure,
-     * собирающая inline content через временный ParagraphBuilder.
+     * An external link. The content is either a string (the short-form run) or
+     * a closure that assembles inline content via a temporary ParagraphBuilder.
      *
      * @param  string|callable(ParagraphBuilder): void  $textOrBuilder
      */
@@ -121,7 +121,7 @@ trait AddsInlineContent
     }
 
     /**
-     * Внутренняя ссылка на bookmark с заданным name.
+     * An internal link to the bookmark with the given name.
      *
      * @param  string|callable(ParagraphBuilder): void  $textOrBuilder
      */
@@ -134,8 +134,8 @@ trait AddsInlineContent
     }
 
     /**
-     * Bookmark anchor. Обёртывает content (или ставит пустую метку если
-     * content = '').
+     * A bookmark anchor. Wraps the content (or places an empty marker when the
+     * content is '').
      *
      * @param  string|callable(ParagraphBuilder): void  $textOrBuilder
      */
@@ -178,8 +178,8 @@ trait AddsInlineContent
     }
 
     /**
-     * MERGEFIELD placeholder для дальнейшего mail-merge'а.
-     * Сериализуется как `<w:fldSimple w:instr="MERGEFIELD Name \\* MERGEFORMAT">`.
+     * A MERGEFIELD placeholder for a later mail merge.
+     * Serialized as `<w:fldSimple w:instr="MERGEFIELD Name \\* MERGEFORMAT">`.
      */
     public function mergeField(string $name): self
     {
@@ -201,7 +201,7 @@ trait AddsInlineContent
     }
 
     /**
-     * Из bytes — caller знает формат и размеры в пикселях.
+     * From bytes — the caller knows the format and the size in pixels.
      */
     public function imageFromBytes(
         string $binary,
@@ -216,7 +216,7 @@ trait AddsInlineContent
     }
 
     /**
-     * Из data:image/...;base64,... URL — формат и размеры авто-детектятся.
+     * From a data:image/...;base64,... URL — format and size are auto-detected.
      */
     public function imageFromDataUrl(
         string $dataUrl,
@@ -246,8 +246,8 @@ trait AddsInlineContent
     }
 
     /**
-     * Из файла — формат по расширению/magic-bytes, размеры из binary
-     * (если не переданы).
+     * From a file — the format comes from the extension or the magic bytes, the
+     * size from the binary (unless it was passed in).
      */
     public function imageFromFile(
         string $path,
@@ -268,7 +268,7 @@ trait AddsInlineContent
     }
 
     /**
-     * Helper для image*-методов: размеры auto-detect если null.
+     * A helper for the image* methods: the size is auto-detected when null.
      */
     private function ingestImage(
         string $binary,
@@ -323,9 +323,9 @@ trait AddsInlineContent
     }
 
     /**
-     * Создаёт временный ParagraphBuilder, прогоняет callback, забирает
-     * inline children. Используется в link/internalLink/bookmark для
-     * rich-content.
+     * Creates a temporary ParagraphBuilder, runs the callback and takes the
+     * inline children out of it. Used by link/internalLink/bookmark for rich
+     * content.
      *
      * @param  string|callable(ParagraphBuilder): void  $textOrBuilder
      * @return list<InlineElement>

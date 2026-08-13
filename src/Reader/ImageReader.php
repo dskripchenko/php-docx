@@ -10,18 +10,18 @@ use Dskripchenko\PhpDocx\Element\ImageFormat;
 /**
  * Phase 6 — ImageReader.
  *
- * Парсит `<w:drawing>` (inline или anchor) → Element\Image:
+ * Parses `<w:drawing>` (inline or anchor) → Element\Image:
  *  - `<a:blip r:embed="rIdN"/>` → resolve via partRels → media bytes
- *  - `<wp:extent cx="..." cy="..."/>` → размер в EMU
+ *  - `<wp:extent cx="..." cy="..."/>` → the size in EMU
  *  - `<wp:docPr descr="..."/>` → alt text
  *
- * Возвращает null если:
- *  - нет blip с r:embed
- *  - rel не resolved
- *  - бинарь отсутствует или формат не поддерживается
+ * Returns null when:
+ *  - there is no blip with r:embed
+ *  - the rel does not resolve
+ *  - the binary is missing or its format is unsupported
  *
- * Anchored picture (`<wp:anchor>`) обрабатывается как inline — Word
- * читатель в HTML контексте не имеет понятия "float position".
+ * An anchored picture (`<wp:anchor>`) is treated as inline — a reader in an
+ * HTML context has no notion of a float position.
  */
 final class ImageReader
 {
@@ -32,7 +32,7 @@ final class ImageReader
 
     public function read(\DOMElement $drawing): ?Image
     {
-        // wp:inline или wp:anchor.
+        // Either wp:inline or wp:anchor.
         $container = OoxmlNs::firstChild($drawing, OoxmlNs::WP, 'inline')
             ?? OoxmlNs::firstChild($drawing, OoxmlNs::WP, 'anchor');
         if ($container === null) {
@@ -53,7 +53,7 @@ final class ImageReader
             }
         }
 
-        // Смещение по вертикали — только у плавающего объекта (wp:anchor).
+        // Only a floating object (wp:anchor) has a vertical offset.
         $offsetYEmu = 0;
         $positionV = OoxmlNs::firstChild($container, OoxmlNs::WP, 'positionV');
         if ($positionV !== null) {
@@ -75,9 +75,9 @@ final class ImageReader
             }
         }
 
-        // Ищем blip — он может быть в произвольной глубине внутри
-        // a:graphic > a:graphicData > pic:pic > pic:blipFill > a:blip.
-        // Безопаснее — getElementsByTagNameNS.
+        // Look for the blip: it can sit at an arbitrary depth inside
+        // a:graphic > a:graphicData > pic:pic > pic:blipFill > a:blip, so
+        // getElementsByTagNameNS is the safer way.
         $blip = $drawing->getElementsByTagNameNS(OoxmlNs::A, 'blip')->item(0);
         if (! $blip instanceof \DOMElement) {
             return null;
@@ -107,7 +107,7 @@ final class ImageReader
             return null;
         }
 
-        // Fallback размеры — getimagesizefromstring если extent отсутствовал.
+        // Fallback size via getimagesizefromstring when there was no extent.
         if ($widthEmu <= 0 || $heightEmu <= 0) {
             $info = @getimagesizefromstring($bytes);
             if ($info !== false) {
@@ -138,7 +138,7 @@ final class ImageReader
 
     private function detectFormat(string $zipPath, string $bytes): ?ImageFormat
     {
-        // Сначала по расширению (быстро).
+        // By extension first (it is cheap).
         $ext = strtolower(pathinfo($zipPath, PATHINFO_EXTENSION));
         $byExt = match ($ext) {
             'png' => ImageFormat::Png,
@@ -164,7 +164,7 @@ final class ImageReader
         if (str_starts_with($bytes, 'BM')) {
             return ImageFormat::Bmp;
         }
-        // TIFF: little-endian (II*\0) или big-endian (MM\0*).
+        // TIFF: little-endian (II*\0) or big-endian (MM\0*).
         if (str_starts_with($bytes, "II\x2A\x00") || str_starts_with($bytes, "MM\x00\x2A")) {
             return ImageFormat::Tiff;
         }

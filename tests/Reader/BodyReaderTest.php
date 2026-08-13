@@ -174,16 +174,16 @@ final class BodyReaderTest extends TestCase
         self::assertInstanceOf(\DOMElement::class, $body);
         $blocks = $reader->read($body);
 
-        // Должно быть 3 параграфа (h1 + 2 p).
+        // There must be 3 paragraphs (h1 + 2 p).
         $paragraphs = array_values(array_filter($blocks, fn ($b) => $b instanceof Paragraph));
         self::assertCount(3, $paragraphs);
 
         self::assertSame(1, $paragraphs[0]->headingLevel);
         self::assertNull($paragraphs[1]->headingLevel);
 
-        // Текст «Title» в первом.
+        // The text «Title» is in the first one.
         self::assertStringContainsString('Title', $this->extractText($paragraphs[0]));
-        // bold mark внутри второго.
+        // The bold mark is inside the second one.
         $secondText = $this->extractText($paragraphs[1]);
         self::assertStringContainsString('bold', $secondText);
         $hasBold = false;
@@ -243,11 +243,11 @@ final class BodyReaderTest extends TestCase
     #[Test]
     public function complex_script_properties_do_not_style_cyrillic(): void
     {
-        // `w:bCs`/`w:iCs`/`w:szCs` описывают начертание и размер для СЛОЖНЫХ
-        // письменностей — арабской, ивритской, индийских. Кириллицу и латиницу
-        // Word такими рунами рисует обычным текстом. Пока их принимали за
-        // обычные `b`/`i`/`sz`, заявление страхователя с `<w:bCs/>` на каждом
-        // руне печаталось жирным целиком.
+        // `w:bCs`/`w:iCs`/`w:szCs` describe the weight and size for COMPLEX
+        // scripts — Arabic, Hebrew, Indic ones. Word draws Cyrillic and Latin
+        // in such runs as regular text. While they were taken for ordinary
+        // `b`/`i`/`sz`, the policyholder's application with `<w:bCs/>` on every
+        // run printed entirely bold.
         $body = $this->loadBody(
             '<w:p><w:r><w:rPr><w:bCs/><w:iCs/><w:szCs w:val="40"/><w:sz w:val="20"/></w:rPr>'
             .'<w:t>Прошу СПАО</w:t></w:r></w:p>'
@@ -302,9 +302,10 @@ final class BodyReaderTest extends TestCase
     #[Test]
     public function keep_next_reaches_the_paragraph_style(): void
     {
-        // Заголовок раздела не должен оставаться последней строкой страницы.
-        // Без этого свойства должностная инструкция расходилась с оригиналом
-        // уже на первой странице: Word уносил заголовок вместе с таблицей.
+        // A section heading must not be left as the last line of a page.
+        // Without this property the job description diverged from the original
+        // on the very first page: Word carried the heading over together with
+        // the table.
         $body = $this->loadBody(
             '<w:p><w:pPr><w:keepNext/></w:pPr><w:r><w:t>1. Требования</w:t></w:r></w:p>'
             .'<w:p><w:r><w:t>обычный абзац</w:t></w:r></w:p>'
@@ -318,8 +319,8 @@ final class BodyReaderTest extends TestCase
     #[Test]
     public function footnote_text_is_read_from_the_notes_part(): void
     {
-        // `word/footnotes.xml` и `w:footnoteReference` проходили мимо, и текст
-        // внизу полосы исчезал без следа.
+        // `word/footnotes.xml` and `w:footnoteReference` used to be ignored, and
+        // the text at the foot of the page disappeared without a trace.
         $notes = new \DOMDocument;
         $notes->loadXML(
             '<?xml version="1.0"?><w:footnotes xmlns:w="'.OoxmlNs::W.'">'
@@ -351,7 +352,7 @@ final class BodyReaderTest extends TestCase
         }
 
         self::assertCount(1, $footnotes);
-        // Знак сноски — её номер, его рисует движок печати: «1. 1Текст» не нужно.
+        // A footnote mark is its number, drawn by the print engine: «1. 1Текст» is not wanted.
         self::assertSame('Предшествующее состояние — нарушение здоровья.', $footnotes[0]);
     }
 }

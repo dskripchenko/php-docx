@@ -7,19 +7,20 @@ namespace Dskripchenko\PhpDocx\Style;
 final readonly class CellStyle
 {
     /**
-     * @param  int|null  $widthTwips  Ширина в twips (для `w:type="dxa"`).
-     * @param  int|null  $widthPercent  Ширина в процентах × 50 (`w:type="pct"`).
-     *                                  Используется если widthTwips=null.
-     * @param  int  $paddingTopTwips  Inner padding (в `<w:tcMar>`).
-     * @param  int  $rowSpan  Логическое количество строк, на которые ячейка
-     *                        тянется (нач. ячейка). >1 → renderer эмитит
-     *                        `<w:vMerge w:val="restart"/>`. Не-первичные
-     *                        строки получают auto-inserted cells с
+     * @param  int|null  $widthTwips  Width in twips (for `w:type="dxa"`).
+     * @param  int|null  $widthPercent  Width as a percentage × 50
+     *                                  (`w:type="pct"`). Used when
+     *                                  widthTwips is null.
+     * @param  int  $paddingTopTwips  Inner padding (in `<w:tcMar>`).
+     * @param  int  $rowSpan  The logical number of rows the cell spans (on the
+     *                        starting cell). >1 makes the renderer emit
+     *                        `<w:vMerge w:val="restart"/>`. The non-primary
+     *                        rows get auto-inserted cells with
      *                        `$vMergeContinue=true`.
-     * @param  bool  $vMergeContinue  Маркер «продолжение rowSpan-merge» —
-     *                                renderer эмитит `<w:vMerge/>` без val.
-     *                                Эти ячейки создаются автоматически
-     *                                Converter'ом, caller обычно не выставляет.
+     * @param  bool  $vMergeContinue  The "rowSpan merge continues" marker — the
+     *                                renderer emits `<w:vMerge/>` without val.
+     *                                Such cells are created automatically by
+     *                                the converter; a caller rarely sets it.
      */
     public function __construct(
         public ?int $widthTwips = null,

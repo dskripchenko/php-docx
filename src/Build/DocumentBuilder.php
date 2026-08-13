@@ -11,16 +11,16 @@ use Dskripchenko\PhpDocx\Style\StyleRegistry;
 use Dskripchenko\PhpDocx\Writer\Word2007Writer;
 
 /**
- * Fluent builder для построения DOCX-документа поблочно.
+ * A fluent builder that assembles a DOCX document block by block.
  *
- * Стартует через `DocumentBuilder::new()`, накапливает блоки тела
- * (paragraph/heading/table/list/image/pageBreak/...), header'ы/footer'ы,
- * page setup, watermark, custom styles, finalize'ит через `build(): Document`
- * (или `toBytes()`/`toFile()` напрямую в DOCX-bytes).
+ * It starts with `DocumentBuilder::new()`, accumulates body blocks
+ * (paragraph/heading/table/list/image/pageBreak/...), headers and footers, the
+ * page setup, a watermark and custom styles, and finalizes through
+ * `build(): Document` (or `toBytes()`/`toFile()` straight into DOCX bytes).
  *
- * Header/footer/watermark — Phase B5.
+ * Header/footer/watermark are Phase B5.
  *
- * Пример:
+ * Example:
  * ```
  * $doc = DocumentBuilder::new()
  *     ->heading(1, 'Title')
@@ -98,7 +98,7 @@ final class DocumentBuilder
     }
 
     /**
-     * Header section (повторяется на каждой странице).
+     * The header section (repeated on every page).
      *
      * @param  callable(SectionContentBuilder): void  $builderCallback
      */
@@ -112,7 +112,7 @@ final class DocumentBuilder
     }
 
     /**
-     * Footer section (повторяется на каждой странице).
+     * The footer section (repeated on every page).
      *
      * @param  callable(SectionContentBuilder): void  $builderCallback
      */
@@ -126,8 +126,8 @@ final class DocumentBuilder
     }
 
     /**
-     * Header только для первой страницы. Writer автоматически добавит
-     * `<w:titlePg/>` в sectPr — иначе Word проигнорирует first-header.
+     * A header for the first page only. The writer adds `<w:titlePg/>` to
+     * sectPr automatically — otherwise Word ignores the first-page header.
      *
      * @param  callable(SectionContentBuilder): void  $builderCallback
      */
@@ -141,7 +141,7 @@ final class DocumentBuilder
     }
 
     /**
-     * Footer только для первой страницы.
+     * A footer for the first page only.
      *
      * @param  callable(SectionContentBuilder): void  $builderCallback
      */
@@ -155,9 +155,9 @@ final class DocumentBuilder
     }
 
     /**
-     * Header для чётных страниц. Writer автоматически добавит
-     * `<w:evenAndOddHeaders/>` в word/settings.xml — иначе Word
-     * проигнорирует even-header.
+     * A header for even pages. The writer adds `<w:evenAndOddHeaders/>` to
+     * word/settings.xml automatically — otherwise Word ignores the even-page
+     * header.
      *
      * @param  callable(SectionContentBuilder): void  $builderCallback
      */
@@ -171,7 +171,7 @@ final class DocumentBuilder
     }
 
     /**
-     * Footer для чётных страниц.
+     * A footer for even pages.
      *
      * @param  callable(SectionContentBuilder): void  $builderCallback
      */
@@ -202,7 +202,8 @@ final class DocumentBuilder
     }
 
     /**
-     * Сразу пишет DOCX bytes. Удобно когда не нужно держать Document AST.
+     * Writes the DOCX bytes right away. Handy when the Document AST is not
+     * needed.
      */
     public function toBytes(): string
     {
@@ -214,7 +215,7 @@ final class DocumentBuilder
     }
 
     /**
-     * Пишет DOCX в файл. Возвращает количество записанных байт.
+     * Writes the DOCX to a file. Returns the number of bytes written.
      */
     public function toFile(string $path): int
     {

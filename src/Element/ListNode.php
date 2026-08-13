@@ -5,24 +5,26 @@ declare(strict_types=1);
 namespace Dskripchenko\PhpDocx\Element;
 
 /**
- * Список — `<w:p>` параграфы с `<w:numPr>` reference на abstract numbering.
+ * A list — `<w:p>` paragraphs carrying a `<w:numPr>` reference to an abstract
+ * numbering.
  *
- * Поддержка:
- *  - bullet (●/○/■ для 3 уровней)
- *  - ordered с гибкими форматами через ListFormat (decimal/lowerLetter/
- *    upperLetter/lowerRoman/upperRoman) и custom $startAt
- *  - nested через ListItem.nestedList
+ * Supported:
+ *  - bullet (●/○/■ for 3 levels)
+ *  - ordered, with flexible formats via ListFormat (decimal/lowerLetter/
+ *    upperLetter/lowerRoman/upperRoman) and a custom $startAt
+ *  - nesting via ListItem.nestedList
  */
 final readonly class ListNode implements BlockElement
 {
     /**
      * @param  list<ListItem>  $items
      * @param  bool  $ordered  true → ordered, false → bullet
-     * @param  int  $levelStart  Уровень вложения (0..2)
-     * @param  ListFormat|null  $format  Override format. Если null —
-     *                                   default Bullet/Decimal по $ordered.
-     * @param  int  $startAt  С какого номера начать (default 1).
-     *                       Игнорируется для bullet.
+     * @param  int  $levelStart  The nesting level (0..2)
+     * @param  ListFormat|null  $format  An override format. Null means the
+     *                                   Bullet/Decimal default implied by
+     *                                   $ordered.
+     * @param  int  $startAt  The number to start from (default 1). Ignored for
+     *                       bullet lists.
      */
     public function __construct(
         public array $items,

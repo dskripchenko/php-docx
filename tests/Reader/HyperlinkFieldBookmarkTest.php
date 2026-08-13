@@ -54,7 +54,7 @@ final class HyperlinkFieldBookmarkTest extends TestCase
         $bookmarks = $this->collectByType($blocks, Bookmark::class);
         self::assertCount(1, $bookmarks);
         self::assertSame('anchor1', $bookmarks[0]->name);
-        // bookmark должен содержать text "Heading text"
+        // The bookmark must contain the text "Heading text"
         $text = '';
         foreach ($bookmarks[0]->children as $c) {
             if ($c instanceof Run) {
@@ -110,8 +110,8 @@ final class HyperlinkFieldBookmarkTest extends TestCase
     #[Test]
     public function complex_fldChar_field_emitted_as_field(): void
     {
-        // Симулируем complex field вручную — Writer наш всегда эмитит
-        // fldSimple, но другие редакторы (Word) могут эмитить complex.
+        // Simulate a complex field by hand: our writer always emits fldSimple,
+        // but other editors (Word) may emit a complex one.
         $bodyXml =
             '<w:p>'
             .'<w:r><w:fldChar w:fldCharType="begin"/></w:r>'
@@ -133,7 +133,7 @@ final class HyperlinkFieldBookmarkTest extends TestCase
         self::assertStringContainsString('MERGEFIELD', $fields[0]->instruction);
         self::assertStringContainsString('CustomerName', $fields[0]->instruction);
 
-        // «CustomerName» display-text должен быть подавлен (value-phase).
+        // The «CustomerName» display text must be suppressed (the value phase).
         $paragraphs = array_values(array_filter($blocks, fn ($b) => $b instanceof Paragraph));
         self::assertCount(1, $paragraphs);
         $hasDisplayText = false;
@@ -148,7 +148,7 @@ final class HyperlinkFieldBookmarkTest extends TestCase
     #[Test]
     public function multi_run_instrText_concatenates(): void
     {
-        // Word иногда разбивает instrText на несколько runs.
+        // Word sometimes splits instrText across several runs.
         $bodyXml =
             '<w:p>'
             .'<w:r><w:fldChar w:fldCharType="begin"/></w:r>'
@@ -171,7 +171,7 @@ final class HyperlinkFieldBookmarkTest extends TestCase
     #[Test]
     public function hyperlink_without_rels_fallbacks_to_flatten(): void
     {
-        // Hyperlink с rId но без package → fallback на children
+        // A hyperlink with an rId but no package → fall back to the children
         $bodyXml = '<w:p><w:hyperlink r:id="rIdMissing"'
             .' xmlns:r="'.OoxmlNs::R.'">'
             .'<w:r><w:t>x</w:t></w:r></w:hyperlink></w:p>';
@@ -183,7 +183,7 @@ final class HyperlinkFieldBookmarkTest extends TestCase
         $reader = new BodyReader; // package = null
         $blocks = $reader->read($body);
 
-        // Без Hyperlink — но children fallback → run с "x"
+        // No hyperlink, but the children fallback gives a run with "x"
         $links = $this->collectByType($blocks, Hyperlink::class);
         self::assertCount(0, $links);
         /** @var Paragraph $p */
@@ -246,11 +246,11 @@ final class HyperlinkFieldBookmarkTest extends TestCase
     #[Test]
     public function form_field_placeholder_becomes_text(): void
     {
-        // Word показывает незаполненное поле формы подсказкой из
-        // `w:ffData/w:textInput/w:default` — для читателя документа это и
-        // есть видимый текст. Пока результат поля подавлялся целиком, в
-        // анкете страхователя пропадали подписи «Наименование страхователя»,
-        // «Юридический адрес», «ИНН».
+        // Word shows an unfilled form field as the hint from
+        // `w:ffData/w:textInput/w:default` — to whoever reads the document that
+        // IS the visible text. While the field result was suppressed wholesale,
+        // the policyholder's questionnaire lost the captions «Наименование
+        // страхователя», «Юридический адрес», «ИНН».
         $xml = '<?xml version="1.0"?><w:document xmlns:w="'.OoxmlNs::W.'"><w:body><w:p>'
             .'<w:r><w:fldChar w:fldCharType="begin"><w:ffData><w:textInput>'
             .'<w:default w:val="Наименование страхователя"/></w:textInput></w:ffData></w:fldChar></w:r>'
@@ -274,7 +274,7 @@ final class HyperlinkFieldBookmarkTest extends TestCase
     #[Test]
     public function filled_form_field_keeps_its_value(): void
     {
-        // Заполненное поле показывает своё значение, а не подсказку.
+        // A filled field shows its value rather than the hint.
         $xml = '<?xml version="1.0"?><w:document xmlns:w="'.OoxmlNs::W.'"><w:body><w:p>'
             .'<w:r><w:fldChar w:fldCharType="begin"><w:ffData><w:textInput>'
             .'<w:default w:val="подсказка"/></w:textInput></w:ffData></w:fldChar></w:r>'

@@ -5,26 +5,27 @@ declare(strict_types=1);
 namespace Dskripchenko\PhpDocx\Reader;
 
 /**
- * Phase 8 — extract watermark text из header XML.
+ * Phase 8 — extracts the watermark text from the header XML.
  *
- * Поддерживаем два формата:
+ * Two formats are supported:
  *
- * 1. **VML** (legacy, наш writer и старый Word):
+ * 1. **VML** (legacy: our writer and older Word):
  *    `<v:shape type="#_x0000_t136"><v:textpath string="…"/></v:shape>`
- *    В DOCX-файле обычно завёрнуто в `<w:pict>` внутри `<w:r>`.
+ *    In a DOCX file it is usually wrapped in `<w:pict>` inside `<w:r>`.
  *
  * 2. **DrawingML SDT** (Word 2013+):
- *    `<w:sdt>` с `<w:sdtPr><w:tag w:val="..."/></w:sdtPr>` + `wp14:Watermark`
- *    children. Текст watermark'а сидит в любом `<w:t>` внутри SDT.
+ *    `<w:sdt>` with `<w:sdtPr><w:tag w:val="..."/></w:sdtPr>` plus
+ *    `wp14:Watermark` children. The watermark text sits in any `<w:t>` inside
+ *    the SDT.
  *
- * Mutates `$headerDoc` — удаляет watermark shape/SDT из DOM чтобы
- * BodyReader не вытащил его как обычный run.
+ * Mutates `$headerDoc`: the watermark shape/SDT is removed from the DOM so that
+ * BodyReader does not pull it out as an ordinary run.
  */
 final class WatermarkExtractor
 {
     /**
-     * Извлекает текст watermark'а из header DOMDocument. Возвращает null если
-     * не найден.
+     * Extracts the watermark text from the header DOMDocument. Returns null
+     * when there is none.
      */
     public function extract(\DOMDocument $headerDoc): ?string
     {
@@ -40,8 +41,8 @@ final class WatermarkExtractor
     {
         $shapes = $doc->getElementsByTagNameNS(OoxmlNs::V, 'shape');
         $found = null;
-        // Сначала найдём; потом отдельно удалим (изменять collection during
-        // iteration не безопасно).
+        // Find first, remove separately afterwards (mutating the collection
+        // during iteration is not safe).
         $shapesToRemove = [];
         for ($i = 0; $i < $shapes->length; $i++) {
             $shape = $shapes->item($i);
@@ -75,7 +76,7 @@ final class WatermarkExtractor
 
     private function extractSdt(\DOMDocument $doc): ?string
     {
-        // SDT'ы могут быть в любом контексте; берём только watermark'ы.
+        // SDTs can appear in any context; take the watermarks only.
         $sdts = $doc->getElementsByTagNameNS(OoxmlNs::W, 'sdt');
         $sdtsToRemove = [];
         $found = null;
@@ -137,11 +138,11 @@ final class WatermarkExtractor
     {
         $parent = $node->parentNode;
         $node->parentNode?->removeChild($node);
-        // Подчищаем пустые wrapper'ы (w:pict, w:r, w:p) которые
-        // остались бы пустыми после удаления watermark'а.
+        // Clean up the wrappers (w:pict, w:r, w:p) that would be left empty
+        // once the watermark is removed.
         while ($parent instanceof \DOMElement) {
             if ($parent->hasChildNodes()) {
-                // Проверяем — только нетекстовые элементы или непустой текст.
+                // Check for non-text elements or non-empty text only.
                 $allEmpty = true;
                 foreach ($parent->childNodes as $c) {
                     if ($c instanceof \DOMElement) {
@@ -158,7 +159,7 @@ final class WatermarkExtractor
                 }
             }
             $next = $parent->parentNode;
-            // Не сносим root <w:hdr>/<w:ftr>.
+            // Never drop the root <w:hdr>/<w:ftr>.
             if (! $next instanceof \DOMElement) {
                 return;
             }

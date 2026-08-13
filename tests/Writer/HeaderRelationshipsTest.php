@@ -16,13 +16,13 @@ use PHPUnit\Framework\TestCase;
 use ZipArchive;
 
 /**
- * Ссылка внутри колонтитула разрешается относительно rels ЕГО части.
+ * A reference inside a header resolves against the rels of ITS OWN part.
  *
- * `r:embed="rIdN"` в `header1.xml` Word ищет в `word/_rels/header1.xml.rels`.
- * Пока картинки колонтитула регистрировались в rels документа, Word их не
- * находил: знак в шапке печатался пустым квадратом с крестом, а сам файл
- * объявлялся повреждённым — «обнаружено содержимое, которое не удалось
- * прочитать».
+ * Word looks for `r:embed="rIdN"` in `header1.xml` under
+ * `word/_rels/header1.xml.rels`. While header images were registered in the
+ * document rels, Word did not find them: the mark in the header printed as an
+ * empty box with a cross, and the file itself was declared corrupt —
+ * «обнаружено содержимое, которое не удалось прочитать».
  */
 final class HeaderRelationshipsTest extends TestCase
 {
@@ -86,7 +86,7 @@ final class HeaderRelationshipsTest extends TestCase
     #[Test]
     public function every_reference_resolves_within_its_own_part(): void
     {
-        // Целостность пакета целиком: Word проверяет именно это.
+        // The integrity of the package as a whole: that is what Word checks.
         $doc = new Document(new Section(
             body: [new Paragraph([$this->pngImage()]), new Paragraph([new Run('тело')])],
             header: [new Paragraph([$this->pngImage()])],
@@ -113,10 +113,11 @@ final class HeaderRelationshipsTest extends TestCase
     #[Test]
     public function every_drawing_carries_its_own_number(): void
     {
-        // Номер рисунка уникален во всём документе: два одинаковых Word
-        // считает поводом объявить файл повреждённым. Раньше номер брался от
-        // номера ссылки, а с собственной нумерацией у каждой части картинка
-        // шапки и первая картинка тела получали один и тот же rId1.
+        // A drawing number is unique across the whole document: two identical
+        // ones are reason enough for Word to declare the file corrupt. The
+        // number used to be derived from the relationship number, and once each
+        // part numbered its own, the header image and the first body image both
+        // got rId1.
         $doc = new Document(new Section(
             body: [new Paragraph([$this->pngImage()]), new Paragraph([$this->pngImage()])],
             header: [new Paragraph([$this->pngImage()])],

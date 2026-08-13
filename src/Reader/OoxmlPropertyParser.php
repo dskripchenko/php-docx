@@ -10,14 +10,13 @@ use Dskripchenko\PhpDocx\Style\BorderSet;
 use Dskripchenko\PhpDocx\Style\BorderStyle;
 
 /**
- * Парсер `<w:rPr>` и `<w:pPr>` блоков в partial-style arrays.
+ * Parses `<w:rPr>` and `<w:pPr>` blocks into partial style arrays.
  *
- * Возвращает `array<string, mixed>` где ключи соответствуют полям
- * RunStyle/ParagraphStyle, и присутствуют только те ключи, которые
- * объявлены в текущем layer'е. Это позволяет cascade-merge простым
- * array_merge.
+ * Returns `array<string, mixed>` whose keys match the RunStyle/ParagraphStyle
+ * fields, containing only the keys declared in the current layer. That is what
+ * makes a cascade merge a plain array_merge.
  *
- * Theme-references (`w:themeColor="accent1"`) резолвятся через ThemeResolver.
+ * Theme references (`w:themeColor="accent1"`) are resolved via ThemeResolver.
  */
 final class OoxmlPropertyParser
 {
@@ -26,9 +25,9 @@ final class OoxmlPropertyParser
     ) {}
 
     /**
-     * Парсит `<w:rPr>` (или null) → partial run-style array.
+     * Parses `<w:rPr>` (or null) → a partial run-style array.
      *
-     * Ключи (если присутствуют): sizeHalfPoints, color, fontFamily,
+     * Keys (when present): sizeHalfPoints, color, fontFamily,
      * bold, italic, underline, strikethrough, superscript, subscript,
      * highlight, backgroundColor, letterSpacingTwips.
      *
@@ -46,12 +45,12 @@ final class OoxmlPropertyParser
                 continue;
             }
             match ($node->localName) {
-                // `bCs`/`iCs`/`szCs` описывают начертание и размер для СЛОЖНЫХ
-                // письменностей (арабской, ивритской, индийских). К латинице
-                // и кириллице они не применяются: Word такой текст рисует
-                // обычным. Пока их принимали за обычные `b`/`i`/`sz`, документ
-                // с `<w:bCs/>` на каждом руне печатался жирным целиком —
-                // именно так выглядело заявление страхователя.
+                // `bCs`/`iCs`/`szCs` describe the weight and size for COMPLEX
+                // scripts (Arabic, Hebrew, Indic ones). They do not apply to
+                // Latin or Cyrillic: Word draws such text as regular. While
+                // they were taken for ordinary `b`/`i`/`sz`, a document with
+                // `<w:bCs/>` on every run printed entirely bold — that is
+                // exactly how the policyholder's application looked.
                 'b' => $out['bold'] = OoxmlNs::boolToggle($node),
                 'i' => $out['italic'] = OoxmlNs::boolToggle($node),
                 'u' => $out['underline'] = $this->parseUnderline($node),
@@ -64,20 +63,20 @@ final class OoxmlPropertyParser
                 'rFonts' => $out['fontFamily'] = $this->parseFontFamily($node),
                 'highlight' => $out['highlight'] = OoxmlNs::wVal($node),
                 'shd' => $out['backgroundColor'] = $this->parseShdFill($node),
-                // Тёзка pPr/spacing (межстрочный интервал), но здесь это
-                // разрядка символов в twips.
+                // A namesake of pPr/spacing (line spacing), but here it is
+                // character spacing in twips.
                 'spacing' => $out['letterSpacingTwips'] = $this->parseInt($node),
                 default => null,
             };
         }
-        // Удаляем null-значения (плохо распарсенные).
+        // Drop the null values (the ones that did not parse).
         return array_filter($out, fn ($v) => $v !== null);
     }
 
     /**
-     * Парсит `<w:pPr>` → partial paragraph-style array.
+     * Parses `<w:pPr>` → a partial paragraph-style array.
      *
-     * Ключи: alignment, spaceBeforeTwips, spaceAfterTwips,
+     * Keys: alignment, spaceBeforeTwips, spaceAfterTwips,
      * indentLeftTwips, indentRightTwips, indentFirstLineTwips,
      * lineSpacingTwips, pageBreakAfter, borders, shadingColor,
      * pStyleId, numId, ilvl.
@@ -233,7 +232,7 @@ final class OoxmlPropertyParser
                 }
             }
         }
-        // Hanging indent — Word представляет как firstLine отрицательный смещение.
+        // A hanging indent is what Word represents as a negative firstLine offset.
         if ($ind->hasAttributeNS(OoxmlNs::W, 'hanging')) {
             $hanging = (int) $ind->getAttributeNS(OoxmlNs::W, 'hanging');
             if ($hanging > 0) {
@@ -257,9 +256,10 @@ final class OoxmlPropertyParser
             $line = (int) $sp->getAttributeNS(OoxmlNs::W, 'line');
             if ($line > 0) {
                 $out['lineSpacingTwips'] = $line;
-                // Без правила число ничего не значит: при `auto` это доля от
-                // одинарного интервала (240 = один), при `exact`/`atLeast` —
-                // высота строки в двадцатых долях пункта.
+                // Without the rule the number means nothing: under `auto` it is
+                // a fraction of single spacing (240 = single), under
+                // `exact`/`atLeast` it is the line height in twentieths of a
+                // point.
                 $rule = $sp->getAttributeNS(OoxmlNs::W, 'lineRule');
                 $out['lineSpacingRule'] = $rule !== '' ? $rule : 'auto';
             }
@@ -267,8 +267,8 @@ final class OoxmlPropertyParser
     }
 
     /**
-     * Public для использования из TableReader (tblBorders/tcBorders имеют
-     * тот же sub-schema что и pBdr — top/left/bottom/right + insideH/V).
+     * Public so TableReader can use it (tblBorders/tcBorders share the
+     * sub-schema of pBdr — top/left/bottom/right + insideH/V).
      */
     public function parseBorders(\DOMElement $pBdr): BorderSet
     {

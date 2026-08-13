@@ -5,20 +5,21 @@ declare(strict_types=1);
 namespace Dskripchenko\PhpDocx\Element;
 
 /**
- * Bookmark anchor — точка назначения для внутренней Hyperlink.
+ * A bookmark anchor — the destination of an internal hyperlink.
  *
- * Маппится в `<w:bookmarkStart w:id="N" w:name="anchorName"/>` +
- * `<w:bookmarkEnd w:id="N"/>` (Word требует обе границы; для inline-точечного
- * bookmark обе ставятся подряд).
+ * It maps to `<w:bookmarkStart w:id="N" w:name="anchorName"/>` +
+ * `<w:bookmarkEnd w:id="N"/>` (Word requires both boundaries; for a point-like
+ * inline bookmark the two go one after the other).
  *
- * Параметр $children — опциональный inline-контент, "обёрнутый" в bookmark.
- * Для simple-anchor (просто метка) — пустой массив.
+ * The $children parameter is the optional inline content wrapped in the
+ * bookmark. For a simple anchor (a bare marker) it is an empty array.
  *
- * Имена bookmark'ов в OOXML:
- *  - до 40 символов
- *  - начинаются с letter (не digit)
- *  - без пробелов и спецсимволов кроме _
- * Если HTML id не соответствует — Converter sanitiz'ит его (см. Converter).
+ * Bookmark names in OOXML:
+ *  - up to 40 characters
+ *  - start with a letter (not a digit)
+ *  - no spaces or special characters except _
+ * An HTML id that does not comply is sanitized by the converter (see
+ * Converter).
  */
 final readonly class Bookmark implements InlineElement
 {

@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace Dskripchenko\PhpDocx\Style;
 
 /**
- * Стиль параграфа (`<w:pPr>` в OOXML).
+ * A paragraph style (`<w:pPr>` in OOXML).
  *
- * Пространство (spaceBefore/After) — в twips.
- * Отступы (indent*) — в twips.
+ * Spacing (spaceBefore/After) is in twips.
+ * Indents (indent*) are in twips.
  */
 final readonly class ParagraphStyle
 {
@@ -21,21 +21,21 @@ final readonly class ParagraphStyle
         public int $indentFirstLineTwips = 0,
         public ?int $lineSpacingTwips = null,
         /**
-         * Как понимать `lineSpacingTwips`: `auto` — доля от одинарного
-         * интервала (240 = один), `exact`/`atLeast` — высота строки.
+         * How to read `lineSpacingTwips`: under `auto` it is a fraction of
+         * single spacing (240 = single), under `exact`/`atLeast` it is the
+         * line height.
          */
         public ?string $lineSpacingRule = null,
         public bool $pageBreakAfter = false,
         /**
-         * `w:keepNext` — «не отрывать от следующего абзаца».
+         * `w:keepNext` — "keep with the next paragraph".
          *
-         * Заголовок раздела не должен оставаться последней строкой страницы:
-         * если следом за ним ничего не помещается, Word уносит на новую
-         * страницу оба.
+         * A section heading must not be left as the last line of a page: when
+         * nothing fits after it, Word carries both over to the next page.
          */
         public bool $keepWithNext = false,
         public ?BorderSet $borders = null,
-        /** Заливка абзаца (`<w:shd>` в `w:pPr`) — hex без `#`, например `0f766e`. */
+        /** The paragraph fill (`<w:shd>` in `w:pPr`) — hex without the `#`, e.g. `0f766e`. */
         public ?string $shadingColor = null,
     ) {}
 
@@ -55,8 +55,8 @@ final readonly class ParagraphStyle
     }
 
     /**
-     * Immutable-update: возвращает копию с overridden-полями.
-     * Параметры с дефолтом `null` остаются как у `$this`.
+     * An immutable update: returns a copy with the overridden fields. The
+     * parameters left at their `null` default keep the values of `$this`.
      */
     public function copy(
         ?Alignment $alignment = null,

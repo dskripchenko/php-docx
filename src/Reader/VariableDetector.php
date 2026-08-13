@@ -7,20 +7,21 @@ namespace Dskripchenko\PhpDocx\Reader;
 /**
  * Phase 9 — VariableDetector.
  *
- * Ищет в `DocxPackage` (body + headers + footers) три источника
- * переменных:
+ * Looks for three sources of variables in a `DocxPackage` (body + headers +
+ * footers):
  *
  *  1. **MERGEFIELD** — `<w:fldSimple w:instr="MERGEFIELD CustomerName \\* MERGEFORMAT"/>`
- *     или complex field через `<w:fldChar>` + `<w:instrText>` со склейкой
- *     по runs.
- *  2. **SDT content controls** — `<w:sdt>` с `<w:sdtPr><w:tag w:val="X"/></w:sdtPr>`.
- *     Если есть `<w:alias>` — используем как display label.
- *     Sample-value = плейн-текст внутри `<w:sdtContent>` (placeholder Word'а).
- *  3. **Text patterns** — на тексте после склейки соседних `<w:t>` runs
- *     внутри одного параграфа. По умолчанию три regex'а: `{{var}}`, `${var}`,
- *     `%var%`. Caller может передать кастомные паттерны.
+ *     or a complex field via `<w:fldChar>` + `<w:instrText>`, glued together
+ *     across runs.
+ *  2. **SDT content controls** — `<w:sdt>` with `<w:sdtPr><w:tag w:val="X"/></w:sdtPr>`.
+ *     When `<w:alias>` is present it is used as the display label.
+ *     The sample value is the plain text inside `<w:sdtContent>` (Word's
+ *     placeholder).
+ *  3. **Text patterns** — over the text obtained by gluing adjacent `<w:t>`
+ *     runs within one paragraph. Three regexes by default: `{{var}}`,
+ *     `${var}`, `%var%`. The caller may pass custom patterns.
  *
- * Дедупликация: одинаковые (name, source) → возвращается одна запись.
+ * Deduplication: identical (name, source) pairs yield a single entry.
  */
 final class VariableDetector
 {
@@ -28,9 +29,9 @@ final class VariableDetector
     private array $textPatterns;
 
     /**
-     * @param  list<string>|null  $textPatterns  PHP-regex'ы с group(1) =
-     *                                           имя переменной. Если null —
-     *                                           defaults.
+     * @param  list<string>|null  $textPatterns  PHP regexes with group(1) =
+     *                                           the variable name. Null means
+     *                                           the defaults.
      */
     public function __construct(?array $textPatterns = null)
     {
@@ -108,7 +109,7 @@ final class VariableDetector
 
     private function detectComplexMergefields(\DOMDocument $doc, \Closure $emit): void
     {
-        // Сканируем все параграфы; внутри каждого state machine по runs.
+        // Scan every paragraph; inside each one a state machine over the runs.
         foreach ($doc->getElementsByTagNameNS(OoxmlNs::W, 'p') as $p) {
             if (! $p instanceof \DOMElement) {
                 continue;
@@ -172,7 +173,7 @@ final class VariableDetector
             if (! $sdt instanceof \DOMElement) {
                 continue;
             }
-            // Skip watermark-SDT'ы — у них tag/alias содержит "watermark".
+            // Skip watermark SDTs — their tag/alias contains "watermark".
             $sdtPr = OoxmlNs::firstChild($sdt, OoxmlNs::W, 'sdtPr');
             if ($sdtPr === null) {
                 continue;
@@ -182,7 +183,7 @@ final class VariableDetector
             $tag = $tagEl !== null ? OoxmlNs::wVal($tagEl) : null;
             $alias = $aliasEl !== null ? OoxmlNs::wVal($aliasEl) : null;
 
-            // Name приоритет: tag > alias.
+            // Name priority: tag > alias.
             $name = $this->sanitizeVarName($tag !== null && $tag !== '' ? $tag : ($alias ?? ''));
             if ($name === '') {
                 continue;
@@ -205,8 +206,8 @@ final class VariableDetector
 
     private function detectTextPatterns(\DOMDocument $doc, \Closure $emit): void
     {
-        // Склеиваем все <w:t> внутри одного параграфа в одну строку, потом
-        // прогоняем regex'ы.
+        // Glue every <w:t> within one paragraph into a single string, then run
+        // the regexes over it.
         foreach ($doc->getElementsByTagNameNS(OoxmlNs::W, 'p') as $p) {
             if (! $p instanceof \DOMElement) {
                 continue;
@@ -244,8 +245,9 @@ final class VariableDetector
     }
 
     /**
-     * Парсит MERGEFIELD-инструкцию: "MERGEFIELD CustomerName \\* MERGEFORMAT"
-     * → "CustomerName". Также допускаем `<w:instr>MERGEFIELD CustomerName</w:instr>`.
+     * Parses a MERGEFIELD instruction: "MERGEFIELD CustomerName \\* MERGEFORMAT"
+     * → "CustomerName". `<w:instr>MERGEFIELD CustomerName</w:instr>` is accepted
+     * as well.
      */
     private function extractMergefieldName(string $instr): ?string
     {
@@ -259,8 +261,8 @@ final class VariableDetector
     private function sanitizeVarName(string $raw): string
     {
         $clean = trim($raw);
-        // Допускаем буквы/цифры/_./- . Остальное оставляем — caller-side
-        // могут sanitiz'нуть отдельно.
+        // Letters, digits and _./- are allowed. The rest is left as is — the
+        // caller side may sanitize it separately.
         return $clean;
     }
 

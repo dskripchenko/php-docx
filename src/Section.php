@@ -8,23 +8,24 @@ use Dskripchenko\PhpDocx\Element\BlockElement;
 use Dskripchenko\PhpDocx\Style\PageSetup;
 
 /**
- * Section — логическая секция документа: набор block-элементов + page setup
- * + header/footer.
+ * Section is a logical section of the document: a set of block elements plus
+ * the page setup and the header/footer.
  *
- * **Header/footer типы.** Word поддерживает три типа: `default` (на всех
- * страницах), `first` (на первой странице), `even` (на чётных). Default
- * хранится в `$header`/`$footer`; `$firstHeader`/`$evenHeader` (и footer
- * аналоги) — опциональные дополнительные blocks.
+ * **Header/footer types.** Word supports three: `default` (on every page),
+ * `first` (on the first page), `even` (on even ones). The default one is kept
+ * in `$header`/`$footer`; `$firstHeader`/`$evenHeader` (and the footer
+ * counterparts) are optional extra blocks.
  *
- * Если `$firstHeader` или `$firstFooter` не пуст, writer эмитит
- * `<w:titlePg/>` в `<w:sectPr>` (требование Word).
+ * When `$firstHeader` or `$firstFooter` is non-empty, the writer emits
+ * `<w:titlePg/>` in `<w:sectPr>` (Word requires it).
  *
- * Если `$evenHeader` или `$evenFooter` не пуст, writer также эмитит
- * `<w:evenAndOddHeaders/>` в `word/settings.xml` (без этого Word
- * игнорирует even-headers).
+ * When `$evenHeader` or `$evenFooter` is non-empty, the writer also emits
+ * `<w:evenAndOddHeaders/>` in `word/settings.xml` (without it Word ignores
+ * the even headers).
  *
- * В простом случае весь документ — одна секция. Multi-section для
- * mid-document смены ориентации/полей не покрывается v1.
+ * In the simple case the whole document is a single section. Multi-section
+ * documents for a mid-document change of orientation or margins are out of
+ * scope for v1.
  */
 final readonly class Section
 {
@@ -32,15 +33,15 @@ final readonly class Section
      * @param  list<BlockElement>  $body
      * @param  list<BlockElement>  $header  Default header.
      * @param  list<BlockElement>  $footer  Default footer.
-     * @param  list<BlockElement>  $firstHeader  Header только для первой
-     *                                           страницы (если непустой —
-     *                                           sectPr получит titlePg).
-     * @param  list<BlockElement>  $firstFooter  Footer только для первой страницы.
-     * @param  list<BlockElement>  $evenHeader  Header для чётных страниц
-     *                                          (требует evenAndOddHeaders
-     *                                          в settings.xml — writer
-     *                                          добавит автоматически).
-     * @param  list<BlockElement>  $evenFooter  Footer для чётных страниц.
+     * @param  list<BlockElement>  $firstHeader  Header for the first page only
+     *                                           (when non-empty, sectPr gets
+     *                                           titlePg).
+     * @param  list<BlockElement>  $firstFooter  Footer for the first page only.
+     * @param  list<BlockElement>  $evenHeader  Header for even pages (requires
+     *                                          evenAndOddHeaders in
+     *                                          settings.xml — the writer adds
+     *                                          it automatically).
+     * @param  list<BlockElement>  $evenFooter  Footer for even pages.
      */
     public function __construct(
         public array $body,
@@ -54,7 +55,7 @@ final readonly class Section
     ) {}
 
     /**
-     * Все non-empty headers по типу (default/first/even).
+     * All non-empty headers by type (default/first/even).
      *
      * @return array<string, list<BlockElement>>
      */
@@ -75,7 +76,7 @@ final readonly class Section
     }
 
     /**
-     * Все non-empty footers по типу.
+     * All non-empty footers by type.
      *
      * @return array<string, list<BlockElement>>
      */

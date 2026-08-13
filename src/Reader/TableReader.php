@@ -21,17 +21,17 @@ use Dskripchenko\PhpDocx\Style\VerticalAlign;
  * `<w:tbl>` → Table:
  *  - `<w:tblPr>` → TableStyle (width, alignment, borders, layout, cellMargin)
  *  - `<w:tblGrid>/<w:gridCol>` → gridColumnsTwips
- *  - `<w:tr>` → TableRow (с trHeight, tblHeader)
+ *  - `<w:tr>` → TableRow (with trHeight, tblHeader)
  *  - `<w:tc>` → TableCell (gridSpan, vMerge restart/continue, width,
  *    borders, shading, padding, vAlign)
  *
  * vMerge reconstruction:
- *  - `<w:vMerge w:val="restart"/>` → начало merge-группы, считаем rowSpan
- *    путём сканирования последующих строк в той же колонке (по cumulative
- *    gridSpan-индексу)
- *  - `<w:vMerge/>` (без val) → continue-cell, **сохраняем** в AST с флагом
- *    vMergeContinue=true (writer тогда корректно повторно эмитит); HTML
- *    serializer (Phase 10) рассмотрит как «уже учтённую» и пропустит
+ *  - `<w:vMerge w:val="restart"/>` → start of a merge group; the rowSpan is
+ *    counted by scanning the following rows in the same column (by the
+ *    cumulative gridSpan index)
+ *  - `<w:vMerge/>` (without val) → continue cell, **kept** in the AST with the
+ *    vMergeContinue=true flag (the writer then re-emits it correctly); the HTML
+ *    serializer (Phase 10) treats it as already accounted for and skips it
  */
 final class TableReader
 {
@@ -47,10 +47,11 @@ final class TableReader
 
         $gridColumns = $this->readGrid($tbl);
 
-        // Caption — нечасто, OOXML hасто кладёт caption в paragraph над
-        // таблицей через стиль "Caption" (Word UI). DOCX-схема также имеет
-        // <w:caption> внутри <w:tbl> (редко). Пока не trying — caption=null;
-        // Phase 10 при serialization может сшить ближайший Caption-paragraph.
+        // Captions are rare, and OOXML usually puts one into a paragraph above
+        // the table via the "Caption" style (the Word UI). The DOCX schema also
+        // has <w:caption> inside <w:tbl> (rarely). Not attempted yet —
+        // caption=null; Phase 10 may stitch the nearest Caption paragraph in at
+        // serialization time.
 
         $rows = [];
         foreach (OoxmlNs::children($tbl, OoxmlNs::W, 'tr') as $trEl) {
@@ -77,7 +78,7 @@ final class TableReader
         }
         $widths = [];
         foreach (OoxmlNs::children($tblGrid, OoxmlNs::W, 'gridCol') as $col) {
-            // gridCol использует атрибут w:w (не w:val).
+            // gridCol uses the w:w attribute (not w:val).
             if (! $col->hasAttributeNS(OoxmlNs::W, 'w')) {
                 continue;
             }
@@ -241,8 +242,8 @@ final class TableReader
                 case 'vMerge':
                     $val = OoxmlNs::wVal($node);
                     if ($val === 'restart') {
-                        // rowSpan вычислим позже через reconstructRowSpans
-                        $rowSpan = 2; // временно, заменим
+                        // The rowSpan is computed later by reconstructRowSpans
+                        $rowSpan = 2; // temporary, will be replaced
                     } else {
                         $vMergeContinue = true;
                     }
@@ -284,9 +285,9 @@ final class TableReader
     }
 
     /**
-     * Walk rows, для каждой vMergeContinue=true ячейки в строке N считаем
-     * соответствующий restart-cell в строках 0..N-1 (по cumulative
-     * gridSpan-индексу) и инкрементируем его rowSpan.
+     * Walks the rows; for every vMergeContinue=true cell in row N it finds the
+     * matching restart cell in rows 0..N-1 (by the cumulative gridSpan index)
+     * and increments its rowSpan.
      *
      * @param  list<TableRow>  $rows
      * @return list<TableRow>
@@ -294,15 +295,15 @@ final class TableReader
     private function reconstructRowSpans(array $rows): array
     {
         if (count($rows) <= 1) {
-            // ни одной continue быть не должно — возвращаем без модификаций,
-            // только сбрасываем артефактные rowSpan=2 (от parseCell).
+            // There can be no continue cell at all — return unmodified, only
+            // resetting the artificial rowSpan=2 left by parseCell.
             return $this->resetTemporaryRowSpans($rows);
         }
 
-        // Сначала — индексы restart-cells по cumulative column index.
+        // First, the indexes of the restart cells by cumulative column index.
         // openRestarts[colIndex] = [rowIdx, cellIdxInRow]
         $openRestarts = [];
-        // Рабочий rowSpan для каждой restart-cell.
+        // The running rowSpan of every restart cell.
         // restartRowSpan[rowIdx][cellIdxInRow] = rowSpan
         $restartRowSpan = [];
 
@@ -311,7 +312,7 @@ final class TableReader
             foreach ($row->cells as $cellIdx => $cell) {
                 $gs = max(1, $cell->style->gridSpan);
                 if ($cell->style->vMergeContinue) {
-                    // Найти open restart на этом col-индексе → +1 rowSpan
+                    // Find the open restart at this column index → +1 rowSpan
                     if (isset($openRestarts[$col])) {
                         [$rIdx, $cIdx] = $openRestarts[$col];
                         $restartRowSpan[$rIdx][$cIdx] = ($restartRowSpan[$rIdx][$cIdx] ?? 1) + 1;
@@ -320,8 +321,8 @@ final class TableReader
 
                     continue;
                 }
-                // обычная или restart-cell
-                $isRestart = $cell->style->rowSpan > 1; // сигнал из readCellStyle
+                // an ordinary cell or a restart one
+                $isRestart = $cell->style->rowSpan > 1; // the signal from readCellStyle
                 if ($isRestart) {
                     $openRestarts[$col] = [$rowIdx, $cellIdx];
                     $restartRowSpan[$rowIdx][$cellIdx] = 1;
@@ -330,7 +331,7 @@ final class TableReader
             }
         }
 
-        // Применяем computed rowSpan'ы.
+        // Apply the computed rowSpans.
         $newRows = [];
         foreach ($rows as $rowIdx => $row) {
             $newCells = [];
@@ -407,8 +408,8 @@ final class TableReader
         }
         $int = (int) $val;
         if ($type === 'pct') {
-            // В OOXML значение % хранится либо как N*50 (5000 = 100%),
-            // либо как "20.00%" (string). Мы поддерживаем оба варианта.
+            // In OOXML a % value is stored either as N*50 (5000 = 100%) or as
+            // "20.00%" (a string). Both variants are supported.
             return [null, $int];
         }
         // dxa / auto / nil

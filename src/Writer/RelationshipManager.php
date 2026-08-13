@@ -8,16 +8,16 @@ use Dskripchenko\PhpDocx\Element\Image;
 use Dskripchenko\PhpDocx\Element\ImageFormat;
 
 /**
- * Регистратор relationships документа. Используется для image-embed
- * (Phase 4), hyperlink-rels (Phase 4), header/footer-rels (Phase 5a).
+ * Registry of the document's relationships. Used for image embedding
+ * (Phase 4), hyperlink rels (Phase 4), header/footer rels (Phase 5a).
  *
- * Хранит:
- *  - сами `<Relationship>` записи для `word/_rels/document.xml.rels`
- *  - media-файлы для `word/media/imageN.ext`
- *  - extensions для `[Content_Types].xml` (Default-entries)
- *  - hyperlink targets для внешних ссылок
+ * Keeps:
+ *  - the `<Relationship>` entries themselves for `word/_rels/document.xml.rels`
+ *  - media files for `word/media/imageN.ext`
+ *  - extensions for `[Content_Types].xml` (Default entries)
+ *  - hyperlink targets for external links
  *
- * rId генерится монотонно (rId1, rId2, ...).
+ * The rId is generated monotonically (rId1, rId2, ...).
  */
 final class RelationshipManager
 {
@@ -29,12 +29,12 @@ final class RelationshipManager
     private array $relationships = [];
 
     /**
-     * Текущая часть документа: null — сам `document.xml`.
+     * The current document part: null is `document.xml` itself.
      *
-     * Ссылка `r:embed` разрешается относительно rels ТОЙ ЧАСТИ, где она
-     * написана: `header1.xml` смотрит в `word/_rels/header1.xml.rels`.
-     * Пока картинки колонтитула регистрировались в rels документа, Word
-     * не находил их и объявлял файл повреждённым.
+     * An `r:embed` reference resolves against the rels of THE PART where it is
+     * written: `header1.xml` looks into `word/_rels/header1.xml.rels`. While
+     * header images were registered in the document rels, Word did not find
+     * them and declared the file corrupt.
      */
     private ?string $part = null;
 
@@ -44,10 +44,10 @@ final class RelationshipManager
     /** @var array<string, int> */
     private array $partNextRId = [];
 
-    /** @var array<string, string>  filename → binary contents (для word/media/) */
+    /** @var array<string, string>  filename → binary contents (for word/media/) */
     private array $mediaFiles = [];
 
-    /** @var array<string, string>  extension → content-type (для Content_Types.xml Default) */
+    /** @var array<string, string>  extension → content-type (for Content_Types.xml Default) */
     private array $contentTypeExtensions = [];
 
     public const TYPE_IMAGE = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/image';
@@ -65,13 +65,13 @@ final class RelationshipManager
     public const TYPE_SETTINGS = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings';
 
     /**
-     * Сквозной номер графического объекта для `wp:docPr`.
+     * Document-wide sequential number of a graphic object for `wp:docPr`.
      *
-     * Идентификатор обязан быть уникальным во всём документе: Word объявляет
-     * файл повреждённым, если два рисунка носят один номер. Считать его от
-     * номера ссылки нельзя — с тех пор как у каждой части своя нумерация
-     * ссылок, картинка шапки и первая картинка тела получали один и тот же
-     * `rId1`, а значит и один номер.
+     * The identifier has to be unique across the whole document: Word declares
+     * the file corrupt when two drawings carry the same number. It cannot be
+     * derived from the relationship number — ever since each part numbers its
+     * own relationships, a header image and the first body image both got
+     * `rId1`, and therefore the same number.
      */
     public function nextDrawingId(): int
     {
@@ -79,10 +79,11 @@ final class RelationshipManager
     }
 
     /**
-     * Выполняет отрисовку части документа так, чтобы её ссылки попали в её
-     * собственный rels-файл, а не в общий документный.
+     * Renders a document part so that its relationships land in its own rels
+     * file rather than in the shared document one.
      *
-     * Медиа-файлы остаются общими: `word/media` — папка пакета, а не части.
+     * Media files stay shared: `word/media` belongs to the package, not to a
+     * part.
      *
      * @template T
      *
@@ -101,7 +102,7 @@ final class RelationshipManager
     }
 
     /**
-     * Ссылки частей документа: имя части → её relationships.
+     * Relationships of the document parts: part name → its relationships.
      *
      * @return array<string, list<array{id: string, type: string, target: string, targetMode?: string}>>
      */
@@ -111,7 +112,7 @@ final class RelationshipManager
     }
 
     /**
-     * Регистрирует image и возвращает rId для использования в `<a:blip r:embed="..."/>`.
+     * Registers an image and returns the rId to use in `<a:blip r:embed="..."/>`.
      */
     public function registerImage(Image $image): string
     {
@@ -129,7 +130,7 @@ final class RelationshipManager
     }
 
     /**
-     * Регистрирует внешний URL (hyperlink) и возвращает rId.
+     * Registers an external URL (hyperlink) and returns its rId.
      */
     public function registerHyperlink(string $href): string
     {
@@ -137,7 +138,7 @@ final class RelationshipManager
     }
 
     /**
-     * Регистрирует header/footer relationship (header1.xml / footer1.xml).
+     * Registers a header/footer relationship (header1.xml / footer1.xml).
      */
     public function registerHeaderFooter(string $target, bool $isHeader): string
     {
@@ -183,7 +184,7 @@ final class RelationshipManager
         return $this->contentTypeExtensions;
     }
 
-    /** Записывает ссылку в текущую часть и возвращает её rId. */
+    /** Writes the relationship into the current part and returns its rId. */
     private function add(string $type, string $target, ?string $targetMode = null): string
     {
         $rel = ['id' => $this->nextRId(), 'type' => $type, 'target' => $target];
@@ -200,7 +201,7 @@ final class RelationshipManager
         return $rel['id'];
     }
 
-    /** Нумерация ссылок своя у каждой части: она разрешается внутри части. */
+    /** Each part numbers its relationships on its own: they resolve part-locally. */
     private function nextRId(): string
     {
         if ($this->part === null) {

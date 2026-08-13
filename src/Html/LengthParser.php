@@ -5,24 +5,24 @@ declare(strict_types=1);
 namespace Dskripchenko\PhpDocx\Html;
 
 /**
- * CSS length parser. Конвертирует значения с единицами в OOXML-измерения.
+ * A CSS length parser. Converts values with units into OOXML measurements.
  *
- * Единицы CSS → twips:
+ * CSS units → twips:
  *   1pt   = 20 twips
  *   1px   = 15 twips (96 DPI screen, 72 pt/inch → 1px = 0.75pt = 15 twips)
  *   1in   = 1440 twips
  *   1cm   = 567 twips (1cm ≈ 28.3pt)
  *   1mm   = 56.7 twips
- *   1em   = ~10pt = 200 twips (rough; зависит от font-size)
+ *   1em   = ~10pt = 200 twips (rough; it depends on the font-size)
  *
- * Percent (`50%`) возвращается как `null` от parseTwips() и отдельно
- * через parsePercent() — caller сам решает, в каком контексте использует.
+ * A percentage (`50%`) comes back as `null` from parseTwips() and separately
+ * through parsePercent() — the caller decides how to use it in its context.
  */
 final class LengthParser
 {
     /**
-     * Парсит абсолютную длину в twips. Возвращает null если значение —
-     * проценты, auto, inherit, или мусор.
+     * Parses an absolute length into twips. Returns null when the value is a
+     * percentage, auto, inherit, or junk.
      */
     public static function parseTwips(?string $value): ?int
     {
@@ -54,7 +54,7 @@ final class LengthParser
     }
 
     /**
-     * Парсит проценты `50%` в float (50.0). Null если значение не %.
+     * Parses a percentage `50%` into a float (50.0). Null when it is not a %.
      */
     public static function parsePercent(?string $value): ?float
     {
@@ -70,7 +70,7 @@ final class LengthParser
     }
 
     /**
-     * OOXML's `<w:tcW w:type="pct"/>` использует value × 50 (50% = 2500).
+     * OOXML's `<w:tcW w:type="pct"/>` uses value × 50 (50% = 2500).
      */
     public static function percentToOoxmlPct(float $percent): int
     {
@@ -78,7 +78,7 @@ final class LengthParser
     }
 
     /**
-     * Конвертирует twips в half-points для `<w:sz>` (font-size).
+     * Converts twips into the half-points of `<w:sz>` (font-size).
      * 12pt = 240 twips = 24 half-points.
      */
     public static function twipsToHalfPoints(int $twips): int
@@ -87,7 +87,7 @@ final class LengthParser
     }
 
     /**
-     * Парсит font-size в half-points (для `<w:sz>`). Возвращает null если %.
+     * Parses a font-size into half-points (for `<w:sz>`). Null when it is a %.
      */
     public static function parseFontSizeHalfPoints(?string $value): ?int
     {
@@ -97,7 +97,7 @@ final class LengthParser
     }
 
     /**
-     * Парсит CSS длину в EMU (для image dimensions).
+     * Parses a CSS length into EMU (for image dimensions).
      * 1 inch = 914400 EMU; 1 twip = 1/1440 inch → 1 twip = 635 EMU.
      */
     public static function parseEmu(?string $value): ?int
