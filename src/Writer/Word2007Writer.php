@@ -11,21 +11,22 @@ use Dskripchenko\PhpDocx\Style\PageSetup;
 use Dskripchenko\PhpDocx\Style\StyleRegistry;
 
 /**
- * Writer Document → DOCX (Word2007 format).
+ * The writer of a Document into a DOCX (the Word2007 format).
  *
- * Pipeline:
- *  1. BodyXmlBuilder рендерит section.body в XML, попутно регистрирует
- *     image/hyperlink rels через RelationshipManager.
- *  2. document.xml = <w:document>…<w:body>{rendered}</w:body><w:sectPr/></w:document>
- *  3. Rels из RelationshipManager → word/_rels/document.xml.rels
- *  4. Media файлы → word/media/imageN.ext
- *  5. Расширения content-types для image extensions → [Content_Types].xml
+ * The pipeline:
+ *  1. BodyXmlBuilder renders section.body into XML, registering the image and
+ *     hyperlink relationships through the RelationshipManager along the way.
+ *  2. document.xml = <w:document>...<w:body>{rendered}</w:body><w:sectPr/></w:document>
+ *  3. The relationships from the RelationshipManager →
+ *     word/_rels/document.xml.rels
+ *  4. The media files → word/media/imageN.ext
+ *  5. The content-type entries for the image extensions → [Content_Types].xml
  *
- * Phase 3: body content rendering (paragraphs/runs/tables/HR/PageBreak).
- * Phase 4: image embedding (уже работает через RelationshipManager).
- * Phase 5a: headers/footers + watermark.
- * Phase 5b: lists + numbering.xml.
- * Phase 5c: styles.xml + StyleRegistry.
+ * Phase 3: rendering the body content (paragraphs/runs/tables/HR/PageBreak).
+ * Phase 4: embedding the images (already works through the RelationshipManager).
+ * Phase 5a: the headers and footers plus the watermark.
+ * Phase 5b: the lists plus numbering.xml.
+ * Phase 5c: styles.xml plus the StyleRegistry.
  */
 final class Word2007Writer
 {
@@ -36,17 +37,18 @@ final class Word2007Writer
     public function write(Document $document): string
     {
         $section = $document->section;
-        // Если caller передал пустой registry — используем defaults
-        // (Heading1..6 + ListParagraph) чтобы DOCX был самодостаточным.
+        // When the caller passed an empty registry we use the defaults
+        // (Heading1..6 plus ListParagraph) so that the DOCX is self-contained.
         $styles = $this->styles->isEmpty() ? StyleRegistry::defaults() : $this->styles;
         $rels = new RelationshipManager;
         $numbering = new NumberingXmlBuilder;
         $builder = new BodyXmlBuilder($rels, $numbering);
         $bodyXml = $builder->render($section->body);
 
-        // Multi-header/footer: собираем все типы (default/first/even).
-        // Watermark идёт ТОЛЬКО на default header (если default отсутствует —
-        // создаём его пустым с watermark prefix).
+        // Multiple headers and footers: we gather every kind
+        // (default/first/even). The watermark goes ONLY onto the default header
+        // (when there is no default one we create an empty one with the
+        // watermark prefix).
         $watermarkXml = ($document->watermarkText !== null && $document->watermarkText !== '')
             ? $this->watermarkXml($document->watermarkText)
             : '';
@@ -55,7 +57,7 @@ final class Word2007Writer
         $footers = $section->allFooters();
 
         if ($watermarkXml !== '' && ! isset($headers['default'])) {
-            // Watermark требует default-header'а — создаём пустой.
+            // The watermark needs a default header — we create an empty one.
             $headers['default'] = [];
         }
 
@@ -98,8 +100,8 @@ final class Word2007Writer
             $rels->registerNumbering();
         }
 
-        // Settings part — нужен только если есть even-headers/footers
-        // (для <w:evenAndOddHeaders/>).
+        // The settings part is needed only when there are even headers or
+        // footers (for the <w:evenAndOddHeaders/>).
         $settingsXml = null;
         if ($hasEvenPage) {
             $settingsXml = (new SettingsXmlBuilder(evenAndOddHeaders: true))->render();
@@ -109,8 +111,9 @@ final class Word2007Writer
         $stylesXml = (new StylesXmlBuilder($styles))->render();
         $rels->registerStyles();
 
-        // Core properties: пишутся только когда есть что писать — пустая
-        // часть свойств хуже её отсутствия, это просто лишний шум в пакете.
+        // The core properties are written only when there is something to
+        // write — an empty properties part is worse than none, it is just extra
+        // noise in the package.
         $core = $document->coreProperties;
         $coreXml = $core !== null && ! $core->isEmpty()
             ? (new CorePropertiesXmlBuilder($core))->render()
@@ -163,9 +166,9 @@ final class Word2007Writer
         }
         $zip->addFromString('word/styles.xml', $stylesXml);
 
-        // Ссылка внутри колонтитула разрешается относительно rels ЕГО части,
-        // а не документа: без своего файла Word не находит картинку и
-        // объявляет документ повреждённым.
+        // A reference inside a header is resolved against the rels of ITS part
+        // rather than the document's: without a file of its own Word does not
+        // find the image and declares the document corrupt.
         foreach ($rels->partRelationships() as $partName => $partRels) {
             $zip->addFromString('word/_rels/'.$partName.'.rels', $this->renderRelsFile($partRels));
         }
@@ -183,8 +186,9 @@ final class Word2007Writer
     }
 
     /**
-     * VML watermark: `<v:shape type="#_x0000_t136">` с textpath, rotation 315°,
-     * 50% opacity, absolute-position center. Стандартный Word-паттерн.
+     * The VML watermark: a `<v:shape type="#_x0000_t136">` with a textpath, a
+     * rotation of 315°, 50% opacity and an absolute centred position. The
+     * standard Word pattern.
      */
     private function watermarkXml(string $text): string
     {
@@ -225,9 +229,9 @@ final class Word2007Writer
      */
     private function renderHeaderFooterXml(array $blocks, RelationshipManager $rels, NumberingXmlBuilder $numbering, bool $isHeader, string $prefixXml = ''): string
     {
-        // Используем тот же builder с теми же rels-manager и numbering-builder
-        // (картинки/links/lists в header могут регистрировать ресурсы в
-        // общем document-rels/numbering файле).
+        // We use the same builder with the same relationship manager and
+        // numbering builder (the images, links and lists of a header may
+        // register resources in the shared document rels or numbering file).
         $contentBuilder = new BodyXmlBuilder($rels, $numbering);
         $content = $prefixXml.$contentBuilder->render($blocks);
         $tag = $isHeader ? 'w:hdr' : 'w:ftr';
@@ -247,7 +251,7 @@ final class Word2007Writer
     }
 
     /**
-     * @param  list<string>  $headerPartNames  Имена header parts (header1.xml, ...)
+     * @param  list<string>  $headerPartNames  The names of the header parts (header1.xml, ...)
      * @param  list<string>  $footerPartNames
      */
     private function renderContentTypes(
@@ -293,7 +297,7 @@ final class Word2007Writer
             .'</Types>';
     }
 
-    /** Пустой абзац, если XML не заканчивается абзацем (иначе — ничего). */
+    /** An empty paragraph when the XML does not end with one (otherwise nothing). */
     private function trailingParagraph(string $xml): string
     {
         if ($xml === '' || str_ends_with($xml, '</w:p>') || str_ends_with($xml, '<w:p/>')) {
@@ -305,9 +309,10 @@ final class Word2007Writer
 
     private function renderRootRels(bool $hasCoreProperties = false): string
     {
-        // Связь на core.xml объявляется ЗДЕСЬ, в корневых rels, а не в
-        // rels документа: свойства принадлежат пакету, а не главной части.
-        // Объявленная не там, часть остаётся невидимой для Word.
+        // The relationship to core.xml is declared HERE, in the root rels,
+        // rather than in the document's: the properties belong to the package,
+        // not to the main part. Declared in the wrong place, the part stays
+        // invisible to Word.
         $core = $hasCoreProperties
             ? '<Relationship Id="rIdCore" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/>'
             : '';
@@ -369,8 +374,8 @@ final class Word2007Writer
         $sectPrInner .= '<w:pgSz w:w="'.$w.'" w:h="'.$h.'" w:orient="'.$orient.'"/>'
             .'<w:pgMar w:top="'.$ps->marginTopTwips.'" w:right="'.$ps->marginRightTwips.'" w:bottom="'.$ps->marginBottomTwips.'" w:left="'.$ps->marginLeftTwips.'" w:header="'.$ps->headerOffsetTwips.'" w:footer="'.$ps->footerOffsetTwips.'" w:gutter="0"/>';
 
-        // Word требует <w:titlePg/> если first-page header/footer задан —
-        // иначе ссылка type="first" игнорируется.
+        // Word requires a <w:titlePg/> when a first-page header or footer is
+        // set — otherwise the type="first" reference is ignored.
         if ($hasFirstPage) {
             $sectPrInner .= '<w:titlePg/>';
         }
@@ -385,9 +390,9 @@ final class Word2007Writer
             .' xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"'
             .' xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"'
             .'>'
-            // Тело, как и ячейка, обязано заканчиваться абзацем: документ,
-            // последним блоком которого стоит таблица, Word открывает с
-            // предложением восстановить содержимое.
+            // The body, like a cell, must end with a paragraph: a document
+            // whose last block is a table is opened by Word with an offer to
+            // recover the content.
             .'<w:body>'.$bodyXml.$this->trailingParagraph($bodyXml).$sectPr.'</w:body>'
             .'</w:document>';
     }

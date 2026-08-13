@@ -9,27 +9,30 @@ use Dskripchenko\PhpDocx\Exception\DocxException;
 /**
  * Phase 1 — DocxPackageReader.
  *
- * Распаковывает DOCX bytes (ZIP) → DocxPackage VO.
+ * Unpacks the DOCX bytes (a ZIP) into a DocxPackage value object.
  *
- * Этапы:
- *  1. ZipArchive::open из temp-файла (PHP не имеет stream-API для ZIP'ов из памяти).
- *  2. Parse `[Content_Types].xml` → defaults + overrides.
- *  3. Parse `_rels/.rels` (root) → найти main document part (officeDocument rel).
- *  4. Parse `word/_rels/document.xml.rels` → relationships документа.
- *  5. По overrides + rels — collect styles/numbering/theme/settings/headers/footers.
- *  6. Для каждого header/footer part'а: load rels (если есть) — там сидят
- *     картинки header'а.
- *  7. Все `word/media/*` — bytes в память.
+ * The stages:
+ *  1. ZipArchive::open from a temporary file (PHP has no stream API for ZIPs in
+ *     memory).
+ *  2. Parse `[Content_Types].xml` → the defaults plus the overrides.
+ *  3. Parse `_rels/.rels` (the root one) → find the main document part (the
+ *     officeDocument relationship).
+ *  4. Parse `word/_rels/document.xml.rels` → the document's relationships.
+ *  5. From the overrides plus the relationships, collect
+ *     styles/numbering/theme/settings/headers/footers.
+ *  6. For every header and footer part: load its relationships (when there are
+ *     any) — the header's images live there.
+ *  7. Every `word/media/*` goes into memory as bytes.
  *
- * Lenient mode: малое отсутствие частей (styles.xml, theme.xml) — не ошибка
- * (минимальный DOCX может не иметь их). Отсутствие main document — ошибка.
+ * Lenient mode: a few missing parts (styles.xml, theme.xml) are not an error (a
+ * minimal DOCX may lack them). A missing main document is an error.
  */
 final class DocxPackageReader
 {
     /**
-     * Открывает DOCX из binary string.
+     * Opens a DOCX from a binary string.
      *
-     * @throws DocxException на malformed ZIP или отсутствие main document part.
+     * @throws DocxException on a malformed ZIP or a missing main document part.
      */
     public function read(string $bytes): DocxPackage
     {
@@ -75,11 +78,11 @@ final class DocxPackageReader
      */
     private function readFromArchive(\ZipArchive $zip): DocxPackage
     {
-        // 1. Content_Types.xml — обязательный
+        // 1. Content_Types.xml — mandatory
         $contentTypesXml = $this->readEntry($zip, '[Content_Types].xml', required: true);
         [$defaults, $overrides] = $this->parseContentTypes($contentTypesXml);
 
-        // 2. Root rels — обязательный (нужен для нахождения main document)
+        // 2. The root rels — mandatory (it is how the main document is found)
         $rootRelsXml = $this->readEntry($zip, '_rels/.rels', required: true);
         $rootRels = $this->parseRels($rootRelsXml);
 
@@ -88,7 +91,7 @@ final class DocxPackageReader
             throw new DocxException('В _rels/.rels отсутствует relationship на officeDocument.');
         }
 
-        // 3. Document.xml + его rels
+        // 3. document.xml plus its rels
         $documentXml = $this->loadXml(
             $this->readEntry($zip, $documentPartPath, required: true),
         );
@@ -96,7 +99,7 @@ final class DocxPackageReader
 
         $relationshipsByPart = [$documentPartPath => $documentRels];
 
-        // 4. Discover sibling parts через documentRels.
+        // 4. Discover the sibling parts through documentRels.
         $stylesXml = null;
         $numberingXml = null;
         $themeXml = null;
@@ -124,7 +127,7 @@ final class DocxPackageReader
                 Relationship::TYPE_FOOTER => $footers[$absPath] = $this->loadXml($entryBytes),
                 default => null,
             };
-            // header/footer могут иметь свои rels (для картинок в шапке)
+            // a header or a footer may have rels of its own (for the images in it)
             if ($rel->type === Relationship::TYPE_HEADER || $rel->type === Relationship::TYPE_FOOTER) {
                 $partRels = $this->loadPartRels($zip, $absPath);
                 if ($partRels !== []) {
@@ -133,7 +136,7 @@ final class DocxPackageReader
             }
         }
 
-        // 5. Media — все word/media/* в bytes
+        // 5. The media — every word/media/* as bytes
         $media = $this->collectMedia($zip);
 
         return new DocxPackage(
@@ -154,9 +157,10 @@ final class DocxPackageReader
     }
 
     /**
-     * Читает entry из ZIP. Возвращает null если required=false и entry нет.
+     * Reads an entry from the ZIP. Returns null when required=false and the
+     * entry is absent.
      *
-     * @throws DocxException если required=true и entry отсутствует.
+     * @throws DocxException when required=true and the entry is absent.
      */
     /**
      * @phpstan-return ($required is true ? string : ?string)
@@ -176,7 +180,7 @@ final class DocxPackageReader
     }
 
     /**
-     * Парсит `[Content_Types].xml`:
+     * Parses `[Content_Types].xml`:
      *  - `<Default Extension="png" ContentType="image/png"/>` → defaults['png']='image/png'
      *  - `<Override PartName="/word/document.xml" ContentType="..."/>` → overrides['word/document.xml']='...'
      *
@@ -213,7 +217,7 @@ final class DocxPackageReader
     }
 
     /**
-     * Парсит `.rels`-XML → list<Relationship>.
+     * Parses the `.rels` XML into a list<Relationship>.
      *
      * @return list<Relationship>
      */
@@ -245,7 +249,7 @@ final class DocxPackageReader
     {
         foreach ($rootRels as $rel) {
             if ($rel->type === Relationship::TYPE_OFFICE_DOCUMENT) {
-                // Root rels — relative к корню ZIP'а.
+                // The root rels are relative to the ZIP's root.
                 return ltrim($rel->target, '/');
             }
         }
@@ -254,8 +258,9 @@ final class DocxPackageReader
     }
 
     /**
-     * Загружает `.rels`-файл рядом с part'ом, если существует.
-     * Например для `word/document.xml` ищет `word/_rels/document.xml.rels`.
+     * Loads the `.rels` file next to a part, when one exists. For
+     * `word/document.xml`, for instance, it looks for
+     * `word/_rels/document.xml.rels`.
      *
      * @return list<Relationship>
      */
@@ -271,7 +276,7 @@ final class DocxPackageReader
     }
 
     /**
-     * Преобразует `word/document.xml` → `word/_rels/document.xml.rels`.
+     * Turns `word/document.xml` into `word/_rels/document.xml.rels`.
      */
     private function relsPathFor(string $partPath): string
     {
@@ -286,12 +291,12 @@ final class DocxPackageReader
     }
 
     /**
-     * Резолв относительного target'а из rels к абсолютному zip-path.
+     * Resolves a relative target from the rels into an absolute zip path.
      *
-     * Target в .rels всегда относительный к директории владельца:
+     * A target in a .rels file is always relative to its owner's directory:
      *  base="word/document.xml" + target="styles.xml" → "word/styles.xml"
      *  base="word/document.xml" + target="media/img1.png" → "word/media/img1.png"
-     *  target="../customXml/item1.xml" → разрешаем `..`
+     *  target="../customXml/item1.xml" → the `..` is resolved
      */
     private function resolvePath(string $basePart, string $target): string
     {
@@ -318,7 +323,7 @@ final class DocxPackageReader
     }
 
     /**
-     * Собирает все entries по префиксу `word/media/`.
+     * Gathers every entry under the `word/media/` prefix.
      *
      * @return array<string, string>
      */
@@ -344,10 +349,11 @@ final class DocxPackageReader
     }
 
     /**
-     * Загружает XML-строку в DOMDocument с подавлением warning'ов
-     * (некоторые DOCX от Word имеют BOM/whitespace, что libxml ругается).
+     * Loads an XML string into a DOMDocument with the warnings suppressed (some
+     * DOCX files from Word carry a BOM or whitespace that libxml complains
+     * about).
      *
-     * @throws DocxException если XML invalid.
+     * @throws DocxException when the XML is invalid.
      */
     private function loadXml(string $xml): \DOMDocument
     {

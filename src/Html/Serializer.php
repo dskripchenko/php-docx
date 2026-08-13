@@ -37,31 +37,33 @@ use Dskripchenko\PhpDocx\Style\VerticalAlign;
 /**
  * Phase 10 — AST Document → HTML + media + detected variables.
  *
- * Output ImportedDocument содержит:
- *  - bodyHtml/headerHtml/footerHtml — HTML с inline-styles (re-loadable
- *    через Html\Converter обратно в AST)
- *  - watermarkText, pageSettings — metadata
- *  - variables — DetectedVariable list (передаётся caller'ом, не
- *    вычисляется здесь — Serializer чистый AST→HTML)
- *  - media — extracted image bytes для image-references в HTML
+ * The resulting ImportedDocument holds:
+ *  - bodyHtml/headerHtml/footerHtml — HTML with inline styles (re-loadable back
+ *    into the AST through Html\Converter)
+ *  - watermarkText, pageSettings — the metadata
+ *  - variables — the DetectedVariable list (passed in by the caller rather than
+ *    computed here — the Serializer is a pure AST→HTML step)
+ *  - media — the extracted image bytes for the image references in the HTML
  *
- * Image-стратегия: `cid:N` ссылки в `<img src>`, media[N] = bytes.
- * Importer-сторона (printable) подменяет cid: на свои storage URL'ы.
+ * The image strategy: `cid:N` references in the `<img src>`, media[N] = the
+ * bytes. The importer's side (printable) substitutes its own storage URLs for
+ * the cid: ones.
  *
- * Twip → CSS: 1 twip = 0.05 pt → используем pt в inline стилях.
- * EMU → px: 1 px = 9525 EMU (@96 DPI).
+ * Twip → CSS: 1 twip = 0.05 pt, so we use pt in the inline styles.
+ * EMU → px: 1 px = 9525 EMU (at 96 DPI).
  */
 final class Serializer
 {
     /**
-     * Одинарный межстрочный интервал в двадцатых долях пункта (ECMA-376).
+     * A single line spacing, in twentieths of a point (ECMA-376).
      *
-     * Без типа: типизированные константы появились в PHP 8.3, а пакет держит
-     * 8.2 — на локальной 8.5 это проходит, а сборка падает разбором файла.
+     * Untyped on purpose: typed constants appeared in PHP 8.3 while the package
+     * supports 8.2 — locally on 8.5 it passes, and the build then fails while
+     * parsing the file.
      */
     private const SINGLE_LINE_TWIPS = 240;
 
-    /** Во сколько кеглей обходится одинарный интервал у типичного шрифта. */
+    /** How many font sizes a single line spacing costs with a typical font. */
     private const SINGLE_LINE_EM = 1.2;
 
     /** @var array<string, string> filename → binary */
@@ -70,8 +72,8 @@ final class Serializer
     private int $mediaCounter = 0;
 
     /**
-     * @param  list<DetectedVariable>  $variables  Опциональный список
-     *         переменных (если caller прогнал VariableDetector отдельно).
+     * @param  list<DetectedVariable>  $variables  An optional list of variables
+     *         (when the caller ran VariableDetector separately).
      */
     public function serialize(Document $document, array $variables = []): ImportedDocument
     {
@@ -139,7 +141,7 @@ final class Serializer
         $style = $this->paragraphStyleCss($p->style);
         $styleAttr = $style !== '' ? ' style="'.$this->escape($style).'"' : '';
         $inner = $this->renderInlines($p->children);
-        // Пустой параграф → emit с &nbsp; чтобы Word/Pages показали blank line.
+        // An empty paragraph is emitted with an &nbsp; so that Word and Pages show a blank line.
         if ($inner === '') {
             $inner = '&nbsp;';
         }
@@ -178,11 +180,12 @@ final class Serializer
     private function renderRun(Run $r): string
     {
         $text = $this->escape($r->text);
-        // Сохраняем переносы строк / tab как HTML entities (browser
-        // collapsi'т WS, но при роудтрипе в writer они сохранятся).
+        // The line breaks and the tabs are preserved as HTML entities (a browser
+        // collapses the whitespace, but on a round trip back into the writer
+        // they survive).
         $text = strtr($text, ["\t" => '&#9;']);
 
-        // Semantic-теги для bold/italic/u/s
+        // The semantic tags for bold/italic/u/s
         $open = '';
         $close = '';
         $s = $r->style;
@@ -215,7 +218,7 @@ final class Serializer
             $close = '</mark>'.$close;
         }
 
-        // Inline-styles (color/font/size/bg) → span wrapper если они есть
+        // The inline styles (colour/font/size/background) get a span wrapper when there are any
         $cssParts = [];
         if ($s->color !== null) {
             $cssParts[] = 'color:#'.$s->color;
@@ -276,7 +279,7 @@ final class Serializer
             return '<page-total/>';
         }
         if (str_starts_with($instr, 'DATE')) {
-            // вытащим format между кавычками если есть
+            // we pull out the format between the quotes, when there is one
             $format = '';
             if (preg_match('/"([^"]+)"/', $f->instruction, $m) === 1) {
                 $format = ' format="'.$this->escape($m[1]).'"';
@@ -304,13 +307,14 @@ final class Serializer
         $widthPx = (int) round($img->widthEmu / 9525);
         $heightPx = (int) round($img->heightEmu / 9525);
         $alt = $img->altText !== null ? $this->escape($img->altText) : '';
-        // Used data: URL для standalone-renderability; importer заменит
-        // на admin-storage URL.
+        // A data: URL is used for standalone renderability; the importer
+        // replaces it with an admin-storage URL.
         $src = $this->dataUrl($img->binary, $img->format);
 
-        // Смещение якоря — в CSS-отступ. Отрицательный поднимает объект над
-        // предыдущим текстом ровно так, как это делает Word: печать и подпись
-        // ставятся поверх готового блока, а не отдельной строкой под ним.
+        // The anchor's offset becomes a CSS margin. A negative one lifts the
+        // object above the preceding text exactly the way Word does it: a stamp
+        // and a signature are placed on top of a finished block rather than on a
+        // separate line below it.
         $style = '';
         if ($img->offsetYEmu !== 0) {
             $offsetPt = round($img->offsetYEmu / 12700, 2);
@@ -400,8 +404,8 @@ final class Serializer
     {
         $cells = '';
         foreach ($row->cells as $cell) {
-            // continue-cells (vMergeContinue) — drop в HTML, они merged
-            // в rowspan основной ячейки.
+            // The continue cells (vMergeContinue) are dropped in the HTML —
+            // they are merged into the rowspan of the main cell.
             if ($cell->style->vMergeContinue) {
                 continue;
             }
@@ -455,18 +459,21 @@ final class Serializer
             $rule = $s->lineSpacingRule ?? 'auto';
 
             if ($rule !== 'auto') {
-                // `exact`/`atLeast` задают высоту строки прямо — переносим как
-                // есть.
+                // `exact` and `atLeast` set the line height directly — we carry
+                // them over as they are.
                 $parts[] = 'line-height:'.$this->twipsToPt($s->lineSpacingTwips).'pt';
             } elseif ($s->lineSpacingTwips !== self::SINGLE_LINE_TWIPS) {
-                // `auto` — доля ОДИНАРНОГО интервала, а одинарный у Word это
-                // естественная высота строки шрифта (примерно 1.2 кегля), а не
-                // сам кегль. CSS-множитель считается от кегля, поэтому прямой
-                // перенос 240 → 1.0 сжимал строки против оригинала: на эталоне
-                // это сразу увело последнюю страницу почти в пустоту.
+                // `auto` is a fraction of the SINGLE spacing, and a single
+                // spacing in Word is the font's natural line height (about 1.2
+                // of the font size) rather than the font size itself. A CSS
+                // multiplier is counted from the font size, so carrying 240 over
+                // directly as 1.0 squeezed the lines against the original: on
+                // the reference document that immediately drove the last page
+                // almost empty.
                 //
-                // Одинарный интервал не переносим вовсе: у движка он свой и
-                // ближе к типографской норме, чем любое наше приближение.
+                // A single spacing is not carried over at all: the engine has
+                // its own, and it is closer to the typographic norm than any
+                // approximation of ours.
                 $parts[] = 'line-height:'.round(
                     $s->lineSpacingTwips / self::SINGLE_LINE_TWIPS * self::SINGLE_LINE_EM,
                     3,
@@ -483,7 +490,7 @@ final class Serializer
             $parts[] = 'background-color:#'.$s->shadingColor;
         }
         if ($s->keepWithNext) {
-            // Стандартное CSS-свойство: «не разрывать после этого блока».
+            // The standard CSS property: "do not break after this block".
             $parts[] = 'break-after:avoid';
         }
         if ($s->borders !== null) {
@@ -585,7 +592,7 @@ final class Serializer
             BorderStyle::Double => 'double',
             default => 'solid',
         };
-        // size в OOXML — 1/8 пункта. CSS — pt.
+        // The size in OOXML is in eighths of a point. In CSS it is pt.
         $widthPt = max(0.1, $b->sizeEighthsOfPoint / 8);
 
         return sprintf('%.2fpt %s #%s', $widthPt, $style, $b->color);

@@ -10,25 +10,27 @@ use Dskripchenko\PhpDocx\Style\ParagraphStyle;
 use Dskripchenko\PhpDocx\Style\RunStyle;
 
 /**
- * Резолв OOXML style cascade:
+ * The resolution of the OOXML style cascade:
  *
  *   docDefaults.rPr/pPr
  *     ↓
- *   Named paragraph style (с basedOn chain)
+ *   the named paragraph style (with its basedOn chain)
  *     ↓
- *   Linked character style (если есть <w:rStyle> в run)
+ *   the linked character style (when the run has a <w:rStyle>)
  *     ↓
- *   Direct <w:rPr>/<w:pPr> on element
+ *   the direct <w:rPr>/<w:pPr> on the element
  *     ↓
- *   Effective RunStyle/ParagraphStyle
+ *   the effective RunStyle/ParagraphStyle
  *
- * Алгоритм:
- *  1. Парсим styles.xml на map "styleId → { type, basedOn, pPr-partial, rPr-partial }"
- *  2. Лениво резолвим basedOn chain (memoize'им результат)
- *  3. Для каждого `<w:p>`/<w:r>` строим cascade и конвертируем
- *     partial-array → final RunStyle/ParagraphStyle.
+ * The algorithm:
+ *  1. parse styles.xml into a map of
+ *     "styleId → { type, basedOn, pPr-partial, rPr-partial }";
+ *  2. resolve the basedOn chain lazily (memoizing the result);
+ *  3. for every `<w:p>`/`<w:r>` build the cascade and convert the partial array
+ *     into a final RunStyle/ParagraphStyle.
  *
- * Headings — особый случай: имя стиля `Heading1..6` → headingLevel.
+ * The headings are a special case: a style named `Heading1..6` gives the
+ * headingLevel.
  */
 final class StylesResolver
 {
@@ -39,24 +41,25 @@ final class StylesResolver
     private array $docDefaultsPPr = [];
 
     /**
-     * Стиль, помеченный `w:default="1"` — тот, что Word применяет к абзацам
-     * без явного `pStyle`.
+     * The style marked `w:default="1"` — the one Word applies to the paragraphs
+     * without an explicit `pStyle`.
      *
-     * Пропустить его нельзя: документы сплошь и рядом задают в docDefaults
-     * одно, а в стиле по умолчанию — другое, и побеждать должно второе. В
-     * эталонном полисе docDefaults обещал 8pt после каждого абзаца, а стиль
-     * по умолчанию сбрасывал их в ноль; без этого слоя каждый из 246 абзацев
-     * получал лишние 8pt, и документ распухал с пяти страниц до семи.
+     * It cannot be skipped: documents routinely state one thing in docDefaults
+     * and another in the default style, and the latter must win. In the
+     * reference policy the docDefaults promised 8pt after every paragraph while
+     * the default style reset them to zero; without this layer each of the 246
+     * paragraphs got an extra 8pt and the document swelled from five pages to
+     * seven.
      */
     private ?string $defaultParagraphStyleId = null;
 
-    /** То же для рунов: `w:type="character" w:default="1"`. */
+    /** The same for the runs: `w:type="character" w:default="1"`. */
     private ?string $defaultCharacterStyleId = null;
 
     /** @var array<string, array{type: string, basedOn: ?string, pPr: array<string, mixed>, rPr: array<string, mixed>}> */
     private array $stylesById = [];
 
-    /** @var array<string, array{pPr: array<string, mixed>, rPr: array<string, mixed>}>  кеш after-basedOn merge */
+    /** @var array<string, array{pPr: array<string, mixed>, rPr: array<string, mixed>}>  the cache of the after-basedOn merge */
     private array $resolvedCache = [];
 
     private OoxmlPropertyParser $parser;
@@ -77,9 +80,9 @@ final class StylesResolver
     }
 
     /**
-     * Резолв effective paragraph-style + run-style для `<w:p>`-элемента.
+     * Resolves the effective paragraph style and run style of a `<w:p>` element.
      *
-     * Возвращает [paragraphStyle, runStyle, headingLevel, numId, ilvl].
+     * Returns [paragraphStyle, runStyle, headingLevel, numId, ilvl].
      *
      * @return array{0: ParagraphStyle, 1: RunStyle, 2: ?int, 3: ?int, 4: ?int}
      */
@@ -88,7 +91,7 @@ final class StylesResolver
         $pPrEl = OoxmlNs::firstChild($paragraph, OoxmlNs::W, 'pPr');
         $direct = $this->parser->parseParagraphProperties($pPrEl);
 
-        // pStyle определяет heading-level И добавляет ещё один cascade-layer.
+        // The pStyle decides the heading level AND adds one more cascade layer.
         $styleId = $direct['pStyleId'] ?? null;
         $headingLevel = $this->styleIdToHeadingLevel($styleId);
 
@@ -100,19 +103,21 @@ final class StylesResolver
             $namedRPr = $resolved['rPr'];
         }
 
-        // Внутри pPr может быть свой <w:rPr> — но это формат ЗНАКА АБЗАЦА
-        // (символа ¶), а не текста в нём. Word применяет его к тому, что
-        // наберут в конце абзаца, и не трогает существующие руны.
+        // A pPr may hold a <w:rPr> of its own — but that is the format of the
+        // PARAGRAPH MARK (the ¶ character), not of the text inside it. Word
+        // applies it to whatever is typed at the end of the paragraph and does
+        // not touch the existing runs.
         //
-        // Раньше он подмешивался в базовый стиль рунов, и любое свойство
-        // оттуда протекало на весь абзац: в эталонном полисе знак абзаца был
-        // помечен жирным, и жирным печатался весь документ — строки выходили
-        // на 16% шире, а вёрстка расходилась с оригиналом повсеместно.
+        // It used to be mixed into the base run style, and any property from
+        // there leaked onto the whole paragraph: in the reference policy the
+        // paragraph mark was marked bold and the entire document printed bold —
+        // the lines came out 16% wider and the layout diverged from the original
+        // everywhere.
         $pPrRPr = [];
 
-        // Порядок каскада по ECMA-376: docDefaults → стиль по умолчанию →
-        // именованный стиль → прямое форматирование. Каждый следующий слой
-        // перекрывает предыдущий.
+        // The order of the cascade per ECMA-376: docDefaults → the default style
+        // → the named style → the direct formatting. Every next layer overrides
+        // the previous one.
         $defaultPPr = [];
         $defaultRPr = [];
         if ($this->defaultParagraphStyleId !== null) {
@@ -137,8 +142,8 @@ final class StylesResolver
     }
 
     /**
-     * Effective RunStyle для `<w:r>` с учётом direct rPr + parent paragraph's
-     * default rPr (передаём через $baseRPr).
+     * The effective RunStyle of a `<w:r>`, taking into account the direct rPr
+     * plus the parent paragraph's default rPr (passed in through $baseRPr).
      */
     public function effectiveStylesForRun(\DOMElement $run, RunStyle $baseRunStyle): RunStyle
     {
@@ -148,8 +153,8 @@ final class StylesResolver
         }
         $direct = $this->parser->parseRunProperties($rPrEl);
 
-        // Linked character style (<w:rStyle w:val="StyleId"/>) — добавляет
-        // ещё одну resolved-rPr layer.
+        // A linked character style (<w:rStyle w:val="StyleId"/>) adds one more
+        // resolved rPr layer.
         $charStyleId = null;
         $rStyleEl = OoxmlNs::firstChild($rPrEl, OoxmlNs::W, 'rStyle');
         if ($rStyleEl !== null) {
@@ -160,8 +165,9 @@ final class StylesResolver
             $namedRPr = $this->resolveStyleChain($charStyleId)['rPr'];
         }
 
-        // baseRunStyle уже включает docDefaults + named paragraph-style rPr +
-        // pPr.rPr. На него layer'ом namedRPr (от character style) + direct.
+        // baseRunStyle already includes the docDefaults, the named paragraph
+        // style's rPr and the pPr.rPr. On top of it go namedRPr (from the
+        // character style) and then the direct one.
         $base = $this->runStyleToArray($baseRunStyle);
         $merged = array_merge($base, $namedRPr, $direct);
 
@@ -235,8 +241,9 @@ final class StylesResolver
     }
 
     /**
-     * Резолв basedOn chain для named style → собранный partial state.
-     * Memoize'им через $resolvedCache, циклы детектируем visited-set'ом.
+     * Resolves the basedOn chain of a named style into an assembled partial
+     * state. It is memoized through $resolvedCache, and the cycles are detected
+     * with a visited set.
      *
      * @return array{pPr: array<string, mixed>, rPr: array<string, mixed>}
      */
@@ -246,7 +253,7 @@ final class StylesResolver
             return $this->resolvedCache[$styleId];
         }
         if (in_array($styleId, $visited, true)) {
-            // Цикл — возвращаем пустое.
+            // A cycle — we return an empty one.
             return ['pPr' => [], 'rPr' => []];
         }
         $entry = $this->stylesById[$styleId] ?? null;

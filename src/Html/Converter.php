@@ -37,17 +37,19 @@ use Dskripchenko\PhpDocx\Style\TableStyle;
 /**
  * HTML → Document converter. Phase 2 implementation.
  *
- * Парсит HTML5 через `DOMDocument::loadHTML` (lenient mode), обходит дерево,
- * мапит элементы в типизированные value-objects.
+ * It parses HTML5 through `DOMDocument::loadHTML` (in lenient mode), walks the
+ * tree and maps the elements onto typed value objects.
  *
- *  - Только inline `style="..."` для стилей; CSS-rules — caller-inlines upstream.
- *  - Картинки: только `<img src="data:image/...;base64,...">`. URL-images
- *    (`http://`/`file://`) игнорируются (caller должен resolve'ить upstream).
- *  - Block vs inline разруливается по тегу в `BLOCK_TAGS` set'е.
+ *  - Only an inline `style="..."` counts for the styles; the CSS rules are
+ *    inlined by the caller upstream.
+ *  - Images: only `<img src="data:image/...;base64,...">`. URL images
+ *    (`http://`, `file://`) are ignored (the caller must resolve them upstream).
+ *  - Block versus inline is decided by the tag's presence in the `BLOCK_TAGS`
+ *    set.
  */
 final class Converter
 {
-    /** Теги, которые превращаются в BlockElement или производят их split. */
+    /** The tags that turn into a BlockElement or cause one to be split. */
     private const BLOCK_TAGS = ['p', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'table', 'hr', 'ul', 'ol', 'blockquote', 'pagebreak', 'pre', 'dl', 'figure', 'section', 'article', 'aside', 'header', 'footer', 'nav', 'main'];
 
     public function __construct(
@@ -117,10 +119,11 @@ final class Converter
             return [];
         }
 
-        // Body's inline-style — basis для всех children. Симулируем CSS
-        // inheritance: font-family/color/font-size с <body> применяются ко
-        // всем descendants. CssInliner (tijsverkoyen) НЕ propagates
-        // inherited properties down — без этого все runs без явного fonts.
+        // The body's inline style is the basis for every child. We simulate
+        // the CSS inheritance: the font-family, colour and font-size of the
+        // <body> apply to every descendant. CssInliner (tijsverkoyen) does NOT
+        // propagate the inherited properties downwards — without this every run
+        // would come out without an explicit font.
         $bodyCss = InlineStyleParser::parse($body->getAttribute('style'));
         $rootRun = RunStyleApplier::apply(new RunStyle, $bodyCss);
         $rootPara = ParagraphStyleApplier::apply(new ParagraphStyle, $bodyCss);
@@ -208,10 +211,10 @@ final class Converter
             'pagebreak' => [new PageBreak],
             'ul', 'ol' => $this->parseList($node, $localRun, $localPara, ordered: $tag === 'ol'),
             'blockquote' => $this->processChildNodes($node, $localRun, $localPara->copy(indentLeftTwips: 720)),
-            // Semantic block-теги — рендерим как div'ы (children).
+            // The semantic block tags are rendered as divs (their children).
             'section', 'article', 'aside', 'header', 'footer', 'nav', 'main' =>
                 $this->processChildNodes($node, $localRun, $localPara),
-            // Pre — preserve whitespace + Courier New. Текст внутри идёт как-есть.
+            // pre preserves the whitespace and uses Courier New. The text inside goes as it is.
             'pre' => $this->parsePreformatted($node, $localRun->withFontFamily('Courier New'), $localPara),
             'dl' => $this->parseDefinitionList($node, $localRun, $localPara),
             'figure' => $this->parseFigure($node, $localRun, $localPara),
@@ -220,9 +223,9 @@ final class Converter
     }
 
     /**
-     * `<dl><dt>term</dt><dd>def</dd></dl>` → пары paragraph'ов:
-     *  - <dt> рендерится bold (без отступа)
-     *  - <dd> рендерится с left-indent 720 twips (0.5")
+     * `<dl><dt>term</dt><dd>def</dd></dl>` becomes pairs of paragraphs:
+     *  - the <dt> is rendered bold (without an indent)
+     *  - the <dd> is rendered with a left indent of 720 twips (0.5")
      *
      * @return list<BlockElement>
      */
@@ -268,7 +271,7 @@ final class Converter
 
                 continue;
             }
-            // Прочие children рендерим через regular block-pipeline.
+            // The remaining children are rendered through the regular block pipeline.
             $produced = $this->processBlockElement(
                 $child,
                 $runStyle,
@@ -277,7 +280,7 @@ final class Converter
             foreach ($produced as $b) {
                 $blocks[] = $b;
             }
-            // Если inline (image внутри figure) — оборачиваем
+            // When it is inline (an image inside a figure) we wrap it
             if ($produced === [] && in_array($tag, ['img', 'a'], true)) {
                 $inlines = $this->processInlineElement($child, $runStyle);
                 if ($inlines !== []) {
@@ -307,8 +310,9 @@ final class Converter
      */
     private function parsePreformatted(\DOMElement $node, RunStyle $runStyle, ParagraphStyle $paraStyle): array
     {
-        // Preserve whitespace и newlines. Внутренние <code>/<br>/etc parse'ятся
-        // как inline, но не normalize'им text content.
+        // The whitespace and the newlines are preserved. The inner <code>, <br>
+        // and so on are parsed as inline, but the text content is not
+        // normalized.
         $inlines = [];
         foreach ($node->childNodes as $child) {
             if ($child instanceof \DOMText) {
@@ -336,9 +340,9 @@ final class Converter
      */
     private function parseParagraph(\DOMElement $node, RunStyle $runStyle, ParagraphStyle $paraStyle, ?int $headingLevel): array
     {
-        // Если внутри блочного <p>/<div>/<h*> есть только inline-children —
-        // собираем единый Paragraph. Если есть block-level дети (вложенный
-        // <table>, <ul> и т.д.) — рекурсируем и параграф не создаём.
+        // When a block <p>/<div>/<h*> holds only inline children we assemble a
+        // single Paragraph. When there are block-level children (a nested
+        // <table>, a <ul> and so on) we recurse and create no paragraph.
         if ($this->containsBlockChild($node)) {
             return $this->processChildNodes($node, $runStyle, $paraStyle);
         }
@@ -377,7 +381,7 @@ final class Converter
         $css = InlineStyleParser::parse($node->getAttribute('style'));
         $local = RunStyleApplier::apply($runStyle, $css);
 
-        // Mark-теги наследуют + добавляют свой признак (через with*-helpers).
+        // The mark tags inherit and add their own flag (through the with* helpers).
         $marked = match ($tag) {
             'strong', 'b' => $local->withBold(),
             'em', 'i', 'cite', 'dfn', 'var', 'address' => $local->withItalic(),
@@ -385,24 +389,25 @@ final class Converter
             's', 'del', 'strike' => $local->withStrikethrough(),
             'sup' => $local->withSuperscript(),
             'sub' => $local->withSubscript(),
-            // Highlighted text (CSS background-color на span НЕ работает в OOXML).
+            // Highlighted text (a CSS background-color on a span does NOT work in OOXML).
             'mark' => $local->withHighlight('yellow'),
-            // Monospaced inline-теги.
+            // The monospaced inline tags.
             'code', 'kbd', 'samp', 'tt' => $local->withFontFamily('Courier New'),
-            // Smaller font (≈83% от текущего).
+            // A smaller font (about 83% of the current one).
             'small' => $local->withSizeHalfPoints(
                 $local->sizeHalfPoints !== null
                     ? max(10, (int) round($local->sizeHalfPoints * 0.83))
                     : 18,
             ),
-            // Inline quoted (italic + добавим « » если хочется — пока просто italic).
+            // An inline quotation (italic; the quotation marks could be added later, for now it is just italic).
             'q' => $local->withItalic(),
             default => $local,
         };
 
-        // Маркер классом (`<span class="page-number">`) — вторая запись того
-        // же, что custom-теги ниже. Так поля пишут HTML-редакторы: свой тег
-        // они не сохранят, а класс на span переживает любую чистку разметки.
+        // A marker by class (`<span class="page-number">`) is a second spelling
+        // of the same thing as the custom tags below. That is how HTML editors
+        // write fields: they would not preserve a tag of their own, while a
+        // class on a span survives any markup cleanup.
         $byClass = $this->fieldByClass($node, $marked);
         if ($byClass !== null) {
             return [$byClass];
@@ -412,7 +417,7 @@ final class Converter
             'br' => [new LineBreak],
             'img' => $this->parseInlineImage($node) !== null ? [$this->parseInlineImage($node)] : [],
             'a' => $this->parseAnchor($node, $marked),
-            // Custom-теги для field codes:
+            // The custom tags for the field codes:
             'page-number' => [Field::page($marked)],
             'page-total' => [Field::pageTotal($marked)],
             'current-date' => [Field::date(
@@ -423,21 +428,21 @@ final class Converter
                 $node->getAttribute('format') !== '' ? $node->getAttribute('format') : 'HH:mm',
                 $marked,
             )],
-            // Mark-теги + неизвестные inline-теги (span и т.д.) — просто
-            // прокидываем стиль в детей.
+            // The mark tags and the unknown inline tags (span and so on) —
+            // we simply pass the style down into the children.
             default => $this->collectInline($node, $marked),
         };
     }
 
     /**
-     * `<a>` бывает четырёх видов:
-     *  - <a href="https://...">  — внешняя ссылка (Hyperlink с href)
-     *  - <a href="#anchor">      — внутренняя (Hyperlink с anchor)
-     *  - <a id="anchor"> или <a name="anchor"> — bookmark-метка
-     *  - <a href="..." id="...">  — и то и другое (bookmark, обёрнутый в link)
+     * An `<a>` comes in four kinds:
+     *  - <a href="https://...">  — an external link (a Hyperlink with an href)
+     *  - <a href="#anchor">      — an internal one (a Hyperlink with an anchor)
+     *  - <a id="anchor"> or <a name="anchor"> — a bookmark
+     *  - <a href="..." id="...">  — both (a bookmark wrapped into a link)
      *
-     * Bookmark-имя в OOXML: до 40 символов, начинается с буквы/`_`, без
-     * пробелов. Sanitize'им HTML id под этот регламент.
+     * A bookmark name in OOXML: up to 40 characters, starting with a letter or
+     * `_`, without spaces. We sanitize the HTML id to that rule.
      *
      * @return list<InlineElement>
      */
@@ -449,7 +454,7 @@ final class Converter
         $bookmarkName = $id !== '' ? $id : ($name !== '' ? $name : null);
         $children = $this->collectInline($node, $runStyle);
 
-        // Чистый bookmark — без href.
+        // A pure bookmark — without an href.
         if ($href === '' && $bookmarkName !== null) {
             return [new Bookmark($this->sanitizeBookmarkName($bookmarkName), $children)];
         }
@@ -474,7 +479,7 @@ final class Converter
             return [$link];
         }
 
-        // <a> без href и без id/name — просто прокидываем стиль.
+        // An <a> with neither href nor id/name — we simply pass the style down.
         return $children;
     }
 
@@ -489,7 +494,7 @@ final class Converter
     }
 
     /**
-     * Рекурсивный сбор inline-children с применённым style.
+     * A recursive collection of the inline children with the style applied.
      *
      * @return list<InlineElement>
      */
@@ -521,7 +526,7 @@ final class Converter
         $attrs = $this->collectAttrs($node);
         $tableStyle = TableStyleApplier::apply(new TableStyle, $css, $attrs);
 
-        // <caption> текст (опционально) — render'ится перед <w:tbl> со стилем Caption.
+        // The <caption> text (optional) is rendered before the <w:tbl>, with the Caption style.
         $caption = null;
         foreach ($node->childNodes as $c) {
             if ($c instanceof \DOMElement && strtolower($c->tagName) === 'caption') {
@@ -544,17 +549,17 @@ final class Converter
         if ($rows !== []) {
             $rows[0] = $this->balanceFirstRowWidths($rows[0]);
         }
-        // Rowspan: автоматически inject'им continue-cells (<w:vMerge/>)
-        // в следующие строки для каждой ячейки с rowSpan>1.
+        // Rowspan: we automatically inject the continue cells (<w:vMerge/>)
+        // into the following rows for every cell with rowSpan > 1.
         $rows = $this->expandRowSpans($rows);
 
         return new Table($rows, $tableStyle, $caption, $gridColumnsTwips);
     }
 
     /**
-     * Walk rows, для каждой rowSpan>1 ячейки добавляет matching continue-cells
-     * в следующие row'ы. Иначе OOXML rowspan не работает: w:vMerge ожидается
-     * в КАЖДОЙ строке, которую затрагивает merge.
+     * Walks the rows and, for every cell with rowSpan > 1, adds the matching
+     * continue cells into the following rows. Otherwise an OOXML rowspan does
+     * not work: a w:vMerge is expected in EVERY row the merge touches.
      *
      * @param  list<TableRow>  $rows
      * @return list<TableRow>
@@ -565,10 +570,11 @@ final class Converter
             return $rows;
         }
 
-        // For each row produce expanded cell list.
+        // For each row produce an expanded cell list.
         // pendingByCol[colIndex] = remaining_continuations
-        // continueStyle[colIndex] = CellStyle для continue-cell (наследуем
-        //   width/gridSpan/borders от originating cell для column-alignment).
+        // continueStyle[colIndex] = the CellStyle of the continue cell (we
+        //   inherit the width, gridSpan and borders of the originating cell, to
+        //   keep the columns aligned).
         $pendingByCol = [];
         $continueStyle = [];
 
@@ -578,8 +584,8 @@ final class Converter
             $colCursor = 0;
             $origIdx = 0;
 
-            // Step через колонки, вставляя continue-cells на pending-позициях
-            // и копируя original cells в остальные.
+            // We step through the columns, inserting the continue cells at the
+            // pending positions and copying the original cells into the rest.
             while ($origIdx < count($row->cells) || isset($pendingByCol[$colCursor])) {
                 if (isset($pendingByCol[$colCursor]) && $pendingByCol[$colCursor] > 0) {
                     // Place continue-cell at this column.
@@ -658,7 +664,7 @@ final class Converter
         if (! $hasAny) {
             return null;
         }
-        // Default для col'ов без width — равное распределение остатка от 9000 twips.
+        // The default for the columns without a width is an equal share of what is left of 9000 twips.
         $sum = array_sum(array_filter($widths, fn ($w) => $w !== null));
         $nullCount = count(array_filter($widths, fn ($w) => $w === null));
         $fallback = $nullCount > 0 ? max(720, (int) floor(max(0, 9000 - $sum) / $nullCount)) : 2000;
@@ -690,8 +696,8 @@ final class Converter
     }
 
     /**
-     * Распределяет недостающие cell widths в первой строке до 100% (5000 pct).
-     * Используется как gridCol-источник, поэтому первая строка решает.
+     * Distributes the missing cell widths of the first row up to 100% (5000
+     * pct). It is used as the source of the gridCols, so the first row decides.
      */
     private function balanceFirstRowWidths(TableRow $row): TableRow
     {
@@ -699,14 +705,14 @@ final class Converter
             return $row;
         }
 
-        // Считаем что имеем; 5000 pct = 100%; 100mm = ~5670 twips.
+        // We count what we have; 5000 pct = 100%; 100 mm is about 5670 twips.
         $totalPctClaimed = 0;
         $cellsWithoutWidth = [];
         foreach ($row->cells as $i => $cell) {
             if ($cell->style->widthPercent !== null) {
                 $totalPctClaimed += $cell->style->widthPercent;
             } elseif ($cell->style->widthTwips !== null) {
-                // ничего: explicit twips — не трогаем
+                // nothing: explicit twips are left alone
             } else {
                 $cellsWithoutWidth[] = $i;
             }
@@ -716,7 +722,7 @@ final class Converter
             return $row;
         }
 
-        // Доступный остаток в pct.
+        // What is left available, in pct.
         $remaining = max(0, 5000 - $totalPctClaimed);
         $perCell = (int) floor($remaining / count($cellsWithoutWidth));
         if ($perCell <= 0) {
@@ -799,20 +805,20 @@ final class Converter
         $attrs = $this->collectAttrs($cell);
         $cellStyle = CellStyleApplier::apply(new CellStyle, $css, $attrs);
 
-        // Cell-уровневые run/paragraph стили: применяем CSS к ним тоже
-        // (color/font-size на td → distributes to inner text).
+        // The cell-level run and paragraph styles: the CSS applies to them too
+        // (a colour or a font-size on a td spreads to the inner text).
         $cellRunStyle = RunStyleApplier::apply($runStyle, $css);
         $cellParaStyle = ParagraphStyleApplier::apply($paraStyle, $css);
 
-        // <th> по умолчанию bold
+        // A <th> is bold by default
         if ($isHeader) {
             $cellRunStyle = $cellRunStyle->withBold();
         }
 
         $blocks = $this->processChildNodes($cell, $cellRunStyle, $cellParaStyle);
 
-        // Если ячейка пустая или содержит только inline'ы которые collapse'нули,
-        // добавим пустой параграф — OOXML требует хотя бы один <w:p> в <w:tc>.
+        // When a cell is empty or holds only inlines that collapsed, we add an
+        // empty paragraph — OOXML requires at least one <w:p> inside a <w:tc>.
         if ($blocks === []) {
             $blocks = [new Paragraph([], $cellParaStyle)];
         }
@@ -821,8 +827,8 @@ final class Converter
     }
 
     /**
-     * Классы разметки для полей: `page-number` / `page-total`. Возвращает
-     * `null`, если у элемента нет такого класса.
+     * The markup classes of the fields: `page-number` / `page-total`. Returns
+     * `null` when the element has no such class.
      */
     private function fieldByClass(\DOMElement $node, RunStyle $style): ?Field
     {
@@ -834,8 +840,9 @@ final class Converter
     }
 
     /**
-     * Блочный элемент с классом-маркером: `page-break` даёт разрыв,
-     * `page-number`/`page-total` — абзац с полем. Null, если класса нет.
+     * A block element with a marker class: `page-break` gives a break,
+     * `page-number`/`page-total` give a paragraph with a field. Null when there
+     * is no such class.
      *
      * @return list<BlockElement>|null
      */
@@ -877,9 +884,10 @@ final class Converter
         $type = $ordered ? ($node->getAttribute('type') ?: null) : null;
         $format = ListFormat::fromHtmlType($type, $ordered);
         $startAt = $ordered ? max(1, (int) ($node->getAttribute('start') ?: '1')) : 1;
-        // <li value="N"> у первого <li> ровно эквивалентен ol start="N".
-        // У последующих <li> — Word требует отдельный numbering instance,
-        // что сложно. Поддерживаем только первый.
+        // A <li value="N"> on the first <li> is exactly equivalent to an
+        // ol start="N". On the following <li> elements Word would require a
+        // separate numbering instance, which is involved. We support the first
+        // one only.
         $firstLi = $this->findFirstChild($node, 'li');
         if ($ordered && $firstLi !== null) {
             $val = $firstLi->getAttribute('value');
@@ -934,8 +942,8 @@ final class Converter
             }
             $tag = strtolower($child->tagName);
             if ($tag === 'ul' || $tag === 'ol') {
-                // Nested list — берём первый encountered. parseList сам
-                // прочитает type/start от вложенного <ol>.
+                // A nested list — we take the first one encountered. parseList
+                // reads the type and the start of the nested <ol> itself.
                 if ($nestedList === null) {
                     $produced = $this->parseList($child, $runStyle, new ParagraphStyle, ordered: $tag === 'ol');
                     if ($produced !== [] && $produced[0] instanceof ListNode) {
@@ -977,16 +985,16 @@ final class Converter
             return null;
         }
 
-        // CSS-размер важнее атрибута: он несёт единицу. Атрибут её не несёт
-        // (`width="96"` — всегда css-пиксели), поэтому автор, которому нужны
-        // пункты, задать их атрибутом не может.
+        // The CSS size wins over the attribute: it carries a unit. The
+        // attribute does not (`width="96"` is always CSS pixels), so an author
+        // who needs points cannot state them through the attribute.
         $css = InlineStyleParser::parse($node->getAttribute('style'));
         $widthPx = self::cssLengthToPx($css['width'] ?? null)
             ?? (int) ($node->getAttribute('width') ?: 0);
         $heightPx = self::cssLengthToPx($css['height'] ?? null)
             ?? (int) ($node->getAttribute('height') ?: 0);
         if ($widthPx <= 0 || $heightPx <= 0) {
-            // Без размеров — пытаемся прочитать из binary.
+            // With no dimensions we try to read them from the binary.
             $info = @getimagesizefromstring($binary);
             if ($info !== false) {
                 $widthPx = $widthPx > 0 ? $widthPx : (int) $info[0];
@@ -1006,8 +1014,8 @@ final class Converter
     }
 
     /**
-     * CSS-длина → css-пиксели (та единица, в которой Image::fromPx ждёт
-     * размер). Null для процентов, auto и мусора.
+     * A CSS length → CSS pixels (the unit Image::fromPx expects the size in).
+     * Null for percentages, auto and rubbish.
      */
     private static function cssLengthToPx(?string $value): ?int
     {
@@ -1063,15 +1071,15 @@ final class Converter
 
     private function normalizeText(string $text): string
     {
-        // Collapse whitespace (HTML-style — multiple WS → single space).
-        // Tags-context preserve будет в parsePreformatted (когда добавим <pre>).
+        // Collapse the whitespace (HTML style — several whitespace characters
+        // become a single space). The tag-context preservation lives in
+        // parsePreformatted (once <pre> is added).
         return (string) preg_replace('/\s+/u', ' ', $text);
     }
 
     /**
-     * Убирает leading/trailing whitespace-only Run'ы — Word склеивает
-     * "  Hello  " в "Hello", мы делаем то же чтобы избежать ложных
-     * indent'ов.
+     * Removes the leading and trailing whitespace-only runs — Word collapses
+     * "  Hello  " into "Hello" and we do the same, to avoid false indents.
      *
      * @param  list<InlineElement>  $inlines
      * @return list<InlineElement>

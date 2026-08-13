@@ -23,23 +23,28 @@ use Dskripchenko\PhpDocx\Style\RunStyle;
 /**
  * Phase 3 — body XML → list<BlockElement>.
  *
- * Walks `<w:body>` (или `<w:hdr>`/`<w:ftr>` — та же структура), маппит
- * `<w:p>` → Paragraph, `<w:tbl>` → null (Phase 4 заполнит), `<w:sectPr>`
- * → skip (это metadata).
+ * Walks the `<w:body>` (or a `<w:hdr>`/`<w:ftr>` — the same structure) and maps
+ * `<w:p>` → Paragraph, `<w:tbl>` → null (phase 4 fills it in), `<w:sectPr>` →
+ * skip (that is metadata).
  *
- * Run-обход внутри `<w:p>`:
- *  - `<w:r>` → Run (с effective styles от StylesResolver) или LineBreak/PageBreak
- *  - `<w:t>` → текст
- *  - `<w:br w:type="page">` → PageBreak (split: всё что после идёт в новый параграф)
- *  - `<w:br/>` → LineBreak
- *  - `<w:tab/>` → "\t" в text
- *  - `<w:hyperlink>` — пока проксируем как inline children (Phase 7 заменит на Hyperlink)
- *  - `<w:fldSimple>`/`<w:fldChar>` — пока inline-текст из contentRuns (Phase 7 заменит на Field)
- *  - `<w:bookmarkStart>`/`<w:bookmarkEnd>` — пока skip (Phase 7 заменит на Bookmark)
- *  - `<w:drawing>` — Phase 6 заполнит
+ * The run traversal inside a `<w:p>`:
+ *  - `<w:r>` → a Run (with the effective styles from StylesResolver) or a
+ *    LineBreak/PageBreak
+ *  - `<w:t>` → the text
+ *  - `<w:br w:type="page">` → a PageBreak (a split: everything after it goes
+ *    into a new paragraph)
+ *  - `<w:br/>` → a LineBreak
+ *  - `<w:tab/>` → a "\t" in the text
+ *  - `<w:hyperlink>` — proxied as inline children for now (phase 7 replaces it
+ *    with a Hyperlink)
+ *  - `<w:fldSimple>`/`<w:fldChar>` — inline text from the contentRuns for now
+ *    (phase 7 replaces it with a Field)
+ *  - `<w:bookmarkStart>`/`<w:bookmarkEnd>` — skipped for now (phase 7 replaces
+ *    them with a Bookmark)
+ *  - `<w:drawing>` — phase 6 fills it in
  *
- * Hooks для следующих phase'ов: TableReader, HyperlinkReader, ImageReader,
- * FieldReader подключаются через сеттеры/конструктор позже.
+ * The hooks for the following phases: TableReader, HyperlinkReader, ImageReader
+ * and FieldReader are wired in through setters or the constructor later.
  */
 final class BodyReader
 {
@@ -55,8 +60,8 @@ final class BodyReader
     ) {}
 
     /**
-     * Lazy-инициализация TableReader (циклическая зависимость с BodyReader,
-     * поэтому делаем lazy через self-reference).
+     * The lazy initialization of TableReader (it has a circular dependency
+     * with BodyReader, hence the laziness through a self-reference).
      */
     private function tableReader(): TableReader
     {
@@ -98,7 +103,7 @@ final class BodyReader
                         $pendingList[] = $item;
                         break;
                     }
-                    // Обычный параграф.
+                    // An ordinary paragraph.
                     $flushList();
                     foreach ($this->readParagraph($child) as $b) {
                         $blocks[] = $b;
@@ -120,8 +125,8 @@ final class BodyReader
     }
 
     /**
-     * Если параграф — list-item (numPr+зарегистрированный numId), возвращает
-     * descriptor. Иначе null (обычный параграф).
+     * When a paragraph is a list item (a numPr plus a registered numId) it
+     * returns a descriptor. Otherwise null (an ordinary paragraph).
      *
      * @return array{numId:int, ilvl:int, inlines:list<InlineElement>, style:ParagraphStyle}|null
      */
@@ -132,8 +137,8 @@ final class BodyReader
             return null;
         }
         $inlines = $this->readInlines($p, $runBase);
-        // Убираем internal PageBreaks (Word редко кладёт их в list-items;
-        // если они есть — flatten как обычный inline).
+        // We remove the internal page breaks (Word rarely puts them into list
+        // items; when they are there we flatten them as an ordinary inline).
         $cleanInlines = array_values(array_filter(
             $inlines,
             fn ($i) => ! $i instanceof PageBreak,
@@ -148,15 +153,15 @@ final class BodyReader
     }
 
     /**
-     * Из flat-списка list-items (по возрастанию или ad-hoc ilvl) собирает
-     * дерево ListNode/ListItem с nesting'ом.
+     * Assembles a nested ListNode/ListItem tree out of a flat list of list
+     * items (ordered by ilvl, or with ad-hoc ones).
      *
      * @param  list<array{numId:int, ilvl:int, inlines:list<InlineElement>, style:ParagraphStyle}>  $items
      */
     private function buildListNode(array $items, ?int $numId): ListNode
     {
         if ($numId === null) {
-            // Не должно случаться — но fallback.
+            // It should not happen — but a fallback.
             return new ListNode([]);
         }
         $minIlvl = $this->minIlvl($items);
@@ -184,9 +189,9 @@ final class BodyReader
     }
 
     /**
-     * Рекурсивно строит ListNode для items[from..to] на заданном depth.
-     * Items с ilvl == depth → siblings в текущем ListNode; items с
-     * ilvl > depth → nested внутрь предыдущего siblng'а.
+     * Recursively builds a ListNode for items[from..to] at the given depth. The
+     * items with ilvl == depth become siblings inside the current ListNode; the
+     * items with ilvl > depth are nested inside the previous sibling.
      *
      * @param  list<array{numId:int, ilvl:int, inlines:list<InlineElement>, style:ParagraphStyle}>  $items
      */
@@ -200,25 +205,25 @@ final class BodyReader
                 break; // отдадим обратно вверх
             }
             if ($cur['ilvl'] > $depth) {
-                // children предыдущего sibling'а
+                // the children of the previous sibling
                 $j = $i;
                 while ($j < $to && $items[$j]['ilvl'] > $depth) {
                     $j++;
                 }
                 $nested = $this->buildRecursive($items, $i, $j, $depth + 1, $numId);
-                // Прикрепить как nestedList последнего sibling'а, если есть.
+                // Attach it as the nestedList of the last sibling, when there is one.
                 if ($siblings !== []) {
                     $last = $siblings[count($siblings) - 1];
                     $siblings[count($siblings) - 1] = new ListItem($last->children, $nested, $last->style);
                 } else {
-                    // Нет предыдущего sibling'а — оборачиваем в пустой parent-item.
+                    // There is no previous sibling — we wrap it into an empty parent item.
                     $siblings[] = new ListItem([], $nested);
                 }
                 $i = $j;
 
                 continue;
             }
-            // ilvl == depth — обычный sibling.
+            // ilvl == depth — an ordinary sibling.
             $siblings[] = new ListItem($cur['inlines'], null, $cur['style']);
             $i++;
         }
@@ -237,7 +242,7 @@ final class BodyReader
     }
 
     /**
-     * Парсит `<w:p>` в один или несколько Block'ов (PageBreak может split'нуть).
+     * Parses a `<w:p>` into one or more blocks (a PageBreak may split it).
      *
      * @return list<BlockElement>
      */
@@ -246,24 +251,24 @@ final class BodyReader
         [$pStyle, $runBase, $headingLevel] = $this->styles->effectiveStylesForParagraph($p);
         $inlines = $this->readInlines($p, $runBase);
 
-        // Если в inlines обнаружен PageBreak — разделяем на 2 параграфа
-        // ("text-before [PageBreak] text-after").
+        // When a PageBreak is found among the inlines we split into two
+        // paragraphs ("text-before [PageBreak] text-after").
         return $this->splitOnPageBreak($inlines, $pStyle, $headingLevel);
     }
 
     /**
-     * Обход inline children внутри `<w:p>` (или внутри hyperlink/etc.).
+     * The traversal of the inline children inside a `<w:p>` (or inside a hyperlink and the like).
      *
      * @return list<InlineElement>
      */
     public function readInlines(\DOMElement $parent, RunStyle $baseRunStyle): array
     {
         $out = [];
-        // Bookmark-stack: openBookmarks[id] = ['name'=>..., 'children'=>[], 'targetIndex'=>...]
-        // children накапливаются в $out — отдельные «buffers» не нужны;
-        // мы запомним index'ы from/to и потом split'нём.
-        // bookmarkStart: запоминаем индекс старта; bookmarkEnd: оборачиваем
-        // диапазон в Bookmark и заменяем slice в $out.
+        // The bookmark stack: openBookmarks[id] = ['name'=>..., 'children'=>[],
+        // 'targetIndex'=>...]. The children accumulate in $out — no separate
+        // buffers are needed; we remember the from/to indexes and split later.
+        // bookmarkStart: we remember the starting index; bookmarkEnd: we wrap
+        // the range into a Bookmark and replace the slice in $out.
         $openBookmarks = [];
 
         // Complex-field state machine.
@@ -323,11 +328,11 @@ final class BodyReader
                 if ($instr !== '') {
                     $out[] = new Field($instr, $baseRunStyle);
                 }
-                // contained runs — игнорируем (placeholder text Word'а)
+                // the contained runs are ignored (Word's placeholder text)
                 continue;
             }
             if ($local === 'r') {
-                // Внутри <w:r> может быть fldChar/instrText (complex field).
+                // A <w:r> may hold a fldChar or an instrText (a complex field).
                 $runResult = $this->readRunWithFieldState(
                     $child,
                     $baseRunStyle,
@@ -379,7 +384,7 @@ final class BodyReader
     }
 
     /**
-     * Подсказка незаполненного поля формы — `w:ffData/w:textInput/w:default`.
+     * The hint of an unfilled form field — `w:ffData/w:textInput/w:default`.
      */
     private static function formFieldDefault(\DOMElement $fldChar): string
     {
@@ -394,7 +399,7 @@ final class BodyReader
     }
 
     /**
-     * Wrapper над readRun который также управляет complex-field state.
+     * A wrapper around readRun that also manages the complex-field state.
      *
      * @return array{inlines: list<InlineElement>, state: string|null, instr: string, style: RunStyle, default: string, valueSeen: bool}
      */
@@ -411,11 +416,12 @@ final class BodyReader
         $emitted = [];
         $textBuffer = '';
 
-        // Результат поля — это то, что Word показывает на экране. Подавляем
-        // его только у полей, которые мы отдаём собственным элементом: номер
-        // страницы, дата, MERGEFIELD. У остальных (FORMTEXT, MACROBUTTON,
-        // REF) результат и есть содержимое документа — в анкете страхователя
-        // так терялись подписи «Наименование страхователя», «ИНН».
+        // A field's result is what Word shows on the screen. We suppress it
+        // only for the fields we return as an element of our own: the page
+        // number, the date, a MERGEFIELD. For the rest (FORMTEXT, MACROBUTTON,
+        // REF) the result IS the document's content — in the policyholder
+        // questionnaire the labels "Наименование страхователя" and "ИНН" were
+        // lost that way.
         $suppressValue = false;
         foreach (['PAGE', 'NUMPAGES', 'SECTIONPAGES', 'DATE', 'TIME', 'CREATEDATE', 'SAVEDATE', 'PRINTDATE', 'MERGEFIELD'] as $regenerated) {
             if (str_starts_with(strtoupper(ltrim($instr)), $regenerated)) {
@@ -461,9 +467,9 @@ final class BodyReader
                     } elseif ($type === 'end') {
                         $flushText();
                         $cleanInstr = trim($instr);
-                        // Незаполненное поле формы Word показывает подсказкой
-                        // из `w:ffData/w:textInput/w:default` — для читателя
-                        // документа это и есть видимый текст.
+                        // Word shows an unfilled form field as the hint from
+                        // `w:ffData/w:textInput/w:default` — for a reader of the
+                        // document that IS the visible text.
                         if (! $valueSeen && $fieldDefault !== '') {
                             $emitted[] = new Run($fieldDefault, $fieldStyle);
                         }
@@ -546,7 +552,7 @@ final class BodyReader
     }
 
     /**
-     * Разделяет inline-список на параграфы по PageBreak'ам.
+     * Splits an inline list into paragraphs at the page breaks.
      *
      * @param  list<InlineElement>  $inlines
      * @return list<BlockElement>

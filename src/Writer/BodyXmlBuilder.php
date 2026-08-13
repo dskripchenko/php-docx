@@ -31,19 +31,22 @@ use Dskripchenko\PhpDocx\Style\TableStyle;
 use Dskripchenko\PhpDocx\Style\VerticalAlign;
 
 /**
- * Рендерит element tree → OOXML body XML (sans <w:body> wrapper).
+ * Renders an element tree into the OOXML body XML (without the <w:body>
+ * wrapper).
  *
- * Все методы — pure: принимают element + RelationshipManager (для регистрации
- * image/hyperlink rels), возвращают XML-фрагмент string.
+ * Every method is pure: it takes an element plus a RelationshipManager (to
+ * register the image and hyperlink relationships) and returns an XML fragment as
+ * a string.
  *
- * Style serialization — `renderRunStyle()`/`renderParagraphStyle()`/etc.
- * Skip-empty: если стиль пустой — не эмитим `<w:rPr/>` (Word принимает оба).
+ * The style serialization lives in
+ * `renderRunStyle()`/`renderParagraphStyle()` and the like. Skip-empty: when a
+ * style is empty no `<w:rPr/>` is emitted (Word accepts both).
  */
 final class BodyXmlBuilder
 {
     private bool $usesNumbering = false;
 
-    /** Counter для w:id у bookmark'ов (уникален в пределах документа). */
+    /** The counter of the bookmarks' w:id (unique within a document). */
     private int $bookmarkIdCounter = 0;
 
     public function __construct(
@@ -120,7 +123,7 @@ final class BodyXmlBuilder
         }
         $xml = '<w:p>'.$pPr.$children.'</w:p>';
 
-        // Nested list — рекурсивно, но с инкрементированным level.
+        // A nested list — recursively, but with the level incremented.
         if ($item->nestedList !== null) {
             $nestedNumId = $this->numbering->instanceFor(
                 $item->nestedList->effectiveFormat(),
@@ -158,8 +161,9 @@ final class BodyXmlBuilder
         if ($style->borders !== null) {
             $pPr .= $this->renderBorderSet($style->borders, 'w:pBdr');
         }
-        // Порядок элементов внутри w:pPr фиксирован схемой (CT_PPrBase —
-        // sequence, в отличие от w:rPr): shd стоит между pBdr и spacing.
+        // The order of the elements inside a w:pPr is fixed by the schema
+        // (CT_PPrBase is a sequence, unlike w:rPr): shd sits between pBdr and
+        // spacing.
         if ($style->shadingColor !== null) {
             $pPr .= '<w:shd w:val="clear" w:color="auto" w:fill="'.$style->shadingColor.'"/>';
         }
@@ -188,9 +192,9 @@ final class BodyXmlBuilder
             if ($style->indentFirstLineTwips > 0) {
                 $attrs[] = 'w:firstLine="'.$style->indentFirstLineTwips.'"';
             } elseif ($style->indentFirstLineTwips < 0) {
-                // ST_TwipsMeasure unsigned: отрицательный firstLine (наша
-                // модель hanging-отступа, см. OoxmlPropertyParser) пишется
-                // атрибутом w:hanging с модулем значения.
+                // ST_TwipsMeasure is unsigned: a negative firstLine (our model
+                // of a hanging indent, see OoxmlPropertyParser) is written as
+                // the w:hanging attribute with the absolute value.
                 $attrs[] = 'w:hanging="'.(-$style->indentFirstLineTwips).'"';
             }
             $pPr .= '<w:ind '.implode(' ', $attrs).'/>';
@@ -237,14 +241,15 @@ final class BodyXmlBuilder
     }
 
     /**
-     * `<w:fldSimple>` для field codes (PAGE/NUMPAGES/DATE/TIME/AUTHOR/TITLE).
-     * Word/Pages при открытии перевычисляет значение.
+     * A `<w:fldSimple>` for the field codes
+     * (PAGE/NUMPAGES/DATE/TIME/AUTHOR/TITLE). Word and Pages recompute the value
+     * when the file is opened.
      */
     private function renderField(Field $f): string
     {
         $instr = XmlEscape::attr(' '.$f->instruction.' ');
         $rPr = $this->renderRunProperties($f->style);
-        // Placeholder text — будет заменён реальным значением при рендере.
+        // The placeholder text — it is replaced by the real value at render time.
         $placeholder = '<w:r>'.$rPr.'<w:t>0</w:t></w:r>';
 
         return '<w:fldSimple w:instr="'.$instr.'">'.$placeholder.'</w:fldSimple>';
@@ -254,7 +259,7 @@ final class BodyXmlBuilder
     {
         $rPr = $this->renderRunProperties($r->style);
         $text = XmlEscape::text($r->text);
-        // xml:space="preserve" — сохраняет ведущие/завершающие пробелы.
+        // xml:space="preserve" keeps the leading and trailing spaces.
         $textNode = '<w:t xml:space="preserve">'.$text.'</w:t>';
 
         return '<w:r>'.$rPr.$textNode.'</w:r>';
@@ -292,18 +297,19 @@ final class BodyXmlBuilder
             $rPr .= '<w:color w:val="'.$s->color.'"/>';
         }
         if ($s->letterSpacingTwips !== null) {
-            // Разрядка символов. Тёзка одноимённого элемента в w:pPr, но это
-            // другое свойство: там межстрочные интервалы, здесь межбуквенный.
+            // Character spacing. It is a namesake of the element in w:pPr, but a
+            // different property: that one is about the spacing between lines,
+            // this one about the spacing between letters.
             $rPr .= '<w:spacing w:val="'.$s->letterSpacingTwips.'"/>';
         }
         if ($s->sizeHalfPoints !== null) {
             $rPr .= '<w:sz w:val="'.$s->sizeHalfPoints.'"/><w:szCs w:val="'.$s->sizeHalfPoints.'"/>';
         }
-        // Background color на run-уровне в OOXML интерпретируется как
-        // horizontal stripe (Pages) или highlight (Word) — оба варианта
-        // обычно дают неожиданный визуал. Если caller хочет background
-        // для текста — лучше использовать cell-level shd или w:highlight.
-        // Игнорируем RunStyle.backgroundColor.
+        // A background colour at the run level is interpreted in OOXML as a
+        // horizontal stripe (in Pages) or a highlight (in Word) — both usually
+        // look unexpected. When a caller wants a background for the text, a
+        // cell-level shd or a w:highlight is better. We ignore
+        // RunStyle.backgroundColor.
 
         if ($s->highlight !== null) {
             $rPr .= '<w:highlight w:val="'.$s->highlight.'"/>';
@@ -320,7 +326,7 @@ final class BodyXmlBuilder
         }
 
         if ($h->isInternal()) {
-            // Внутренняя ссылка на bookmark — без rId, только w:anchor.
+            // An internal link to a bookmark — no rId, only a w:anchor.
             $anchor = XmlEscape::attr((string) $h->anchor);
 
             return '<w:hyperlink w:anchor="'.$anchor.'">'.$children.'</w:hyperlink>';
@@ -372,8 +378,8 @@ final class BodyXmlBuilder
     }
 
     /**
-     * Caption-paragraph перед таблицей. Стиль "Caption" регистрируется
-     * в StyleRegistry::defaults() (italic centered 10pt grey).
+     * The caption paragraph before a table. The "Caption" style is registered
+     * in StyleRegistry::defaults() (italic, centred, 10pt, grey).
      */
     private function renderCaption(string $text): string
     {
@@ -388,9 +394,9 @@ final class BodyXmlBuilder
 
     private function renderTableProperties(TableStyle $s): string
     {
-        // Порядок элементов в <w:tblPr> по OOXML CT_TblPr schema:
-        //   tblW → jc → tblBorders → tblLayout → tblCellMar
-        // Word/Pages игнорируют свойства если порядок нарушен.
+        // The order of the elements in a <w:tblPr> per the OOXML CT_TblPr
+        // schema: tblW → jc → tblBorders → tblLayout → tblCellMar. Word and
+        // Pages ignore the properties when the order is broken.
         $tblPr = '';
 
         // width
@@ -432,8 +438,9 @@ final class BodyXmlBuilder
     }
 
     /**
-     * Вычисляет gridCols по cells первой строки. Если cells без widthTwips —
-     * распределяем равно (default 5000 twips на колонку).
+     * Computes the gridCols from the cells of the first row. When the cells
+     * have no widthTwips we distribute them equally (5000 twips per column by
+     * default).
      *
      * @return list<int>
      */
@@ -442,20 +449,21 @@ final class BodyXmlBuilder
         if ($t->rows === []) {
             return [];
         }
-        // Берём первую строку и для каждой ячейки её widthTwips или 0.
+        // We take the first row and, for every cell, its widthTwips or 0.
         $firstRow = $t->rows[0];
         $cols = [];
         foreach ($firstRow->cells as $cell) {
             $w = $cell->style->widthTwips;
             if ($w === null && $cell->style->widthPercent !== null) {
-                // pct в gridGrid некорректно — gridCol требует dxa.
-                // Аппроксимация: % от 9000 (≈ страница A4 minus margins).
+                // A pct is invalid in the grid — a gridCol requires dxa. The
+                // approximation: a percentage of 9000 (roughly an A4 page minus
+                // the margins).
                 $pct = $cell->style->widthPercent / 50;
                 $w = (int) round($pct / 100 * 9000);
             }
             $cols[] = $w ?? 2000;
-            // Учёт colspan: каждая «дополнительная» колонка тоже добавляется
-            // (равная по ширине).
+            // Accounting for the colspan: every "extra" column is added as
+            // well (with an equal width).
             for ($i = 1; $i < $cell->style->gridSpan; $i++) {
                 $cols[] = $w ?? 2000;
             }
@@ -492,10 +500,10 @@ final class BodyXmlBuilder
             $content .= $this->renderBlock($block);
         }
 
-        // Ячейка обязана ЗАКАНЧИВАТЬСЯ абзацем. Проверять «есть ли внутри
-        // хоть один <w:p>» мало: у вложенной таблицы свои абзацы внутри, а
-        // ячейка при этом кончается на </w:tbl> — Word такой файл открывает
-        // с предложением восстановить содержимое.
+        // A cell must END with a paragraph. Checking "is there at least one
+        // <w:p> inside" is not enough: a nested table has paragraphs of its own
+        // inside while the cell still ends on a </w:tbl> — Word opens such a
+        // file offering to recover the content.
         if (! str_ends_with($content, '</w:p>') && ! str_ends_with($content, '<w:p/>')) {
             $content .= '<w:p/>';
         }
@@ -505,10 +513,11 @@ final class BodyXmlBuilder
 
     private function renderCellProperties(CellStyle $s): string
     {
-        // Порядок элементов в <w:tcPr> по OOXML CT_TcPr schema:
+        // The order of the elements in a <w:tcPr> per the OOXML CT_TcPr schema:
         //   tcW → gridSpan → vMerge → tcBorders → shd → tcMar → vAlign
-        // Если порядок нарушен — Word/Pages игнорируют свойства (фон,
-        // padding, valign — самые видимые жертвы).
+        // When the order is broken, Word and Pages ignore the properties (the
+        // background, the padding and the valign are the most visible
+        // victims).
         $tcPr = '';
 
         // width
@@ -523,26 +532,26 @@ final class BodyXmlBuilder
             $tcPr .= '<w:gridSpan w:val="'.$s->gridSpan.'"/>';
         }
 
-        // vMerge: первая ячейка merge-группы с restart, продолжения — без val.
-        // Converter автоматически вставляет continue-cells ($vMergeContinue)
-        // в последующие строки.
+        // vMerge: the first cell of a merge group carries restart, the
+        // continuations carry no val. The converter inserts the continue cells
+        // ($vMergeContinue) into the following rows automatically.
         if ($s->vMergeContinue) {
             $tcPr .= '<w:vMerge/>';
         } elseif ($s->rowSpan > 1) {
             $tcPr .= '<w:vMerge w:val="restart"/>';
         }
 
-        // borders (ПЕРЕД shd)
+        // the borders (BEFORE shd)
         if ($s->borders !== null) {
             $tcPr .= $this->renderBorderSet($s->borders, 'w:tcBorders');
         }
 
-        // background (ПОСЛЕ borders, ПЕРЕД tcMar)
+        // the background (AFTER the borders, BEFORE tcMar)
         if ($s->backgroundColor !== null) {
             $tcPr .= '<w:shd w:val="clear" w:color="auto" w:fill="'.$s->backgroundColor.'"/>';
         }
 
-        // padding (ПОСЛЕ shd)
+        // the padding (AFTER shd)
         if ($s->paddingTopTwips !== 0 || $s->paddingRightTwips !== 0
             || $s->paddingBottomTwips !== 0 || $s->paddingLeftTwips !== 0) {
             $tcPr .= '<w:tcMar>';
@@ -553,7 +562,7 @@ final class BodyXmlBuilder
             $tcPr .= '</w:tcMar>';
         }
 
-        // valign (последний)
+        // the valign (last)
         if ($s->verticalAlign !== VerticalAlign::Top) {
             $tcPr .= '<w:vAlign w:val="'.$s->verticalAlign->value.'"/>';
         }
@@ -600,7 +609,7 @@ final class BodyXmlBuilder
 
     private function renderBlockImage(Image $img): string
     {
-        // Block-level image: оборачиваем в собственный paragraph.
+        // A block-level image: we wrap it into a paragraph of its own.
         return '<w:p>'.$this->renderInlineImage($img).'</w:p>';
     }
 
@@ -610,9 +619,9 @@ final class BodyXmlBuilder
         $cx = $img->widthEmu;
         $cy = $img->heightEmu;
         $alt = XmlEscape::attr($img->altText ?? 'image');
-        // Простая inline-картинка через <w:drawing><wp:inline>...
-        // Номер рисунка сквозной по документу: Word объявляет файл
-        // повреждённым, если два рисунка носят один номер.
+        // A simple inline image through <w:drawing><wp:inline>... The picture's
+        // number runs through the whole document: Word declares a file corrupt
+        // when two pictures share a number.
         $docPrId = $this->rels->nextDrawingId();
 
         return <<<XML
