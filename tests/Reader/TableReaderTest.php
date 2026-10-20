@@ -14,6 +14,7 @@ use Dskripchenko\PhpDocx\Reader\OoxmlNs;
 use Dskripchenko\PhpDocx\Reader\StylesResolver;
 use Dskripchenko\PhpDocx\Reader\TableReader;
 use Dskripchenko\PhpDocx\Writer\Word2007Writer;
+use Dskripchenko\PhpDocx\Style\RowHeightRule;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
@@ -165,6 +166,21 @@ final class TableReaderTest extends TestCase
     }
 
     #[Test]
+    public function tblInd_extracted(): void
+    {
+        $read = fn (string $ind) => (new TableReader)->read($this->loadTable(
+            '<w:tbl><w:tblPr>'.$ind.'</w:tblPr>'
+            .'<w:tr><w:tc><w:p><w:r><w:t>x</w:t></w:r></w:p></w:tc></w:tr>'
+            .'</w:tbl>'
+        ))->style->indentTwips;
+
+        self::assertSame(360, $read('<w:tblInd w:w="360" w:type="dxa"/>'));
+        self::assertSame(-108, $read('<w:tblInd w:w="-108" w:type="dxa"/>'));
+        self::assertNull($read('<w:tblInd w:w="0" w:type="nil"/>'));
+        self::assertNull($read(''));
+    }
+
+    #[Test]
     public function trHeight_extracted(): void
     {
         $tbl = $this->loadTable(
@@ -175,6 +191,42 @@ final class TableReaderTest extends TestCase
         );
         $t = (new TableReader)->read($tbl);
         self::assertSame(800, $t->rows[0]->heightTwips);
+    }
+
+    #[Test]
+    public function trHeight_rule_extracted(): void
+    {
+        $tbl = $this->loadTable(
+            '<w:tbl>'
+            .'<w:tr><w:trPr><w:trHeight w:val="300" w:hRule="exact"/></w:trPr>'
+            .'<w:tc><w:p><w:r><w:t>x</w:t></w:r></w:p></w:tc></w:tr>'
+            .'<w:tr><w:trPr><w:trHeight w:val="300" w:hRule="atLeast"/></w:trPr>'
+            .'<w:tc><w:p><w:r><w:t>y</w:t></w:r></w:p></w:tc></w:tr>'
+            .'<w:tr><w:trPr><w:trHeight w:val="300"/></w:trPr>'
+            .'<w:tc><w:p><w:r><w:t>z</w:t></w:r></w:p></w:tc></w:tr>'
+            .'</w:tbl>'
+        );
+        $t = (new TableReader)->read($tbl);
+        self::assertSame(RowHeightRule::Exact, $t->rows[0]->heightRule);
+        self::assertSame(RowHeightRule::AtLeast, $t->rows[1]->heightRule);
+        self::assertSame(RowHeightRule::AtLeast, $t->rows[2]->heightRule);
+    }
+
+    #[Test]
+    public function exact_row_height_survives_row_span_reconstruction(): void
+    {
+        $tbl = $this->loadTable(
+            '<w:tbl>'
+            .'<w:tr><w:trPr><w:trHeight w:val="300" w:hRule="exact"/></w:trPr>'
+            .'<w:tc><w:tcPr><w:vMerge w:val="restart"/></w:tcPr><w:p><w:r><w:t>x</w:t></w:r></w:p></w:tc></w:tr>'
+            .'<w:tr><w:trPr><w:trHeight w:val="300" w:hRule="exact"/></w:trPr>'
+            .'<w:tc><w:tcPr><w:vMerge/></w:tcPr><w:p/></w:tc></w:tr>'
+            .'</w:tbl>'
+        );
+        // A vMerge goes through reconstructRowSpans(), which rebuilds the rows.
+        $t = (new TableReader)->read($tbl);
+        self::assertSame(RowHeightRule::Exact, $t->rows[0]->heightRule);
+        self::assertSame(RowHeightRule::Exact, $t->rows[1]->heightRule);
     }
 
     #[Test]

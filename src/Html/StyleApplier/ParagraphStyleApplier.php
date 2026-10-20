@@ -19,6 +19,7 @@ use Dskripchenko\PhpDocx\Style\ParagraphStyle;
  *  - margin-left/right → indentLeft/Right
  *  - line-height (a multiplier or an absolute value)
  *  - page-break-after: always
+ *  - page-break-before: always / break-before: page
  *  - background-color / background → the paragraph fill (`<w:shd>`)
  */
 final class ParagraphStyleApplier
@@ -36,6 +37,7 @@ final class ParagraphStyleApplier
         $indentFirst = $base->indentFirstLineTwips;
         $lineSpacing = $base->lineSpacingTwips;
         $pageBreakAfter = $base->pageBreakAfter;
+        $pageBreakBefore = $base->pageBreakBefore;
         $shading = $base->shadingColor;
 
         foreach ($properties as $prop => $value) {
@@ -119,6 +121,12 @@ final class ParagraphStyleApplier
                     $pageBreakAfter = in_array(strtolower(trim($value)), ['always', 'page'], true);
 
                     break;
+
+                case 'page-break-before':
+                case 'break-before':
+                    $pageBreakBefore = in_array(strtolower(trim($value)), ['always', 'page'], true);
+
+                    break;
             }
         }
 
@@ -133,6 +141,8 @@ final class ParagraphStyleApplier
             pageBreakAfter: $pageBreakAfter,
             borders: $base->borders,
             shadingColor: $shading,
+            pageBreakBefore: $pageBreakBefore,
+            widowControl: $base->widowControl,
         );
     }
 

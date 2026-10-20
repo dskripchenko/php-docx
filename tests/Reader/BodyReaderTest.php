@@ -332,6 +332,23 @@ final class BodyReaderTest extends TestCase
     }
 
     #[Test]
+    public function page_break_before_and_widow_control_reach_the_paragraph_style(): void
+    {
+        $body = $this->loadBody(
+            '<w:p><w:pPr><w:pageBreakBefore/><w:widowControl/></w:pPr><w:r><w:t>new page</w:t></w:r></w:p>'
+            .'<w:p><w:pPr><w:widowControl w:val="0"/></w:pPr><w:r><w:t>off</w:t></w:r></w:p>'
+            .'<w:p><w:r><w:t>plain</w:t></w:r></w:p>'
+        );
+        $blocks = (new BodyReader)->read($body);
+
+        self::assertTrue($blocks[0]->style->pageBreakBefore);
+        self::assertTrue($blocks[0]->style->widowControl);
+        self::assertFalse($blocks[1]->style->pageBreakBefore);
+        self::assertFalse($blocks[1]->style->widowControl);
+        self::assertNull($blocks[2]->style->widowControl);
+    }
+
+    #[Test]
     public function footnote_text_is_read_from_the_notes_part(): void
     {
         // `word/footnotes.xml` and `w:footnoteReference` used to be ignored, and

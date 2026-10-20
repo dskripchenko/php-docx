@@ -5,6 +5,69 @@ file. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- `DocumentBuilder::coreProperties(CoreProperties)`: title, author, dates
+  and the rest of `docProps/core.xml` from the fluent builder. Until now
+  `build()` never set them, and builder users had to construct the
+  `Document` by hand to get a core part.
+- `Paragraph::$styleId` and `ParagraphBuilder::styleId()`: any paragraph
+  style id (`Normal`, `Title`, `Quote`, a custom one registered with
+  `StyleRegistry::paragraph()`) is written as `<w:pStyle>`. Only `Heading1..6`
+  (through `headingLevel`) could be referenced before. An explicit id wins
+  over the heading level.
+- `ParagraphStyle::$pageBreakBefore` (`w:pageBreakBefore`) and
+  `ParagraphStyle::$widowControl` (`w:widowControl`; `null` leaves it to the
+  style, `false` writes `w:val="0"`), with `ParagraphBuilder::pageBreakBefore()`
+  and `widowControl()`. Both are written at their place in `w:pPr` and read
+  back. A page break before a paragraph no longer needs a `PageBreak` block and
+  its empty paragraph. HTML: `pageBreakBefore` is serialized as
+  `break-before: page`, and `break-before: page` / `page-break-before: always`
+  are parsed back.
+- `RunStyle::$fontFamilyEastAsia` (`w:eastAsia` on `<w:rFonts>`), with
+  `RunStyle::withFontFamilyEastAsia()` and
+  `RunStyleBuilder::fontFamilyEastAsia()`: the font Word uses for CJK text.
+  Written in document and style run properties, and read back from an
+  explicit `w:eastAsia`.
+- Table indent: `TableStyle::$indentTwips` and `TableBuilder::indent()` /
+  `indentMm()` / `indentPt()` write `<w:tblInd w:type="dxa">`, which moves
+  the table in from the leading margin (negative values pull it out). The
+  reader parses it back; HTML carries it as `margin-left` on the `<table>`
+  in both directions.
+- Exact row height: `TableRow::$heightRule` (`RowHeightRule::AtLeast`, the
+  default, or `RowHeightRule::Exact`) and `TableRowBuilder::exactHeight()`.
+  The writer emitted every `w:trHeight` as `w:hRule="atLeast"`, so a row could
+  not be held to a fixed height; the rule is now written and read back.
+
+### Fixed
+- A tab or a newline in run text was written as is inside `<w:t>`, where
+  Word shows it as a space at best. The writer now splits the text into
+  `<w:t>`, `<w:tab/>` and `<w:br/>` (for "\n", "\r\n" and "\r"). The reader
+  reads `<w:tab/>` as "\t", so a document read and written back lost its
+  tabs; a `<pre>` from HTML lost its line breaks.
+- Text with an invalid UTF-8 sequence was written as an empty string: the
+  whole run (or attribute) was dropped without a word. `XmlEscape` now
+  replaces the sequence with U+FFFD and keeps the rest.
+- A control character in text (`\x01`, a vertical tab pasted from Word, …)
+  went into the XML as is, and Word refused to open the file. `XmlEscape`
+  now removes every character XML 1.0 does not allow.
+- The same document now gives the same bytes on every write. ZipArchive put
+  the current time on every entry, so two writes a couple of seconds apart
+  differed, and a checksum, a cache key or a diff of generated files was
+  useless. Every entry now carries `CoreProperties::$modified` (as a UTC
+  wall-clock time), or 1980-01-01 00:00:00 when it is not set. The time is
+  written into the ZIP headers directly: `ZipArchive::setMtimeName()` alone
+  converts through the process's `TZ`, so the bytes would still differ
+  between machines in different time zones.
+- The table grid computed when `Table::$gridColumnsTwips` is not set repeated
+  a spanning cell's full width for every column it spans: a 2000-twip cell
+  with `gridSpan: 2` gave two 2000-twip columns, and the grid came out wider
+  than the table. The spanned columns now share the cell's width, and a
+  column takes its width from the first row where an unspanned cell with a
+  width covers it (a title row spanning the table no longer decides the
+  columns below it).
+
 ## [1.16.0] — 2026-10-20
 
 ### Added

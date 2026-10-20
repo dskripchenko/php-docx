@@ -644,7 +644,7 @@ final class Converter
                 $origIdx++;
             }
 
-            $newRows[] = new TableRow($newCells, $row->isHeader, $row->heightTwips, $row->cantSplit);
+            $newRows[] = new TableRow($newCells, $row->isHeader, $row->heightTwips, $row->cantSplit, $row->heightRule);
         }
 
         return $newRows;
@@ -774,6 +774,7 @@ final class Converter
             isHeader: $row->isHeader,
             heightTwips: $row->heightTwips,
             cantSplit: $row->cantSplit,
+            heightRule: $row->heightRule,
         );
     }
 

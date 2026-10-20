@@ -229,10 +229,12 @@ pipeline 相同的不可变 AST。
 
 ### DocumentBuilder
 
-入口点。积累 body、页眉/页脚、水印、页面设置。
+入口点。积累 body、页眉/页脚、水印、页面设置、文档属性
+（`docProps/core.xml`：标题、作者、日期）。
 
 ```php
 use Dskripchenko\PhpDocx\Build\DocumentBuilder;
+use Dskripchenko\PhpDocx\Style\CoreProperties;
 use Dskripchenko\PhpDocx\Style\PageSetup;
 use Dskripchenko\PhpDocx\Style\PaperSize;
 use Dskripchenko\PhpDocx\Style\Orientation;
@@ -243,6 +245,7 @@ $doc = DocumentBuilder::new()
         orientation: Orientation::Portrait,
     ))
     ->watermark('机密')
+    ->coreProperties(new CoreProperties(title: '报告', creator: 'Acme Inc.'))
     ->heading(1, '报告')
     ->paragraph('正文')
     ->build();           // → Document AST
@@ -250,6 +253,9 @@ $doc = DocumentBuilder::new()
 $bytes = DocumentBuilder::new()->paragraph('你好')->toBytes();
 $count = DocumentBuilder::new()->paragraph('你好')->toFile('out.docx');
 ```
+
+输出逐字节可复现：每个 ZIP 条目的时间为 `CoreProperties::$modified`（UTC），
+未设置时为 1980-01-01 00:00:00。
 
 ### ParagraphBuilder
 
@@ -283,6 +289,8 @@ $count = DocumentBuilder::new()->paragraph('你好')->toFile('out.docx');
 ```php
 ->paragraph(fn ($p) => $p
     ->alignCenter()           // 或 alignRight() / alignJustify()
+    ->styleId('Quote')        // StyleRegistry 中的样式 id
+    ->pageBreakBefore()       // 从新页开始；widowControl(false) 关闭孤行控制
     ->indentMm(left: 20, firstLine: 10)
     ->spacingPt(before: 6, after: 12)
     ->text('带缩进与间距')
@@ -362,6 +370,7 @@ RunStyleBuilder::new()
     ->backgroundColor('eeeeee')
     ->highlight('yellow')
     ->fontFamily('Arial')
+    ->fontFamilyEastAsia('SimSun')   // w:eastAsia：中日韩文字所用字体
     ->fontSizePt(14.5)
     ->build();
 ```
@@ -383,7 +392,7 @@ Length::px(100);    // 1500（CSS px @ 96 DPI）
 大多数构造器都暴露了单位感知快捷方法：
 
 - TableBuilder：`widthPt/widthMm/widthCm/widthInches`、
-  `cellMarginsMm/cellMarginsPt`
+  `cellMarginsMm/cellMarginsPt`、`indent/indentMm/indentPt`
 - TableCellBuilder：`widthPt/Mm/Cm/Inches`、`paddingMm/Pt/Cm/Inches`
 - ColumnBuilder：`widthPt/Mm/Cm/Inches/Px`
 - ParagraphBuilder：`indentMm/Cm/Pt/Inches`、`spacingPt/Mm`
@@ -542,7 +551,7 @@ foreach ($variables as $v) {
 |---|---|---|
 | `Document` | root | `{ section: Section, watermarkText: ?string }` |
 | `Section` | container | `{ body, header, footer, pageSetup, firstHeader, firstFooter, evenHeader, evenFooter }` |
-| `Paragraph` | BlockElement | `{ children: InlineElement[], style, headingLevel: ?int }` |
+| `Paragraph` | BlockElement | `{ children: InlineElement[], style, headingLevel: ?int, styleId: ?string }` |
 | `Run` | InlineElement | `{ text: string, style: RunStyle }` |
 | `Hyperlink` | InlineElement | `{ href: ?string, anchor: ?string, children }` |
 | `Bookmark` | InlineElement | `{ name: string, children }` |
@@ -550,17 +559,17 @@ foreach ($variables as $v) {
 | `Field` | InlineElement | `{ instruction: string, style: RunStyle }` |
 | `LineBreak`、`PageBreak`、`HorizontalRule` | 两者 | 标记元素 |
 | `Table` | BlockElement | `{ rows: TableRow[], style, caption, gridColumnsTwips }` |
-| `TableRow` | element | `{ cells: TableCell[], isHeader, heightTwips, cantSplit }` |
+| `TableRow` | element | `{ cells: TableCell[], isHeader, heightTwips, cantSplit, heightRule }` |
 | `TableCell` | element | `{ children: BlockElement[], style: CellStyle }` |
 | `ListNode` | BlockElement | `{ items: ListItem[], ordered, format, startAt }` |
 | `ListItem` | element | `{ children: InlineElement[], nestedList: ?ListNode }` |
 
 样式位于 `Dskripchenko\PhpDocx\Style`：
 
-- `RunStyle` — 字体、weight、italic、color、size、highlight 等
-- `ParagraphStyle` — alignment、缩进、间距、边框
+- `RunStyle` — 字体（中日韩文字用 `fontFamilyEastAsia`）、weight、italic、color、size、highlight 等
+- `ParagraphStyle` — alignment、缩进、间距、边框、分页（keepWithNext、keepLines、pageBreakBefore、widowControl）
 - `CellStyle` — width、padding、边框、valign、gridSpan、rowSpan
-- `TableStyle` — width、边框、对齐、单元格边距、布局
+- `TableStyle` — width、边框、对齐、单元格边距、布局、缩进（`indentTwips`）
 - `PageSetup`、`PaperSize`、`Orientation`、`Alignment`、`VerticalAlign`、
   `BorderStyle`、`Border`、`BorderSet`
 

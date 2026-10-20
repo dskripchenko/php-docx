@@ -36,6 +36,11 @@ final readonly class RunStyle
         public bool $allCaps = false,
         /** `<w:smallCaps/>` — small caps: lower case is drawn as reduced capitals. */
         public bool $smallCaps = false,
+        /**
+         * The font for East Asian text (`w:eastAsia` on `<w:rFonts>`): Word
+         * draws CJK characters with it, and the rest with `fontFamily`.
+         */
+        public ?string $fontFamilyEastAsia = null,
     ) {}
 
     public static function fromPt(
@@ -99,6 +104,11 @@ final readonly class RunStyle
         return $this->copy(fontFamily: $family);
     }
 
+    public function withFontFamilyEastAsia(string $family): self
+    {
+        return $this->copy(fontFamilyEastAsia: $family);
+    }
+
     public function withHighlight(string $highlight): self
     {
         return $this->copy(highlight: $highlight);
@@ -129,6 +139,7 @@ final readonly class RunStyle
         ?int $letterSpacingTwips = null,
         ?bool $allCaps = null,
         ?bool $smallCaps = null,
+        ?string $fontFamilyEastAsia = null,
     ): self {
         return new self(
             sizeHalfPoints: $sizeHalfPoints ?? $this->sizeHalfPoints,
@@ -145,6 +156,7 @@ final readonly class RunStyle
             letterSpacingTwips: $letterSpacingTwips ?? $this->letterSpacingTwips,
             allCaps: $allCaps ?? $this->allCaps,
             smallCaps: $smallCaps ?? $this->smallCaps,
+            fontFamilyEastAsia: $fontFamilyEastAsia ?? $this->fontFamilyEastAsia,
         );
     }
 
@@ -154,6 +166,7 @@ final readonly class RunStyle
             && $this->color === null
             && $this->backgroundColor === null
             && $this->fontFamily === null
+            && $this->fontFamilyEastAsia === null
             && $this->highlight === null
             && $this->letterSpacingTwips === null
             && ! $this->bold && ! $this->italic && ! $this->underline

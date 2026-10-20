@@ -212,4 +212,15 @@ final class ConverterTest extends TestCase
         }
         self::fail("Run with text '{$text}' not found");
     }
+
+    #[Test]
+    public function it_parses_break_before_page_into_page_break_before(): void
+    {
+        $doc = (new Converter)->fromHtml(
+            '<p style="break-before: page">A</p><p style="page-break-before: always">B</p><p>C</p>'
+        );
+        self::assertTrue($doc->section->body[0]->style->pageBreakBefore);
+        self::assertTrue($doc->section->body[1]->style->pageBreakBefore);
+        self::assertFalse($doc->section->body[2]->style->pageBreakBefore);
+    }
 }

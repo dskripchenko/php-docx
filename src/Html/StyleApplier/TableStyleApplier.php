@@ -11,7 +11,8 @@ use Dskripchenko\PhpDocx\Style\BorderSet;
 use Dskripchenko\PhpDocx\Style\TableStyle;
 
 /**
- * Applies CSS to a TableStyle. It parses width/border-collapse/table-layout.
+ * Applies CSS to a TableStyle. It parses width/border-collapse/table-layout
+ * and margin-left (the table indent).
  */
 final class TableStyleApplier
 {
@@ -26,6 +27,7 @@ final class TableStyleApplier
         $fixed = $base->fixedLayout;
         $borders = $base->borders;
         $align = $base->alignment;
+        $indent = $base->indentTwips;
 
         if (isset($attrs['width'])) {
             self::applyWidth($attrs['width'], $widthTwips, $widthPercent);
@@ -51,6 +53,14 @@ final class TableStyleApplier
                     $borders = BorderSet::all(BorderParser::parse($value));
 
                     break;
+                case 'margin-left':
+                    // `auto` centres the table and is not an indent.
+                    $t = LengthParser::parseTwips($value);
+                    if ($t !== null) {
+                        $indent = $t;
+                    }
+
+                    break;
             }
         }
 
@@ -64,6 +74,7 @@ final class TableStyleApplier
             cellMarginRightTwips: $base->cellMarginRightTwips,
             cellMarginBottomTwips: $base->cellMarginBottomTwips,
             cellMarginLeftTwips: $base->cellMarginLeftTwips,
+            indentTwips: $indent,
         );
     }
 

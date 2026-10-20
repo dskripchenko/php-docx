@@ -186,4 +186,13 @@ final class RunStyleBuilderTest extends TestCase
         self::assertTrue($secondRun->style->italic);
         self::assertSame('888888', $secondRun->style->color);
     }
+
+    #[Test]
+    public function east_asian_font_is_built_and_carried_by_from(): void
+    {
+        $style = RunStyleBuilder::new()->fontFamily('Arial')->fontFamilyEastAsia('SimSun')->build();
+        self::assertSame('SimSun', $style->fontFamilyEastAsia);
+        self::assertSame('SimSun', RunStyleBuilder::from($style)->build()->fontFamilyEastAsia);
+        self::assertSame('MS Mincho', (new RunStyle)->withFontFamilyEastAsia('MS Mincho')->fontFamilyEastAsia);
+    }
 }

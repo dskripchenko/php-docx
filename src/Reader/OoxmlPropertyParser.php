@@ -27,7 +27,7 @@ final class OoxmlPropertyParser
     /**
      * Parses `<w:rPr>` (or null) → a partial run-style array.
      *
-     * Keys (when present): sizeHalfPoints, color, fontFamily,
+     * Keys (when present): sizeHalfPoints, color, fontFamily, fontFamilyEastAsia,
      * bold, italic, underline, strikethrough, superscript, subscript,
      * highlight, backgroundColor, letterSpacingTwips.
      *
@@ -60,7 +60,7 @@ final class OoxmlPropertyParser
                 'vertAlign' => $this->parseVertAlign($node, $out),
                 'color' => $out['color'] = $this->parseColor($node),
                 'sz' => $out['sizeHalfPoints'] = $this->parseInt($node),
-                'rFonts' => $out['fontFamily'] = $this->parseFontFamily($node),
+                'rFonts' => $this->parseFonts($node, $out),
                 'highlight' => $out['highlight'] = OoxmlNs::wVal($node),
                 'shd' => $out['backgroundColor'] = $this->parseShdFill($node),
                 // A namesake of pPr/spacing (line spacing), but here it is
@@ -78,7 +78,8 @@ final class OoxmlPropertyParser
      *
      * Keys: alignment, spaceBeforeTwips, spaceAfterTwips,
      * indentLeftTwips, indentRightTwips, indentFirstLineTwips,
-     * lineSpacingTwips, pageBreakAfter, keepWithNext, keepLines, borders, shadingColor,
+     * lineSpacingTwips, pageBreakAfter, pageBreakBefore, keepWithNext, keepLines,
+     * widowControl, borders, shadingColor,
      * pStyleId, numId, ilvl.
      *
      * @return array<string, mixed>
@@ -102,6 +103,7 @@ final class OoxmlPropertyParser
                 'pageBreakBefore' => $out['pageBreakBefore'] = OoxmlNs::boolToggle($node),
                 'keepNext' => $out['keepWithNext'] = OoxmlNs::boolToggle($node),
                 'keepLines' => $out['keepLines'] = OoxmlNs::boolToggle($node),
+                'widowControl' => $out['widowControl'] = OoxmlNs::boolToggle($node),
                 'pBdr' => $out['borders'] = $this->parseBorders($node),
                 'shd' => $out['shadingColor'] = $this->parseShdFill($node),
                 'numPr' => $this->parseNumPr($node, $out),
@@ -167,6 +169,29 @@ final class OoxmlPropertyParser
         }
 
         return (int) $val;
+    }
+
+    /**
+     * @param  array<string, mixed>  $out
+     */
+    private function parseFonts(\DOMElement $rFonts, array &$out): void
+    {
+        $out['fontFamily'] = $this->parseFontFamily($rFonts);
+        $eastAsia = $this->parseEastAsiaFont($rFonts);
+        if ($eastAsia !== null) {
+            $out['fontFamilyEastAsia'] = $eastAsia;
+        }
+    }
+
+    /**
+     * Only an explicit `w:eastAsia`: the theme map holds the Latin faces, so an
+     * `eastAsiaTheme` reference is left to Word.
+     */
+    private function parseEastAsiaFont(\DOMElement $rFonts): ?string
+    {
+        $val = $rFonts->getAttributeNS(OoxmlNs::W, 'eastAsia');
+
+        return $val !== '' ? $val : null;
     }
 
     private function parseFontFamily(\DOMElement $rFonts): ?string

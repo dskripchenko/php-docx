@@ -13,6 +13,9 @@ final readonly class TableStyle
      * @param  bool  $fixedLayout  true → `<w:tblLayout w:type="fixed"/>`: the
      *                             cell widths are applied literally, without
      *                             Word's auto-fitting.
+     * @param  int|null  $indentTwips  Indent of the table from the leading
+     *                                 margin in twips (`<w:tblInd>`); negative
+     *                                 values pull it into the margin.
      */
     public function __construct(
         public ?int $widthTwips = null,
@@ -24,5 +27,6 @@ final readonly class TableStyle
         public int $cellMarginRightTwips = 80,
         public int $cellMarginBottomTwips = 0,
         public int $cellMarginLeftTwips = 80,
+        public ?int $indentTwips = null,
     ) {}
 }

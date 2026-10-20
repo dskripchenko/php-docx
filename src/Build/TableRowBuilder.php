@@ -6,6 +6,7 @@ namespace Dskripchenko\PhpDocx\Build;
 
 use Dskripchenko\PhpDocx\Element\TableCell;
 use Dskripchenko\PhpDocx\Element\TableRow;
+use Dskripchenko\PhpDocx\Style\RowHeightRule;
 
 /**
  * A fluent builder for a table row.
@@ -31,6 +32,8 @@ final class TableRowBuilder
     private ?int $heightTwips = null;
 
     private bool $cantSplit = false;
+
+    private RowHeightRule $heightRule = RowHeightRule::AtLeast;
 
     public function cell(string|callable $textOrBuilder): self
     {
@@ -76,9 +79,25 @@ final class TableRowBuilder
         return $this;
     }
 
+    /**
+     * A minimum row height in twips: the row grows with its content.
+     */
     public function height(int $twips): self
     {
         $this->heightTwips = $twips;
+        $this->heightRule = RowHeightRule::AtLeast;
+
+        return $this;
+    }
+
+    /**
+     * An exact row height in twips (`w:hRule="exact"`): content that does not
+     * fit is clipped.
+     */
+    public function exactHeight(int $twips): self
+    {
+        $this->heightTwips = $twips;
+        $this->heightRule = RowHeightRule::Exact;
 
         return $this;
     }
@@ -92,6 +111,6 @@ final class TableRowBuilder
 
     public function build(): TableRow
     {
-        return new TableRow($this->cells, $this->isHeader, $this->heightTwips, $this->cantSplit);
+        return new TableRow($this->cells, $this->isHeader, $this->heightTwips, $this->cantSplit, $this->heightRule);
     }
 }

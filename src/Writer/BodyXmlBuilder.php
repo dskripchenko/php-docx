@@ -212,7 +212,7 @@ final class BodyXmlBuilder
 
     private function renderParagraph(Paragraph $p): string
     {
-        $pPr = $this->renderParagraphProperties($p->style, $p->headingLevel);
+        $pPr = $this->renderParagraphProperties($p->style, $p->headingLevel, styleId: $p->styleId);
         $children = '';
         foreach ($p->children as $child) {
             $children .= $this->renderInline($child);
@@ -224,12 +224,20 @@ final class BodyXmlBuilder
     /**
      * @param  string  $numPr  A ready `<w:numPr>` of a list item: it is placed at its
      *                         position in the sequence (and `ListParagraph` is the style).
+     * @param  string|null  $styleId  An explicit paragraph style id; it wins over the
+     *                                heading level and the list style.
      */
-    private function renderParagraphProperties(ParagraphStyle $style, ?int $headingLevel, string $numPr = ''): string
-    {
+    private function renderParagraphProperties(
+        ParagraphStyle $style,
+        ?int $headingLevel,
+        string $numPr = '',
+        ?string $styleId = null,
+    ): string {
         $pPr = '';
 
-        if ($headingLevel !== null && $headingLevel >= 1 && $headingLevel <= 6) {
+        if ($styleId !== null && $styleId !== '') {
+            $pPr .= '<w:pStyle w:val="'.XmlEscape::attr($styleId).'"/>';
+        } elseif ($headingLevel !== null && $headingLevel >= 1 && $headingLevel <= 6) {
             $pPr .= '<w:pStyle w:val="Heading'.$headingLevel.'"/>';
         } elseif ($numPr !== '') {
             $pPr .= '<w:pStyle w:val="ListParagraph"/>';
@@ -239,6 +247,13 @@ final class BodyXmlBuilder
         }
         if ($style->keepLines) {
             $pPr .= '<w:keepLines/>';
+        }
+        if ($style->pageBreakBefore) {
+            $pPr .= '<w:pageBreakBefore/>';
+        }
+        // framePr would sit here; widowControl follows it.
+        if ($style->widowControl !== null) {
+            $pPr .= $style->widowControl ? '<w:widowControl/>' : '<w:widowControl w:val="0"/>';
         }
         // numPr sits after keepNext/keepLines/pageBreakBefore and before pBdr in
         // CT_PPrBase; placing it here (not by prefixing the finished string)
@@ -350,11 +365,36 @@ final class BodyXmlBuilder
     private function renderRun(Run $r): string
     {
         $rPr = $this->renderRunProperties($r->style);
-        $text = XmlEscape::text($r->text);
-        // xml:space="preserve" keeps the leading and trailing spaces.
-        $textNode = '<w:t xml:space="preserve">'.$text.'</w:t>';
 
-        return '<w:r>'.$rPr.$textNode.'</w:r>';
+        return '<w:r>'.$rPr.self::renderRunContent($r->text).'</w:r>';
+    }
+
+    /**
+     * The content of a `<w:r>` for a piece of text. A tab inside `<w:t>` is
+     * not a tab to Word, and a newline is not a line break: both are shown as
+     * a space at best. Each "\t" becomes a `<w:tab/>` and each "\n", "\r\n"
+     * or "\r" a `<w:br/>`, between `<w:t>` segments; empty segments are left
+     * out. The reader turns `<w:tab/>` back into "\t".
+     */
+    private static function renderRunContent(string $text): string
+    {
+        $parts = preg_split('/(\t|\r\n|\r|\n)/', $text, -1, PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY);
+        if ($parts === false || $parts === []) {
+            // An empty run keeps its (empty) <w:t>, as before.
+            return '<w:t xml:space="preserve">'.XmlEscape::text($text).'</w:t>';
+        }
+
+        $xml = '';
+        foreach ($parts as $part) {
+            $xml .= match ($part) {
+                "\t" => '<w:tab/>',
+                "\r\n", "\r", "\n" => '<w:br/>',
+                // xml:space="preserve" keeps the leading and trailing spaces.
+                default => '<w:t xml:space="preserve">'.XmlEscape::text($part).'</w:t>',
+            };
+        }
+
+        return $xml;
     }
 
     private function renderRunProperties(RunStyle $s): string
@@ -363,10 +403,7 @@ final class BodyXmlBuilder
             return '';
         }
         $rPr = '';
-        if ($s->fontFamily !== null) {
-            $f = XmlEscape::attr($s->fontFamily);
-            $rPr .= '<w:rFonts w:ascii="'.$f.'" w:hAnsi="'.$f.'" w:cs="'.$f.'"/>';
-        }
+        $rPr .= RunFonts::render($s);
         if ($s->bold) {
             $rPr .= '<w:b/><w:bCs/>';
         }
@@ -481,19 +518,17 @@ final class BodyXmlBuilder
      */
     private function renderCaption(string $text): string
     {
-        $escaped = XmlEscape::text($text);
-
         return '<w:p>'
             .'<w:pPr><w:pStyle w:val="Caption"/><w:jc w:val="center"/></w:pPr>'
             .'<w:r><w:rPr><w:i/><w:iCs/><w:color w:val="6b7280"/><w:sz w:val="20"/></w:rPr>'
-            .'<w:t xml:space="preserve">'.$escaped.'</w:t></w:r>'
+            .self::renderRunContent($text).'</w:r>'
             .'</w:p>';
     }
 
     private function renderTableProperties(TableStyle $s): string
     {
         // The order of the elements in a <w:tblPr> per the OOXML CT_TblPr
-        // schema: tblW → jc → tblBorders → tblLayout → tblCellMar. Word and
+        // schema: tblW → jc → tblInd → tblBorders → tblLayout → tblCellMar. Word and
         // Pages ignore the properties when the order is broken.
         $tblPr = '';
 
@@ -509,6 +544,11 @@ final class BodyXmlBuilder
         // alignment
         if ($s->alignment !== Alignment::Start) {
             $tblPr .= '<w:jc w:val="'.$s->alignment->value.'"/>';
+        }
+
+        // indent
+        if ($s->indentTwips !== null) {
+            $tblPr .= '<w:tblInd w:w="'.$s->indentTwips.'" w:type="dxa"/>';
         }
 
         // borders
@@ -536,9 +576,13 @@ final class BodyXmlBuilder
     }
 
     /**
-     * Computes the gridCols from the cells of the first row. When the cells
-     * have no widthTwips we distribute them equally (5000 twips per column by
-     * default).
+     * Computes the gridCols when the table has no explicit gridColumnsTwips.
+     *
+     * The number of columns is the first row's total gridSpan. Each column
+     * takes its width from the first row in which an unspanned cell with a
+     * known width covers it; failing that, from the first spanning cell with
+     * a known width that covers it, divided by its span (so the columns of a
+     * spanning cell add up to its width); failing that, 2000 twips.
      *
      * @return list<int>
      */
@@ -547,27 +591,59 @@ final class BodyXmlBuilder
         if ($t->rows === []) {
             return [];
         }
-        // We take the first row and, for every cell, its widthTwips or 0.
-        $firstRow = $t->rows[0];
-        $cols = [];
-        foreach ($firstRow->cells as $cell) {
-            $w = $cell->style->widthTwips;
-            if ($w === null && $cell->style->widthPercent !== null) {
-                // A pct is invalid in the grid — a gridCol requires dxa. The
-                // approximation: a percentage of 9000 (roughly an A4 page minus
-                // the margins).
-                $pct = $cell->style->widthPercent / 50;
-                $w = (int) round($pct / 100 * 9000);
-            }
-            $cols[] = $w ?? 2000;
-            // Accounting for the colspan: every "extra" column is added as
-            // well (with an equal width).
-            for ($i = 1; $i < $cell->style->gridSpan; $i++) {
-                $cols[] = $w ?? 2000;
+        $count = 0;
+        foreach ($t->rows[0]->cells as $cell) {
+            $count += max(1, $cell->style->gridSpan);
+        }
+
+        /** @var array<int, int> $exact widths from unspanned cells */
+        $exact = [];
+        /** @var array<int, int> $shared widths split from spanning cells */
+        $shared = [];
+        foreach ($t->rows as $row) {
+            $col = 0;
+            foreach ($row->cells as $cell) {
+                $span = max(1, $cell->style->gridSpan);
+                $w = $this->cellWidthForGrid($cell);
+                if ($w !== null) {
+                    for ($i = $col; $i < $col + $span && $i < $count; $i++) {
+                        if ($span === 1) {
+                            $exact[$i] ??= $w;
+                        } else {
+                            $shared[$i] ??= intdiv($w, $span);
+                        }
+                    }
+                }
+                $col += $span;
             }
         }
 
+        $cols = [];
+        for ($i = 0; $i < $count; $i++) {
+            $cols[] = $exact[$i] ?? $shared[$i] ?? 2000;
+        }
+
         return $cols;
+    }
+
+    /**
+     * A cell's width in twips for the grid, or null when it has none.
+     */
+    private function cellWidthForGrid(TableCell $cell): ?int
+    {
+        if ($cell->style->widthTwips !== null) {
+            return $cell->style->widthTwips;
+        }
+        if ($cell->style->widthPercent !== null) {
+            // A pct is invalid in the grid — a gridCol requires dxa. The
+            // approximation: a percentage of 9000 (roughly an A4 page minus
+            // the margins).
+            $pct = $cell->style->widthPercent / 50;
+
+            return (int) round($pct / 100 * 9000);
+        }
+
+        return null;
     }
 
     private function renderTableRow(TableRow $row): string
@@ -580,7 +656,7 @@ final class BodyXmlBuilder
             $trPr .= '<w:tblHeader/>';
         }
         if ($row->heightTwips !== null) {
-            $trPr .= '<w:trHeight w:val="'.$row->heightTwips.'" w:hRule="atLeast"/>';
+            $trPr .= '<w:trHeight w:val="'.$row->heightTwips.'" w:hRule="'.$row->heightRule->value.'"/>';
         }
         $trPrXml = $trPr === '' ? '' : '<w:trPr>'.$trPr.'</w:trPr>';
 

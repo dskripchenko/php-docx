@@ -142,6 +142,8 @@ final class RunStyleApplier
             // highlighting.
             highlight: $base->highlight,
             letterSpacingTwips: $letterSpacing,
+            // CSS has no East Asian font slot: keep the base's.
+            fontFamilyEastAsia: $base->fontFamilyEastAsia,
         );
     }
 

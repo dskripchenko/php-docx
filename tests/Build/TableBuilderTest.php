@@ -14,6 +14,7 @@ use Dskripchenko\PhpDocx\Element\Run;
 use Dskripchenko\PhpDocx\Element\Table;
 use Dskripchenko\PhpDocx\Style\Alignment;
 use Dskripchenko\PhpDocx\Style\VerticalAlign;
+use Dskripchenko\PhpDocx\Style\RowHeightRule;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
@@ -206,6 +207,38 @@ final class TableBuilderTest extends TestCase
         self::assertTrue($t->rows[0]->cantSplit);
         self::assertFalse($t->rows[1]->cantSplit);
         self::assertFalse($t->rows[2]->cantSplit);
+    }
+
+    #[Test]
+    public function table_indent(): void
+    {
+        $doc = DocumentBuilder::new()
+            ->table(fn (TableBuilder $t) => $t->indentPt(18)->row(['A']))
+            ->table(fn (TableBuilder $t) => $t->row(['B']))
+            ->build();
+        /** @var Table $t */
+        $t = $doc->section->body[0];
+        self::assertSame(360, $t->style->indentTwips);
+        /** @var Table $t2 */
+        $t2 = $doc->section->body[1];
+        self::assertNull($t2->style->indentTwips);
+    }
+
+    #[Test]
+    public function row_exact_height(): void
+    {
+        $doc = DocumentBuilder::new()
+            ->table(fn (TableBuilder $t) => $t
+                ->row(fn (TableRowBuilder $r) => $r->exactHeight(300)->cell('A'))
+                ->row(fn (TableRowBuilder $r) => $r->exactHeight(300)->height(400)->cell('B'))
+            )
+            ->build();
+        /** @var Table $t */
+        $t = $doc->section->body[0];
+        self::assertSame(300, $t->rows[0]->heightTwips);
+        self::assertSame(RowHeightRule::Exact, $t->rows[0]->heightRule);
+        self::assertSame(400, $t->rows[1]->heightTwips);
+        self::assertSame(RowHeightRule::AtLeast, $t->rows[1]->heightRule);
     }
 
     #[Test]

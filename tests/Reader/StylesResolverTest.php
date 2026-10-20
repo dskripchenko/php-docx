@@ -326,6 +326,23 @@ final class StylesResolverTest extends TestCase
         self::assertSame('Arial', $runStyle->fontFamily);
     }
 
+    #[Test]
+    public function east_asian_font_is_read_into_its_own_slot(): void
+    {
+        $xml = $this->wrapDocument(
+            '<w:p><w:r><w:rPr>'
+            .'<w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:eastAsia="MS Mincho"/>'
+            .'</w:rPr><w:t>X</w:t></w:r></w:p>'
+        );
+        $resolver = new StylesResolver;
+        $p = $this->firstParagraph($xml);
+        [, $base] = $resolver->effectiveStylesForParagraph($p);
+        $runStyle = $resolver->effectiveStylesForRun($this->firstRun($p), $base);
+
+        self::assertSame('Arial', $runStyle->fontFamily);
+        self::assertSame('MS Mincho', $runStyle->fontFamilyEastAsia);
+    }
+
     private function wrapDocument(string $bodyXml): \DOMDocument
     {
         return $this->loadXml(
