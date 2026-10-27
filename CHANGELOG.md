@@ -49,9 +49,11 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Text with an invalid UTF-8 sequence was written as an empty string: the
   whole run (or attribute) was dropped without a word. `XmlEscape` now
   replaces the sequence with U+FFFD and keeps the rest.
-- A control character in text (`\x01`, a vertical tab pasted from Word, …)
-  went into the XML as is, and Word refused to open the file. `XmlEscape`
-  now removes every character XML 1.0 does not allow.
+- A control character in text (`\x01`, `\x0B`, …) went into the XML as is,
+  and Word refused to open the file. In run text, a vertical tab (`\x0B`,
+  Word's manual line break) is now written as `<w:br/>` and a form feed
+  (`\x0C`, Word's page break) as `<w:br w:type="page"/>`; `XmlEscape` removes
+  every other character XML 1.0 does not allow.
 - The same document now gives the same bytes on every write. ZipArchive put
   the current time on every entry, so two writes a couple of seconds apart
   differed, and a checksum, a cache key or a diff of generated files was

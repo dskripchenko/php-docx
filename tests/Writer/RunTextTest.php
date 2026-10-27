@@ -58,6 +58,24 @@ final class RunTextTest extends TestCase
     }
 
     #[Test]
+    public function word_line_and_page_break_characters_become_w_br(): void
+    {
+        // Word's object model and clipboard give a manual line break as "\v"
+        // and a page break as "\f"; neither may go into the XML as is.
+        $xml = (new BodyXmlBuilder)->render([new Paragraph([new Run("a\x0Bb\x0Cc\x01d")])]);
+
+        self::assertStringContainsString(
+            '<w:t xml:space="preserve">a</w:t><w:br/>'
+            .'<w:t xml:space="preserve">b</w:t><w:br w:type="page"/>'
+            // Other control characters are still dropped by XmlEscape.
+            .'<w:t xml:space="preserve">cd</w:t>',
+            $xml,
+        );
+        self::assertStringNotContainsString("\x0B", $xml);
+        self::assertStringNotContainsString("\x0C", $xml);
+    }
+
+    #[Test]
     public function no_empty_w_t_around_tabs(): void
     {
         $xml = (new BodyXmlBuilder)->render([new Paragraph([new Run("\t\tx\t")])]);

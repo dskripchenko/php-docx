@@ -375,10 +375,15 @@ final class BodyXmlBuilder
      * a space at best. Each "\t" becomes a `<w:tab/>` and each "\n", "\r\n"
      * or "\r" a `<w:br/>`, between `<w:t>` segments; empty segments are left
      * out. The reader turns `<w:tab/>` back into "\t".
+     *
+     * "\v" and "\f" are not XML characters, but text taken from Word (its
+     * object model, the clipboard) uses them for a manual line break and a
+     * page break, so they become `<w:br/>` and `<w:br w:type="page"/>`
+     * instead of being dropped by XmlEscape and gluing the words together.
      */
     private static function renderRunContent(string $text): string
     {
-        $parts = preg_split('/(\t|\r\n|\r|\n)/', $text, -1, PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY);
+        $parts = preg_split('/(\t|\r\n|\r|\n|\x0B|\x0C)/', $text, -1, PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY);
         if ($parts === false || $parts === []) {
             // An empty run keeps its (empty) <w:t>, as before.
             return '<w:t xml:space="preserve">'.XmlEscape::text($text).'</w:t>';
@@ -388,7 +393,8 @@ final class BodyXmlBuilder
         foreach ($parts as $part) {
             $xml .= match ($part) {
                 "\t" => '<w:tab/>',
-                "\r\n", "\r", "\n" => '<w:br/>',
+                "\r\n", "\r", "\n", "\x0B" => '<w:br/>',
+                "\x0C" => '<w:br w:type="page"/>',
                 // xml:space="preserve" keeps the leading and trailing spaces.
                 default => '<w:t xml:space="preserve">'.XmlEscape::text($part).'</w:t>',
             };
