@@ -302,6 +302,10 @@ $count = DocumentBuilder::new()->paragraph('Привет')->toFile('out.docx');
 )
 ```
 
+`styleId()` действует только для стиля, который есть в документе: `Heading1..6`,
+`ListParagraph`, `Caption` или зарегистрированный через `StyleRegistry::paragraph()`.
+Абзац с неизвестным id Word показывает как Normal.
+
 ### TableBuilder
 
 ```php

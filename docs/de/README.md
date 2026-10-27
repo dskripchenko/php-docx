@@ -306,6 +306,10 @@ Absatz-Stil:
 )
 ```
 
+`styleId()` wirkt nur bei einem Style, den das Dokument definiert: `Heading1..6`,
+`ListParagraph`, `Caption` oder einer, der mit `StyleRegistry::paragraph()` registriert ist.
+Einen Absatz mit unbekannter ID zeigt Word als Normal.
+
 ### TableBuilder
 
 ```php

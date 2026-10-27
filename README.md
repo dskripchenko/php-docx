@@ -385,6 +385,10 @@ Paragraph-level styling:
 )
 ```
 
+`styleId()` takes effect only for a style the document defines: `Heading1..6`,
+`ListParagraph`, `Caption`, or one registered with `StyleRegistry::paragraph()`.
+Word shows a paragraph with an unknown id as Normal.
+
 ### TableBuilder
 
 ```php

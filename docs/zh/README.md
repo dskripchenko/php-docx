@@ -297,6 +297,9 @@ $count = DocumentBuilder::new()->paragraph('你好')->toFile('out.docx');
 )
 ```
 
+`styleId()` 仅对文档中已定义的样式生效：`Heading1..6`、`ListParagraph`、`Caption`，
+或通过 `StyleRegistry::paragraph()` 注册的样式。id 未知的段落在 Word 中按 Normal 显示。
+
 ### TableBuilder
 
 ```php
