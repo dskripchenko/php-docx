@@ -79,6 +79,20 @@ final class TableExtensionsTest extends TestCase
     }
 
     #[Test]
+    public function margin_left_becomes_table_indent(): void
+    {
+        $doc = (new Converter)->fromHtml('<table style="margin-left: 18pt"><tr><td>A</td></tr></table>');
+        /** @var Table $t */
+        $t = $doc->section->body[0];
+        self::assertSame(360, $t->style->indentTwips);
+
+        $doc = (new Converter)->fromHtml('<table style="margin-left: auto"><tr><td>A</td></tr></table>');
+        /** @var Table $t */
+        $t = $doc->section->body[0];
+        self::assertNull($t->style->indentTwips);
+    }
+
+    #[Test]
     public function colgroup_uses_gridcol_widths_in_tblGrid_xml(): void
     {
         $html = '<table>'

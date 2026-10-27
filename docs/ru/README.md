@@ -234,10 +234,12 @@ Namespace `Build` предоставляет fluent API для поэтапно�
 
 ### DocumentBuilder
 
-Точка входа. Накапливает body, header/footer, watermark, page setup.
+Точка входа. Накапливает body, header/footer, watermark, page setup,
+свойства документа (`docProps/core.xml`: название, автор, даты).
 
 ```php
 use Dskripchenko\PhpDocx\Build\DocumentBuilder;
+use Dskripchenko\PhpDocx\Style\CoreProperties;
 use Dskripchenko\PhpDocx\Style\PageSetup;
 use Dskripchenko\PhpDocx\Style\PaperSize;
 use Dskripchenko\PhpDocx\Style\Orientation;
@@ -248,6 +250,7 @@ $doc = DocumentBuilder::new()
         orientation: Orientation::Portrait,
     ))
     ->watermark('КОНФИДЕНЦИАЛЬНО')
+    ->coreProperties(new CoreProperties(title: 'Отчёт', creator: 'ООО «Ромашка»'))
     ->heading(1, 'Отчёт')
     ->paragraph('Тело документа')
     ->build();           // → Document AST
@@ -255,6 +258,9 @@ $doc = DocumentBuilder::new()
 $bytes = DocumentBuilder::new()->paragraph('Привет')->toBytes();
 $count = DocumentBuilder::new()->paragraph('Привет')->toFile('out.docx');
 ```
+
+Результат воспроизводим байт в байт: у каждой записи ZIP время
+`CoreProperties::$modified` (UTC), а без него — 1980-01-01 00:00:00.
 
 ### ParagraphBuilder
 
@@ -288,11 +294,17 @@ $count = DocumentBuilder::new()->paragraph('Привет')->toFile('out.docx');
 ```php
 ->paragraph(fn ($p) => $p
     ->alignCenter()           // alignRight()/alignJustify()
+    ->styleId('Quote')        // id стиля из StyleRegistry
+    ->pageBreakBefore()       // с новой страницы; widowControl(false) выключает запрет висячих строк
     ->indentMm(left: 20, firstLine: 10)
     ->spacingPt(before: 6, after: 12)
     ->text('С отступами')
 )
 ```
+
+`styleId()` действует только для стиля, который есть в документе: `Heading1..6`,
+`ListParagraph`, `Caption` или зарегистрированный через `StyleRegistry::paragraph()`.
+Абзац с неизвестным id Word показывает как Normal.
 
 ### TableBuilder
 
@@ -367,6 +379,7 @@ RunStyleBuilder::new()
     ->backgroundColor('eeeeee')
     ->highlight('yellow')
     ->fontFamily('Arial')
+    ->fontFamilyEastAsia('SimSun')   // w:eastAsia: шрифт для текста CJK
     ->fontSizePt(14.5)
     ->build();
 ```
@@ -387,7 +400,7 @@ Length::px(100);    // 1500  (CSS px @ 96 DPI)
 
 Большинство builder'ов имеют unit-aware shortcut'ы:
 
-- TableBuilder: `widthPt/widthMm/widthCm/widthInches`, `cellMarginsMm/cellMarginsPt`
+- TableBuilder: `widthPt/widthMm/widthCm/widthInches`, `cellMarginsMm/cellMarginsPt`, `indent/indentMm/indentPt`
 - TableCellBuilder: `widthPt/Mm/Cm/Inches`, `paddingMm/Pt/Cm/Inches`
 - ColumnBuilder: `widthPt/Mm/Cm/Inches/Px`
 - ParagraphBuilder: `indentMm/Cm/Pt/Inches`, `spacingPt/Mm`
@@ -551,7 +564,7 @@ foreach ($variables as $v) {
 |---|---|---|
 | `Document` | root | `{ section: Section, watermarkText: ?string }` |
 | `Section` | container | `{ body, header, footer, pageSetup, firstHeader, firstFooter, evenHeader, evenFooter }` |
-| `Paragraph` | BlockElement | `{ children: InlineElement[], style, headingLevel: ?int }` |
+| `Paragraph` | BlockElement | `{ children: InlineElement[], style, headingLevel: ?int, styleId: ?string }` |
 | `Run` | InlineElement | `{ text: string, style: RunStyle }` |
 | `Hyperlink` | InlineElement | `{ href: ?string, anchor: ?string, children }` |
 | `Bookmark` | InlineElement | `{ name: string, children }` |
@@ -559,17 +572,17 @@ foreach ($variables as $v) {
 | `Field` | InlineElement | `{ instruction: string, style: RunStyle }` |
 | `LineBreak`, `PageBreak`, `HorizontalRule` | both | marker-элементы |
 | `Table` | BlockElement | `{ rows: TableRow[], style, caption, gridColumnsTwips }` |
-| `TableRow` | element | `{ cells: TableCell[], isHeader, heightTwips, cantSplit }` |
+| `TableRow` | element | `{ cells: TableCell[], isHeader, heightTwips, cantSplit, heightRule }` |
 | `TableCell` | element | `{ children: BlockElement[], style: CellStyle }` |
 | `ListNode` | BlockElement | `{ items: ListItem[], ordered, format, startAt }` |
 | `ListItem` | element | `{ children: InlineElement[], nestedList: ?ListNode }` |
 
 Стили — namespace `Dskripchenko\PhpDocx\Style`:
 
-- `RunStyle` — шрифт, weight, italic, color, size, highlight, …
-- `ParagraphStyle` — alignment, indents, spacing, borders
+- `RunStyle` — шрифт (и `fontFamilyEastAsia` для текста CJK), weight, italic, color, size, highlight, …
+- `ParagraphStyle` — alignment, indents, spacing, borders, разбиение на страницы (keepWithNext, keepLines, pageBreakBefore, widowControl)
 - `CellStyle` — width, padding, borders, valign, gridSpan, rowSpan
-- `TableStyle` — width, borders, alignment, cell margins, layout
+- `TableStyle` — width, borders, alignment, cell margins, layout, отступ (`indentTwips`)
 - `PageSetup`, `PaperSize`, `Orientation`, `Alignment`, `VerticalAlign`,
   `BorderStyle`, `Border`, `BorderSet`
 

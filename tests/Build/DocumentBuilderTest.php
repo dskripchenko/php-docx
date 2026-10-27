@@ -11,6 +11,7 @@ use Dskripchenko\PhpDocx\Element\HorizontalRule;
 use Dskripchenko\PhpDocx\Element\PageBreak;
 use Dskripchenko\PhpDocx\Element\Paragraph;
 use Dskripchenko\PhpDocx\Element\Run;
+use Dskripchenko\PhpDocx\Style\CoreProperties;
 use Dskripchenko\PhpDocx\Style\PageSetup;
 use Dskripchenko\PhpDocx\Style\PaperSize;
 use PHPUnit\Framework\Attributes\Test;
@@ -211,5 +212,47 @@ final class DocumentBuilderTest extends TestCase
         self::assertSame(3, $p->headingLevel);
         self::assertCount(2, $p->children);
         self::assertTrue($p->children[0]->style->bold);
+    }
+
+    #[Test]
+    public function core_properties_reach_the_document_and_core_xml(): void
+    {
+        $props = new CoreProperties(title: 'Invoice #42', creator: 'Acme Inc.');
+        $builder = DocumentBuilder::new()->coreProperties($props)->paragraph('x');
+
+        self::assertSame($props, $builder->build()->coreProperties);
+
+        $tmp = (string) tempnam(sys_get_temp_dir(), 'docxbuilder-');
+        file_put_contents($tmp, $builder->toBytes());
+        $zip = new \ZipArchive;
+        $zip->open($tmp);
+        $core = (string) $zip->getFromName('docProps/core.xml');
+        $zip->close();
+        @unlink($tmp);
+
+        self::assertStringContainsString('<dc:title>Invoice #42</dc:title>', $core);
+        self::assertStringContainsString('<dc:creator>Acme Inc.</dc:creator>', $core);
+    }
+
+    #[Test]
+    public function no_core_properties_by_default(): void
+    {
+        self::assertNull(DocumentBuilder::new()->build()->coreProperties);
+    }
+
+    #[Test]
+    public function paragraph_builder_sets_style_id(): void
+    {
+        $p = (new ParagraphBuilder)->styleId('Quote')->text('x')->build();
+        self::assertSame('Quote', $p->styleId);
+        self::assertNull((new ParagraphBuilder)->build()->styleId);
+    }
+
+    #[Test]
+    public function paragraph_builder_sets_page_break_before_and_widow_control(): void
+    {
+        $p = (new ParagraphBuilder)->pageBreakBefore()->widowControl(false)->build();
+        self::assertTrue($p->style->pageBreakBefore);
+        self::assertFalse($p->style->widowControl);
     }
 }

@@ -27,6 +27,8 @@ final class RunStyleBuilder
 
     private ?string $fontFamily = null;
 
+    private ?string $fontFamilyEastAsia = null;
+
     private bool $bold = false;
 
     private bool $italic = false;
@@ -56,6 +58,7 @@ final class RunStyleBuilder
         $b->color = $base->color;
         $b->backgroundColor = $base->backgroundColor;
         $b->fontFamily = $base->fontFamily;
+        $b->fontFamilyEastAsia = $base->fontFamilyEastAsia;
         $b->bold = $base->bold;
         $b->italic = $base->italic;
         $b->underline = $base->underline;
@@ -135,6 +138,14 @@ final class RunStyleBuilder
         return $this;
     }
 
+    /** The font for East Asian text (`w:eastAsia` on `<w:rFonts>`). */
+    public function fontFamilyEastAsia(string $name): self
+    {
+        $this->fontFamilyEastAsia = $name;
+
+        return $this;
+    }
+
     /**
      * The size in points (pt). Converted into the half-points of OOXML.
      */
@@ -171,6 +182,7 @@ final class RunStyleBuilder
             superscript: $this->superscript,
             subscript: $this->subscript,
             highlight: $this->highlight,
+            fontFamilyEastAsia: $this->fontFamilyEastAsia,
         );
     }
 }

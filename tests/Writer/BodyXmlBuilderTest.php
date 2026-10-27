@@ -24,6 +24,7 @@ use Dskripchenko\PhpDocx\Style\RunStyle;
 use Dskripchenko\PhpDocx\Style\TableStyle;
 use Dskripchenko\PhpDocx\Style\VerticalAlign;
 use Dskripchenko\PhpDocx\Writer\BodyXmlBuilder;
+use Dskripchenko\PhpDocx\Style\RowHeightRule;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
@@ -200,6 +201,81 @@ final class BodyXmlBuilderTest extends TestCase
     }
 
     #[Test]
+    public function it_renders_an_explicit_style_id_as_pstyle(): void
+    {
+        $xml = (new BodyXmlBuilder)->render([
+            new Paragraph([new Run('x')], new ParagraphStyle(keepWithNext: true), styleId: 'Title'),
+        ]);
+        self::assertStringContainsString('<w:pPr><w:pStyle w:val="Title"/><w:keepNext/>', $xml);
+    }
+
+    #[Test]
+    public function it_prefers_the_style_id_over_the_heading_level(): void
+    {
+        $xml = (new BodyXmlBuilder)->render([
+            new Paragraph([new Run('x')], headingLevel: 1, styleId: 'ChapterTitle'),
+        ]);
+        self::assertStringContainsString('<w:pStyle w:val="ChapterTitle"/>', $xml);
+        self::assertStringNotContainsString('Heading1', $xml);
+    }
+
+    #[Test]
+    public function it_escapes_the_style_id(): void
+    {
+        $xml = (new BodyXmlBuilder)->render([
+            new Paragraph([new Run('x')], styleId: 'A"&B'),
+        ]);
+        self::assertStringContainsString('<w:pStyle w:val="A&quot;&amp;B"/>', $xml);
+    }
+
+    #[Test]
+    public function it_renders_page_break_before_and_widow_control_before_numpr(): void
+    {
+        $style = new ParagraphStyle(keepLines: true, pageBreakBefore: true, widowControl: true, borders: BorderSet::all(new Border));
+        $xml = (new BodyXmlBuilder)->render([new Paragraph([new Run('x')], $style, headingLevel: 1)]);
+        self::assertStringContainsString(
+            '<w:pStyle w:val="Heading1"/><w:keepLines/><w:pageBreakBefore/><w:widowControl/><w:pBdr>',
+            $xml,
+        );
+
+        $list = (new BodyXmlBuilder)->render([
+            new ListNode([
+                new ListItem([new Run('x')], style: new ParagraphStyle(pageBreakBefore: true, widowControl: false)),
+            ], ordered: true, levelText: '%1.'),
+        ]);
+        self::assertStringContainsString(
+            '<w:pStyle w:val="ListParagraph"/><w:pageBreakBefore/><w:widowControl w:val="0"/><w:numPr>',
+            $list,
+        );
+
+        $plain = (new BodyXmlBuilder)->render([new Paragraph([new Run('x')])]);
+        self::assertStringNotContainsString('pageBreakBefore', $plain);
+        self::assertStringNotContainsString('widowControl', $plain);
+    }
+
+    #[Test]
+    public function it_renders_the_east_asian_font_in_rfonts(): void
+    {
+        $both = (new BodyXmlBuilder)->render([new Paragraph([
+            new Run('x', new RunStyle(fontFamily: 'Arial', fontFamilyEastAsia: 'MS Mincho')),
+        ])]);
+        self::assertStringContainsString(
+            '<w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:eastAsia="MS Mincho" w:cs="Arial"/>',
+            $both,
+        );
+
+        $only = (new BodyXmlBuilder)->render([new Paragraph([
+            new Run('x', new RunStyle(fontFamilyEastAsia: 'SimSun')),
+        ])]);
+        self::assertStringContainsString('<w:rPr><w:rFonts w:eastAsia="SimSun"/></w:rPr>', $only);
+
+        $latin = (new BodyXmlBuilder)->render([new Paragraph([
+            new Run('x', new RunStyle(fontFamily: 'Arial')),
+        ])]);
+        self::assertStringContainsString('<w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial"/>', $latin);
+    }
+
+    #[Test]
     public function it_renders_cant_split_row_before_header_and_height(): void
     {
         $xml = (new BodyXmlBuilder)->render([
@@ -215,6 +291,102 @@ final class BodyXmlBuilderTest extends TestCase
 
         self::assertStringContainsString('<w:trPr><w:cantSplit/><w:tblHeader/><w:trHeight w:val="400" w:hRule="atLeast"/></w:trPr>', $xml);
         self::assertSame(1, substr_count($xml, '<w:cantSplit/>'));
+    }
+
+    #[Test]
+    public function it_splits_a_spanning_cell_width_across_its_grid_columns(): void
+    {
+        $xml = (new BodyXmlBuilder)->render([
+            new Table([
+                new TableRow([
+                    new TableCell([new Paragraph([new Run('A')])], new CellStyle(widthTwips: 2000, gridSpan: 2)),
+                    new TableCell([new Paragraph([new Run('B')])], new CellStyle(widthTwips: 2000)),
+                ]),
+            ]),
+        ]);
+
+        self::assertStringContainsString(
+            '<w:tblGrid><w:gridCol w:w="1000"/><w:gridCol w:w="1000"/><w:gridCol w:w="2000"/></w:tblGrid>',
+            $xml,
+        );
+    }
+
+    #[Test]
+    public function it_takes_grid_widths_from_a_later_row_where_the_columns_are_unspanned(): void
+    {
+        $xml = (new BodyXmlBuilder)->render([
+            new Table([
+                new TableRow([
+                    new TableCell([new Paragraph([new Run('Title')])], new CellStyle(widthTwips: 5000, gridSpan: 2)),
+                ]),
+                new TableRow([
+                    new TableCell([new Paragraph([new Run('A')])], new CellStyle(widthTwips: 1500)),
+                    new TableCell([new Paragraph([new Run('B')])], new CellStyle(widthTwips: 3500)),
+                ]),
+            ]),
+        ]);
+
+        self::assertStringContainsString(
+            '<w:tblGrid><w:gridCol w:w="1500"/><w:gridCol w:w="3500"/></w:tblGrid>',
+            $xml,
+        );
+    }
+
+    #[Test]
+    public function it_defaults_grid_columns_without_widths_to_2000(): void
+    {
+        $xml = (new BodyXmlBuilder)->render([
+            new Table([
+                new TableRow([
+                    new TableCell([new Paragraph([new Run('A')])]),
+                    new TableCell([new Paragraph([new Run('B')])], new CellStyle(gridSpan: 2)),
+                ]),
+            ]),
+        ]);
+
+        self::assertStringContainsString(
+            '<w:tblGrid><w:gridCol w:w="2000"/><w:gridCol w:w="2000"/><w:gridCol w:w="2000"/></w:tblGrid>',
+            $xml,
+        );
+    }
+
+    #[Test]
+    public function it_writes_table_indent_after_jc_and_before_borders(): void
+    {
+        $xml = (new BodyXmlBuilder)->render([
+            new Table([
+                new TableRow([new TableCell([new Paragraph([new Run('A')])])]),
+            ], new TableStyle(borders: BorderSet::none(), alignment: Alignment::Center, indentTwips: 360)),
+        ]);
+
+        self::assertStringContainsString(
+            '<w:jc w:val="center"/><w:tblInd w:w="360" w:type="dxa"/><w:tblBorders>',
+            $xml,
+        );
+    }
+
+    #[Test]
+    public function it_omits_table_indent_by_default(): void
+    {
+        $xml = (new BodyXmlBuilder)->render([
+            new Table([new TableRow([new TableCell([new Paragraph([new Run('A')])])])]),
+        ]);
+
+        self::assertStringNotContainsString('<w:tblInd', $xml);
+    }
+
+    #[Test]
+    public function it_writes_an_exact_row_height(): void
+    {
+        $xml = (new BodyXmlBuilder)->render([
+            new Table([
+                new TableRow([new TableCell([new Paragraph([new Run('A')])])], heightTwips: 300, heightRule: RowHeightRule::Exact),
+                new TableRow([new TableCell([new Paragraph([new Run('B')])])], heightTwips: 300),
+            ]),
+        ]);
+
+        self::assertStringContainsString('<w:trHeight w:val="300" w:hRule="exact"/>', $xml);
+        self::assertStringContainsString('<w:trHeight w:val="300" w:hRule="atLeast"/>', $xml);
     }
 
     #[Test]

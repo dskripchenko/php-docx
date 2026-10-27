@@ -28,6 +28,8 @@ final class ParagraphBuilder
 
     private ?int $headingLevel = null;
 
+    private ?string $styleId = null;
+
     public function __construct(
         ?ParagraphStyle $style = null,
         ?RunStyle $defaultRunStyle = null,
@@ -48,6 +50,17 @@ final class ParagraphBuilder
     public function headingLevel(?int $level): self
     {
         $this->headingLevel = $level;
+
+        return $this;
+    }
+
+    /**
+     * A paragraph style id written as `<w:pStyle>` (`Normal`, `Title`, a custom
+     * id registered in the StyleRegistry). It wins over the heading level.
+     */
+    public function styleId(?string $styleId): self
+    {
+        $this->styleId = $styleId;
 
         return $this;
     }
@@ -152,6 +165,22 @@ final class ParagraphBuilder
         );
     }
 
+    /** The paragraph starts on a new page (`w:pageBreakBefore`). */
+    public function pageBreakBefore(bool $value = true): self
+    {
+        $this->style = $this->style->copy(pageBreakBefore: $value);
+
+        return $this;
+    }
+
+    /** Widow/orphan control (`w:widowControl`); `false` turns it off explicitly. */
+    public function widowControl(bool $value = true): self
+    {
+        $this->style = $this->style->copy(widowControl: $value);
+
+        return $this;
+    }
+
     public function borders(BorderSet $borders): self
     {
         $this->style = $this->style->copy(borders: $borders);
@@ -173,6 +202,7 @@ final class ParagraphBuilder
             children: $this->children,
             style: $this->style,
             headingLevel: $this->headingLevel,
+            styleId: $this->styleId,
         );
     }
 }

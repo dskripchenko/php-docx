@@ -182,7 +182,9 @@ final class Word2007Writer
         $contents = (string) file_get_contents($tmpFile);
         @unlink($tmpFile);
 
-        return $contents;
+        // ZipArchive stamps every entry with the current time: without a
+        // fixed time the same document gives different bytes on every write.
+        return ZipTimestamp::apply($contents, $core?->modified);
     }
 
     /**

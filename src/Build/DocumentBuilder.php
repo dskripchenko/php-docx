@@ -6,6 +6,7 @@ namespace Dskripchenko\PhpDocx\Build;
 
 use Dskripchenko\PhpDocx\Document;
 use Dskripchenko\PhpDocx\Section;
+use Dskripchenko\PhpDocx\Style\CoreProperties;
 use Dskripchenko\PhpDocx\Style\PageSetup;
 use Dskripchenko\PhpDocx\Style\StyleRegistry;
 use Dskripchenko\PhpDocx\Writer\Word2007Writer;
@@ -44,6 +45,8 @@ final class DocumentBuilder
     private ?string $watermarkText = null;
 
     private ?StyleRegistry $styles = null;
+
+    private ?CoreProperties $coreProperties = null;
 
     /** @var list<\Dskripchenko\PhpDocx\Element\BlockElement> */
     private array $headerBlocks = [];
@@ -93,6 +96,18 @@ final class DocumentBuilder
     public function styles(StyleRegistry $registry): self
     {
         $this->styles = $registry;
+
+        return $this;
+    }
+
+    /**
+     * Title, author, dates and the rest of `docProps/core.xml` — what Word
+     * shows under File → Info. `CoreProperties::$modified` also becomes the
+     * time of every entry in the package.
+     */
+    public function coreProperties(CoreProperties $properties): self
+    {
+        $this->coreProperties = $properties;
 
         return $this;
     }
@@ -198,6 +213,7 @@ final class DocumentBuilder
                 evenFooter: $this->evenFooterBlocks,
             ),
             watermarkText: $this->watermarkText,
+            coreProperties: $this->coreProperties,
         );
     }
 

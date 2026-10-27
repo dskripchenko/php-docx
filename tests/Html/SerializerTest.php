@@ -22,6 +22,7 @@ use Dskripchenko\PhpDocx\Style\CellStyle;
 use Dskripchenko\PhpDocx\Style\ParagraphStyle;
 use Dskripchenko\PhpDocx\Style\RunStyle;
 use Dskripchenko\PhpDocx\Writer\Word2007Writer;
+use Dskripchenko\PhpDocx\Style\TableStyle;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
@@ -104,6 +105,17 @@ final class SerializerTest extends TestCase
     }
 
     #[Test]
+    public function page_break_before_emits_break_before_page(): void
+    {
+        $doc = new Document(section: new Section([
+            new Paragraph([new Run('x')], new ParagraphStyle(pageBreakBefore: true)),
+            new Paragraph([new Run('y')]),
+        ]));
+        $html = (new Serializer)->serialize($doc)->bodyHtml;
+        self::assertSame(1, substr_count($html, 'break-before:page'));
+    }
+
+    #[Test]
     public function cant_split_row_emits_break_inside_avoid(): void
     {
         $cell = new TableCell([new Paragraph([new Run('x')])]);
@@ -113,6 +125,17 @@ final class SerializerTest extends TestCase
         $html = (new Serializer)->serialize($doc)->bodyHtml;
         self::assertSame(1, substr_count($html, '<tr style="break-inside:avoid">'));
         self::assertSame(1, substr_count($html, '<tr>'));
+    }
+
+    #[Test]
+    public function table_indent_emits_margin_left(): void
+    {
+        $row = new TableRow([new TableCell([new Paragraph([new Run('x')])])]);
+        $doc = new Document(section: new Section([
+            new Table([$row], new TableStyle(indentTwips: 360)),
+        ]));
+        $html = (new Serializer)->serialize($doc)->bodyHtml;
+        self::assertStringContainsString('margin-left:18pt', $html);
     }
 
     #[Test]

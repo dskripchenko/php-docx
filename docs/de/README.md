@@ -238,10 +238,12 @@ HTML-Pipeline.
 ### DocumentBuilder
 
 Einstiegspunkt. Sammelt Body, Kopf-/Fußzeilen, Wasserzeichen,
-Seiteneinrichtung.
+Seiteneinrichtung, Dokumenteigenschaften (`docProps/core.xml`: Titel,
+Autor, Daten).
 
 ```php
 use Dskripchenko\PhpDocx\Build\DocumentBuilder;
+use Dskripchenko\PhpDocx\Style\CoreProperties;
 use Dskripchenko\PhpDocx\Style\PageSetup;
 use Dskripchenko\PhpDocx\Style\PaperSize;
 use Dskripchenko\PhpDocx\Style\Orientation;
@@ -252,6 +254,7 @@ $doc = DocumentBuilder::new()
         orientation: Orientation::Portrait,
     ))
     ->watermark('VERTRAULICH')
+    ->coreProperties(new CoreProperties(title: 'Bericht', creator: 'Acme GmbH'))
     ->heading(1, 'Bericht')
     ->paragraph('Inhalt')
     ->build();           // → Document AST
@@ -259,6 +262,9 @@ $doc = DocumentBuilder::new()
 $bytes = DocumentBuilder::new()->paragraph('Hallo')->toBytes();
 $count = DocumentBuilder::new()->paragraph('Hallo')->toFile('out.docx');
 ```
+
+Die Ausgabe ist byte-genau reproduzierbar: jeder ZIP-Eintrag trägt
+`CoreProperties::$modified` (UTC) bzw. 1980-01-01 00:00:00, wenn nicht gesetzt.
 
 ### ParagraphBuilder
 
@@ -292,11 +298,17 @@ Absatz-Stil:
 ```php
 ->paragraph(fn ($p) => $p
     ->alignCenter()           // oder alignRight()/alignJustify()
+    ->styleId('Quote')        // eine Style-ID aus der StyleRegistry
+    ->pageBreakBefore()       // auf neuer Seite beginnen; widowControl(false) schaltet die Absatzkontrolle aus
     ->indentMm(left: 20, firstLine: 10)
     ->spacingPt(before: 6, after: 12)
     ->text('Eingerückt')
 )
 ```
+
+`styleId()` wirkt nur bei einem Style, den das Dokument definiert: `Heading1..6`,
+`ListParagraph`, `Caption` oder einer, der mit `StyleRegistry::paragraph()` registriert ist.
+Einen Absatz mit unbekannter ID zeigt Word als Normal.
 
 ### TableBuilder
 
@@ -371,6 +383,7 @@ RunStyleBuilder::new()
     ->backgroundColor('eeeeee')
     ->highlight('yellow')
     ->fontFamily('Arial')
+    ->fontFamilyEastAsia('SimSun')   // w:eastAsia: die Schrift für CJK-Text
     ->fontSizePt(14.5)
     ->build();
 ```
@@ -393,7 +406,7 @@ Length::px(100);    // 1500  (CSS px @ 96 DPI)
 Die meisten Builder bieten einheiten-bewusste Shortcuts:
 
 - TableBuilder: `widthPt/widthMm/widthCm/widthInches`,
-  `cellMarginsMm/cellMarginsPt`
+  `cellMarginsMm/cellMarginsPt`, `indent/indentMm/indentPt`
 - TableCellBuilder: `widthPt/Mm/Cm/Inches`, `paddingMm/Pt/Cm/Inches`
 - ColumnBuilder: `widthPt/Mm/Cm/Inches/Px`
 - ParagraphBuilder: `indentMm/Cm/Pt/Inches`, `spacingPt/Mm`
@@ -558,7 +571,7 @@ Alle Elemente leben unter `Dskripchenko\PhpDocx\Element`.
 |---|---|---|
 | `Document` | root | `{ section: Section, watermarkText: ?string }` |
 | `Section` | container | `{ body, header, footer, pageSetup, firstHeader, firstFooter, evenHeader, evenFooter }` |
-| `Paragraph` | BlockElement | `{ children: InlineElement[], style, headingLevel: ?int }` |
+| `Paragraph` | BlockElement | `{ children: InlineElement[], style, headingLevel: ?int, styleId: ?string }` |
 | `Run` | InlineElement | `{ text: string, style: RunStyle }` |
 | `Hyperlink` | InlineElement | `{ href: ?string, anchor: ?string, children }` |
 | `Bookmark` | InlineElement | `{ name: string, children }` |
@@ -566,18 +579,18 @@ Alle Elemente leben unter `Dskripchenko\PhpDocx\Element`.
 | `Field` | InlineElement | `{ instruction: string, style: RunStyle }` |
 | `LineBreak`, `PageBreak`, `HorizontalRule` | beides | Marker-Elemente |
 | `Table` | BlockElement | `{ rows: TableRow[], style, caption, gridColumnsTwips }` |
-| `TableRow` | element | `{ cells: TableCell[], isHeader, heightTwips, cantSplit }` |
+| `TableRow` | element | `{ cells: TableCell[], isHeader, heightTwips, cantSplit, heightRule }` |
 | `TableCell` | element | `{ children: BlockElement[], style: CellStyle }` |
 | `ListNode` | BlockElement | `{ items: ListItem[], ordered, format, startAt }` |
 | `ListItem` | element | `{ children: InlineElement[], nestedList: ?ListNode }` |
 
 Styles liegen unter `Dskripchenko\PhpDocx\Style`:
 
-- `RunStyle` — Schrift, Gewicht, Kursiv, Farbe, Grösse, Highlight, …
-- `ParagraphStyle` — Ausrichtung, Einzüge, Abstände, Rahmen
+- `RunStyle` — Schrift (und `fontFamilyEastAsia` für CJK-Text), Gewicht, Kursiv, Farbe, Grösse, Highlight, …
+- `ParagraphStyle` — Ausrichtung, Einzüge, Abstände, Rahmen, Seitenumbruch (keepWithNext, keepLines, pageBreakBefore, widowControl)
 - `CellStyle` — Breite, Padding, Rahmen, vertikale Ausrichtung,
   gridSpan, rowSpan
-- `TableStyle` — Breite, Rahmen, Ausrichtung, Zellenränder, Layout
+- `TableStyle` — Breite, Rahmen, Ausrichtung, Zellenränder, Layout, Einzug (`indentTwips`)
 - `PageSetup`, `PaperSize`, `Orientation`, `Alignment`, `VerticalAlign`,
   `BorderStyle`, `Border`, `BorderSet`
 

@@ -317,10 +317,12 @@ HTML pipeline produces.
 
 ### DocumentBuilder
 
-Entry point. Accumulates body, header/footer, watermark, page setup.
+Entry point. Accumulates body, header/footer, watermark, page setup,
+core properties (`docProps/core.xml`: title, author, dates).
 
 ```php
 use Dskripchenko\PhpDocx\Build\DocumentBuilder;
+use Dskripchenko\PhpDocx\Style\CoreProperties;
 use Dskripchenko\PhpDocx\Style\PageSetup;
 use Dskripchenko\PhpDocx\Style\PaperSize;
 use Dskripchenko\PhpDocx\Style\Orientation;
@@ -331,6 +333,7 @@ $doc = DocumentBuilder::new()
         orientation: Orientation::Portrait,
     ))
     ->watermark('CONFIDENTIAL')
+    ->coreProperties(new CoreProperties(title: 'Report', creator: 'Acme Inc.'))
     ->heading(1, 'Report')
     ->paragraph('Body')
     ->build();           // → Document AST
@@ -338,6 +341,9 @@ $doc = DocumentBuilder::new()
 $bytes = DocumentBuilder::new()->paragraph('Hi')->toBytes();
 $count = DocumentBuilder::new()->paragraph('Hi')->toFile('out.docx');
 ```
+
+Output is byte-for-byte reproducible: every ZIP entry carries
+`CoreProperties::$modified` (UTC), or 1980-01-01 00:00:00 when it is not set.
 
 ### ParagraphBuilder
 
@@ -371,11 +377,17 @@ Paragraph-level styling:
 ```php
 ->paragraph(fn ($p) => $p
     ->alignCenter()           // or alignRight()/alignJustify()
+    ->styleId('Quote')        // a style id from the StyleRegistry
+    ->pageBreakBefore()       // start on a new page; widowControl(false) turns widow control off
     ->indentMm(left: 20, firstLine: 10)
     ->spacingPt(before: 6, after: 12)
     ->text('Indented & spaced')
 )
 ```
+
+`styleId()` takes effect only for a style the document defines: `Heading1..6`,
+`ListParagraph`, `Caption`, or one registered with `StyleRegistry::paragraph()`.
+Word shows a paragraph with an unknown id as Normal.
 
 ### TableBuilder
 
@@ -450,6 +462,7 @@ RunStyleBuilder::new()
     ->backgroundColor('eeeeee')
     ->highlight('yellow')
     ->fontFamily('Arial')
+    ->fontFamilyEastAsia('SimSun')   // w:eastAsia: the font for CJK text
     ->fontSizePt(14.5)
     ->build();
 ```
@@ -471,7 +484,7 @@ Length::px(100);    // 1500  (CSS px @ 96 DPI)
 
 Most builders expose unit-aware shortcuts:
 
-- TableBuilder: `widthPt/widthMm/widthCm/widthInches`, `cellMarginsMm/cellMarginsPt`
+- TableBuilder: `widthPt/widthMm/widthCm/widthInches`, `cellMarginsMm/cellMarginsPt`, `indent/indentMm/indentPt`
 - TableCellBuilder: `widthPt/Mm/Cm/Inches`, `paddingMm/Pt/Cm/Inches`
 - ColumnBuilder: `widthPt/Mm/Cm/Inches/Px`
 - ParagraphBuilder: `indentMm/Cm/Pt/Inches`, `spacingPt/Mm`
@@ -635,7 +648,7 @@ All elements live under `Dskripchenko\PhpDocx\Element` namespace.
 |---|---|---|
 | `Document` | root | `{ section: Section, watermarkText: ?string }` |
 | `Section` | container | `{ body, header, footer, pageSetup, firstHeader, firstFooter, evenHeader, evenFooter }` |
-| `Paragraph` | BlockElement | `{ children: InlineElement[], style: ParagraphStyle, headingLevel: ?int }` |
+| `Paragraph` | BlockElement | `{ children: InlineElement[], style: ParagraphStyle, headingLevel: ?int, styleId: ?string }` |
 | `Run` | InlineElement | `{ text: string, style: RunStyle }` |
 | `Hyperlink` | InlineElement | `{ href: ?string, anchor: ?string, children: InlineElement[] }` |
 | `Bookmark` | InlineElement | `{ name: string, children: InlineElement[] }` |
@@ -643,17 +656,17 @@ All elements live under `Dskripchenko\PhpDocx\Element` namespace.
 | `Field` | InlineElement | `{ instruction: string, style: RunStyle }` |
 | `LineBreak`, `PageBreak`, `HorizontalRule` | both | marker elements |
 | `Table` | BlockElement | `{ rows: TableRow[], style, caption, gridColumnsTwips }` |
-| `TableRow` | element | `{ cells: TableCell[], isHeader, heightTwips, cantSplit }` |
+| `TableRow` | element | `{ cells: TableCell[], isHeader, heightTwips, cantSplit, heightRule }` |
 | `TableCell` | element | `{ children: BlockElement[], style: CellStyle }` |
 | `ListNode` | BlockElement | `{ items: ListItem[], ordered, format, startAt }` |
 | `ListItem` | element | `{ children: InlineElement[], nestedList: ?ListNode }` |
 
 Styles live under `Dskripchenko\PhpDocx\Style`:
 
-- `RunStyle` — font, weight, italic, color, size, highlight, …
-- `ParagraphStyle` — alignment, indents, spacing, borders
+- `RunStyle` — font (and `fontFamilyEastAsia` for CJK text), weight, italic, color, size, highlight, …
+- `ParagraphStyle` — alignment, indents, spacing, borders, pagination (keepWithNext, keepLines, pageBreakBefore, widowControl)
 - `CellStyle` — width, padding, borders, valign, gridSpan, rowSpan
-- `TableStyle` — width, borders, alignment, cell margins, layout
+- `TableStyle` — width, borders, alignment, cell margins, layout, indent (`indentTwips`)
 - `PageSetup`, `PaperSize`, `Orientation`, `Alignment`, `VerticalAlign`,
   `BorderStyle`, `Border`, `BorderSet`
 

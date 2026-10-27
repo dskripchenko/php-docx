@@ -44,6 +44,20 @@ final readonly class ParagraphStyle
          * in what is left of the page, the whole paragraph moves to the next.
          */
         public bool $keepLines = false,
+        /**
+         * `w:pageBreakBefore` — the paragraph starts on a new page.
+         *
+         * Unlike a `PageBreak` block, it adds no empty paragraph: the break
+         * belongs to this paragraph and moves with it.
+         */
+        public bool $pageBreakBefore = false,
+        /**
+         * `w:widowControl` — Word keeps at least two lines of the paragraph at
+         * the top and at the bottom of a page. `null` writes nothing (the
+         * style or document default applies), `true` turns it on, `false`
+         * writes `w:val="0"` to turn it off.
+         */
+        public ?bool $widowControl = null,
     ) {}
 
     public function isEmpty(): bool
@@ -59,7 +73,9 @@ final readonly class ParagraphStyle
             && ! $this->keepWithNext
             && $this->borders === null
             && $this->shadingColor === null
-            && ! $this->keepLines;
+            && ! $this->keepLines
+            && ! $this->pageBreakBefore
+            && $this->widowControl === null;
     }
 
     /**
@@ -80,6 +96,8 @@ final readonly class ParagraphStyle
         ?BorderSet $borders = null,
         ?string $shadingColor = null,
         ?bool $keepLines = null,
+        ?bool $pageBreakBefore = null,
+        ?bool $widowControl = null,
     ): self {
         return new self(
             alignment: $alignment ?? $this->alignment,
@@ -95,6 +113,8 @@ final readonly class ParagraphStyle
             borders: $borders ?? $this->borders,
             shadingColor: $shadingColor ?? $this->shadingColor,
             keepLines: $keepLines ?? $this->keepLines,
+            pageBreakBefore: $pageBreakBefore ?? $this->pageBreakBefore,
+            widowControl: $widowControl ?? $this->widowControl,
         );
     }
 }

@@ -57,6 +57,8 @@ final class TableBuilder
 
     private int $cellMarginLeftTwips = 80;
 
+    private ?int $indentTwips = null;
+
     /**
      * A header row — the short form with a list of strings, or the long one
      * with a RowBuilder.
@@ -199,6 +201,26 @@ final class TableBuilder
         return $this->alignment(Alignment::Center);
     }
 
+    /**
+     * Indent of the table from the leading margin (`<w:tblInd>`), in twips.
+     */
+    public function indent(int $twips): self
+    {
+        $this->indentTwips = $twips;
+
+        return $this;
+    }
+
+    public function indentMm(float $mm): self
+    {
+        return $this->indent(Length::mm($mm));
+    }
+
+    public function indentPt(float $pt): self
+    {
+        return $this->indent(Length::pt($pt));
+    }
+
     public function borders(BorderSet $borders): self
     {
         $this->borders = $borders;
@@ -250,6 +272,7 @@ final class TableBuilder
                 cellMarginRightTwips: $this->cellMarginRightTwips,
                 cellMarginBottomTwips: $this->cellMarginBottomTwips,
                 cellMarginLeftTwips: $this->cellMarginLeftTwips,
+                indentTwips: $this->indentTwips,
             ),
             caption: $this->caption,
             gridColumnsTwips: $this->gridColumnsTwips,

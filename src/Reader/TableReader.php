@@ -12,6 +12,7 @@ use Dskripchenko\PhpDocx\Element\TableRow;
 use Dskripchenko\PhpDocx\Style\Alignment;
 use Dskripchenko\PhpDocx\Style\BorderSet;
 use Dskripchenko\PhpDocx\Style\CellStyle;
+use Dskripchenko\PhpDocx\Style\RowHeightRule;
 use Dskripchenko\PhpDocx\Style\TableStyle;
 use Dskripchenko\PhpDocx\Style\VerticalAlign;
 
@@ -106,6 +107,7 @@ final class TableReader
         $cellMarBottom = 0;
         $cellMarLeft = 80;
         $cellMarRight = 80;
+        $indentTwips = null;
 
         foreach ($tblPr->childNodes as $node) {
             if (! $node instanceof \DOMElement || $node->namespaceURI !== OoxmlNs::W) {
@@ -121,6 +123,14 @@ final class TableReader
                         'right', 'end' => Alignment::End,
                         default => Alignment::Start,
                     };
+                    break;
+                case 'tblInd':
+                    // Only dxa carries a length; `nil` and `auto` mean no indent.
+                    $type = $node->getAttributeNS(OoxmlNs::W, 'type');
+                    $w = $node->getAttributeNS(OoxmlNs::W, 'w');
+                    if (($type === '' || $type === 'dxa') && preg_match('/^-?\d+$/', $w) === 1) {
+                        $indentTwips = (int) $w;
+                    }
                     break;
                 case 'tblLayout':
                     $fixedLayout = $node->getAttributeNS(OoxmlNs::W, 'type') === 'fixed';
@@ -145,6 +155,7 @@ final class TableReader
             cellMarginRightTwips: $cellMarRight,
             cellMarginBottomTwips: $cellMarBottom,
             cellMarginLeftTwips: $cellMarLeft,
+            indentTwips: $indentTwips,
         );
     }
 
@@ -154,6 +165,7 @@ final class TableReader
         $isHeader = false;
         $heightTwips = null;
         $cantSplit = false;
+        $heightRule = RowHeightRule::AtLeast;
         if ($trPr !== null) {
             $cantSplit = OoxmlNs::firstChild($trPr, OoxmlNs::W, 'cantSplit') !== null;
             $isHeader = OoxmlNs::firstChild($trPr, OoxmlNs::W, 'tblHeader') !== null;
@@ -163,6 +175,11 @@ final class TableReader
                 if ($v !== null && ctype_digit($v)) {
                     $heightTwips = (int) $v;
                 }
+                // `atLeast` and `auto` (and a missing hRule) read as a minimum,
+                // as before; only `exact` fixes the height.
+                if ($h->getAttributeNS(OoxmlNs::W, 'hRule') === 'exact') {
+                    $heightRule = RowHeightRule::Exact;
+                }
             }
         }
 
@@ -171,7 +188,7 @@ final class TableReader
             $cells[] = $this->readCell($tcEl);
         }
 
-        return new TableRow($cells, $isHeader, $heightTwips, $cantSplit);
+        return new TableRow($cells, $isHeader, $heightTwips, $cantSplit, $heightRule);
     }
 
     private function readCell(\DOMElement $tc): TableCell
@@ -333,7 +350,7 @@ final class TableReader
                     $restartRowSpan[$rowIdx][$cellIdx] ?? ($cell->style->vMergeContinue ? 1 : 1),
                 );
             }
-            $newRows[] = new TableRow($newCells, $row->isHeader, $row->heightTwips, $row->cantSplit);
+            $newRows[] = new TableRow($newCells, $row->isHeader, $row->heightTwips, $row->cantSplit, $row->heightRule);
         }
 
         return $newRows;
@@ -382,7 +399,7 @@ final class TableReader
                 }
                 $newCells[] = $cell;
             }
-            $out[] = new TableRow($newCells, $row->isHeader, $row->heightTwips, $row->cantSplit);
+            $out[] = new TableRow($newCells, $row->isHeader, $row->heightTwips, $row->cantSplit, $row->heightRule);
         }
 
         return $out;

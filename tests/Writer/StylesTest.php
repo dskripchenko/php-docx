@@ -130,4 +130,16 @@ final class StylesTest extends TestCase
         // Heading1 only — the caller passed no other headings
         self::assertStringNotContainsString('w:styleId="Heading2"', $styles);
     }
+
+    #[Test]
+    public function style_rpr_carries_the_east_asian_font(): void
+    {
+        $registry = (new StyleRegistry)->paragraph(
+            'Cjk',
+            new RunStyle(fontFamily: 'Calibri', fontFamilyEastAsia: 'SimSun'),
+            new ParagraphStyle,
+        );
+        $xml = (new StylesXmlBuilder($registry))->render();
+        self::assertStringContainsString('w:eastAsia="SimSun"', $xml);
+    }
 }
