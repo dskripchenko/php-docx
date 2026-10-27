@@ -40,6 +40,15 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   The writer emitted every `w:trHeight` as `w:hRule="atLeast"`, so a row could
   not be held to a fixed height; the rule is now written and read back.
 
+### Changed
+- ZIP entries no longer carry the time of the write. Every entry is stamped
+  with `CoreProperties::$modified` (as a UTC wall-clock time), or with
+  1980-01-01 00:00:00, the earliest DOS time, when it is not set. Pass
+  `modified: new DateTimeImmutable()` to get the current time back.
+- HTML: a length `margin-left` on a `<table>` is now read as the table indent
+  and written as `<w:tblInd>`, so a table that set it is indented in Word too.
+  `margin-left: auto` (centring) is not an indent and is ignored.
+
 ### Fixed
 - A tab or a newline in run text was written as is inside `<w:t>`, where
   Word shows it as a space at best. The writer now splits the text into
