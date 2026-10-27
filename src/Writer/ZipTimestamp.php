@@ -18,6 +18,8 @@ namespace Dskripchenko\PhpDocx\Writer;
  * every local file header and every central directory record. libzip writes no
  * extended-timestamp extra fields, so these two fields are the only place the
  * time is kept, and the CRC does not cover them.
+ *
+ * @internal Used by Word2007Writer; not part of the public API.
  */
 final class ZipTimestamp
 {
@@ -49,27 +51,43 @@ final class ZipTimestamp
             return $zip;
         }
 
-        $stamp = pack('vv', $time, $date);
-        $patched = $zip;
+        // First collect the offset of every time field, then write the archive
+        // out once: patching the string entry by entry would copy all of it per
+        // entry, which is quadratic for a package with many images.
+        $offsets = [];
+        $length = strlen($zip);
         $pos = $end['offset'];
         for ($i = 0; $i < $end['entries']; $i++) {
-            if (substr($zip, $pos, 4) !== self::CENTRAL_HEADER) {
+            if ($pos + 46 > $eocd || substr($zip, $pos, 4) !== self::CENTRAL_HEADER) {
                 return $zip;
             }
             /** @var array{nameLength: int, extraLength: int, commentLength: int, localOffset: int} $entry */
             $entry = unpack('vnameLength/vextraLength/vcommentLength/x8/VlocalOffset', $zip, $pos + 28);
             $local = $entry['localOffset'];
-            if (substr($zip, $local, 4) !== self::LOCAL_HEADER) {
+            if ($local + 30 > $length || substr($zip, $local, 4) !== self::LOCAL_HEADER) {
                 return $zip;
             }
 
-            $patched = substr_replace($patched, $stamp, $pos + 12, 4);
-            $patched = substr_replace($patched, $stamp, $local + 10, 4);
+            $offsets[] = $pos + 12;
+            $offsets[] = $local + 10;
 
             $pos += 46 + $entry['nameLength'] + $entry['extraLength'] + $entry['commentLength'];
         }
 
-        return $patched;
+        // Two records pointing at one local header give the same offset twice.
+        $offsets = array_unique($offsets);
+        sort($offsets);
+        $stamp = pack('vv', $time, $date);
+        $chunks = [];
+        $from = 0;
+        foreach ($offsets as $offset) {
+            $chunks[] = substr($zip, $from, $offset - $from);
+            $chunks[] = $stamp;
+            $from = $offset + 4;
+        }
+        $chunks[] = substr($zip, $from);
+
+        return implode('', $chunks);
     }
 
     /**

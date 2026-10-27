@@ -102,6 +102,83 @@ final class DeterministicOutputTest extends TestCase
         self::assertSame('not a zip', ZipTimestamp::apply('not a zip'));
     }
 
+    #[Test]
+    public function aTruncatedCentralDirectoryIsReturnedUnchanged(): void
+    {
+        $docx = (new Word2007Writer)->write($this->document());
+        $eocd = strlen($docx) - 22;
+        // Point the central directory at a record signature 8 bytes before
+        // the end record: the record cannot fit, and the bounds check has to
+        // stop before its fields are read past the end of the string.
+        $broken = substr_replace($docx, "PK\x01\x02", $eocd - 8, 4);
+        $broken = substr_replace($broken, pack('V', $eocd - 8), $eocd + 16, 4);
+
+        self::assertSame($broken, ZipTimestamp::apply($broken));
+    }
+
+    #[Test]
+    public function aLargeArchiveIsPatchedInLinearTime(): void
+    {
+        // 2000 stored 8 KB entries: patching the string record by record made
+        // this take seconds (every record copied the whole 16 MB archive).
+        $tmp = (string) tempnam(sys_get_temp_dir(), 'zip-test-');
+        $zip = new \ZipArchive;
+        $zip->open($tmp, \ZipArchive::OVERWRITE);
+        for ($i = 0; $i < 2000; $i++) {
+            $zip->addFromString('word/media/image'.$i.'.png', random_bytes(8192));
+        }
+        $zip->close();
+        $bytes = (string) file_get_contents($tmp);
+        @unlink($tmp);
+
+        $started = microtime(true);
+        $patched = ZipTimestamp::apply($bytes);
+        $elapsed = microtime(true) - $started;
+
+        self::assertLessThan(2.0, $elapsed);
+        self::assertSame(strlen($bytes), strlen($patched));
+        $stamps = $this->entryStamps($patched);
+        self::assertCount(2000, $stamps);
+        foreach ($stamps as $name => $stamp) {
+            self::assertSame([self::DOS_EPOCH, self::DOS_EPOCH], $stamp, $name);
+        }
+    }
+
+    #[Test]
+    public function theBytesDoNotDependOnTheProcessTimeZone(): void
+    {
+        // libzip converts entry times through the C localtime() of the
+        // process, so the time zone has to be set before PHP starts.
+        $script = '<?php require '.var_export(dirname(__DIR__, 2).'/vendor/autoload.php', true).';'
+            .' use Dskripchenko\PhpDocx\Build\DocumentBuilder;'
+            .' echo sha1(DocumentBuilder::new()->paragraph("Hi")->toBytes());';
+        $file = (string) tempnam(sys_get_temp_dir(), 'tz-test-');
+        file_put_contents($file, $script);
+
+        try {
+            $hashes = [];
+            foreach (['UTC', 'Asia/Tokyo', 'America/New_York'] as $tz) {
+                $process = proc_open(
+                    [PHP_BINARY, $file],
+                    [1 => ['pipe', 'w'], 2 => ['pipe', 'w']],
+                    $pipes,
+                    null,
+                    ['TZ' => $tz] + getenv(),
+                );
+                self::assertIsResource($process);
+                $hashes[$tz] = trim((string) stream_get_contents($pipes[1]));
+                fclose($pipes[1]);
+                fclose($pipes[2]);
+                self::assertSame(0, proc_close($process), $tz);
+            }
+        } finally {
+            @unlink($file);
+        }
+
+        self::assertMatchesRegularExpression('/^[0-9a-f]{40}$/', $hashes['UTC']);
+        self::assertSame(['UTC' => $hashes['UTC'], 'Asia/Tokyo' => $hashes['UTC'], 'America/New_York' => $hashes['UTC']], $hashes);
+    }
+
     private function document(?CoreProperties $core = null): Document
     {
         // A 1×1 PNG, so the package has a media part and a part-level rels file.
