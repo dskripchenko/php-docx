@@ -66,12 +66,21 @@ final class BodyXmlBuilder
 
     /**
      * @param  list<BlockElement>  $blocks
+     * @param  string  $sectPr  A section's `<w:sectPr>` to end these blocks with: it
+     *                          goes into the pPr of the last paragraph, or of an
+     *                          empty paragraph added when the blocks end otherwise.
      */
-    public function render(array $blocks): string
+    public function render(array $blocks, string $sectPr = ''): string
     {
+        $last = $sectPr !== '' ? array_key_last($blocks) : null;
         $xml = '';
-        foreach ($blocks as $b) {
-            $xml .= $this->renderBlock($b);
+        foreach ($blocks as $i => $b) {
+            $xml .= $i === $last && $b instanceof Paragraph
+                ? $this->renderParagraph($b, $sectPr)
+                : $this->renderBlock($b);
+        }
+        if ($sectPr !== '' && ($last === null || ! $blocks[$last] instanceof Paragraph)) {
+            $xml .= '<w:p><w:pPr>'.$sectPr.'</w:pPr></w:p>';
         }
 
         return $xml;
@@ -210,9 +219,9 @@ final class BodyXmlBuilder
 
     // ──────────────────────────── Paragraph + Run ────────────────────────────
 
-    private function renderParagraph(Paragraph $p): string
+    private function renderParagraph(Paragraph $p, string $sectPr = ''): string
     {
-        $pPr = $this->renderParagraphProperties($p->style, $p->headingLevel, styleId: $p->styleId);
+        $pPr = $this->renderParagraphProperties($p->style, $p->headingLevel, styleId: $p->styleId, sectPr: $sectPr);
         $children = '';
         foreach ($p->children as $child) {
             $children .= $this->renderInline($child);
@@ -232,6 +241,7 @@ final class BodyXmlBuilder
         ?int $headingLevel,
         string $numPr = '',
         ?string $styleId = null,
+        string $sectPr = '',
     ): string {
         $pPr = '';
 
@@ -309,6 +319,8 @@ final class BodyXmlBuilder
         if ($style->alignment !== Alignment::Start) {
             $pPr .= '<w:jc w:val="'.$style->alignment->value.'"/>';
         }
+        // A section's properties close its last paragraph's (after w:rPr in CT_PPr).
+        $pPr .= $sectPr;
 
         if ($pPr === '') {
             return '';

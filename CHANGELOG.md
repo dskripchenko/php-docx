@@ -5,6 +5,30 @@ file. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- Sections: `Document::$followingSections` (after the first section) and
+  `Document::sections()`, `Section::$start` (`SectionStart`: `NextPage`,
+  `Continuous`, `EvenPage`, `OddPage`), and `DocumentBuilder::newSection()`.
+  Each section has its own page setup and header/footer parts; every section
+  but the last ends with its `<w:sectPr>` in the pPr of its last paragraph
+  (one is added when it ends in a table). A section without a header or
+  footer of a kind shows the previous section's, as in Word.
+- `PageSetup::$widthTwips` / `$heightTwips`: any page size, not only a
+  `PaperSize` (landscape when wider than tall), with `pageWidthTwips()`,
+  `pageHeightTwips()` and `effectiveOrientation()`.
+
+### Changed
+- `DocxReader` reads every section — body, page setup, start, headers and
+  footers — instead of the last section's page setup and the first section's
+  headers for the whole document. **Code that reads only `$document->section`
+  now sees the first section of a multi-section file;** use
+  `$document->sections()` for all of it. A page size no `PaperSize` matches is
+  kept as a custom size instead of becoming A4.
+- The HTML serializer writes every section's body, with a page break before
+  each section that starts on a new page.
+
 ## [1.17.0] — 2026-10-27
 
 ### Added

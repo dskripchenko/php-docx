@@ -6,8 +6,9 @@ declare(strict_types=1);
  * Generate the conformance reference DOCX — a document exercising every
  * writer feature at once: headings, justified paragraphs with spacing and
  * indents, tables with header rows, nested ordered lists, multi-part
- * headers/footers with page-number fields, bookmarks, hyperlinks, and a
- * text watermark. Validated by:
+ * headers/footers with page-number fields, bookmarks, hyperlinks, a text
+ * watermark, and a second section (landscape, its own header, a custom page
+ * size) whose first section ends in a table. Validated by:
  *
  *   scripts/conformance/xsd-check.sh       — ECMA-376 Transitional XSD
  *   scripts/conformance/consumer-smoke.sh  — LibreOffice + python-docx
@@ -19,6 +20,9 @@ declare(strict_types=1);
 use Dskripchenko\PhpDocx\Build\DocumentBuilder;
 use Dskripchenko\PhpDocx\Element\ListFormat;
 use Dskripchenko\PhpDocx\Style\Alignment;
+use Dskripchenko\PhpDocx\Style\Orientation;
+use Dskripchenko\PhpDocx\Style\PageSetup;
+use Dskripchenko\PhpDocx\Style\SectionStart;
 
 require dirname(__DIR__, 2).'/vendor/autoload.php';
 
@@ -56,6 +60,13 @@ $written = DocumentBuilder::new()
     ->paragraph(fn ($p) => $p
         ->text('Link: ')
         ->link('https://github.com/dskripchenko/php-docx', 'repository'))
+    ->table(fn ($t) => $t->row(['A section that ends in a table', 'w:sectPr in an added paragraph']))
+    ->newSection(new PageSetup(orientation: Orientation::Landscape))
+    ->header(fn ($h) => $h->paragraph('Landscape section header'))
+    ->heading(2, 'Sections')
+    ->paragraph('A landscape section with a header of its own.')
+    ->newSection(new PageSetup(widthTwips: 8391, heightTwips: 11906), SectionStart::OddPage)
+    ->paragraph('A custom page size, starting on an odd page; it inherits the header.')
     ->toFile($outDir.'/reference.docx');
 
 printf("wrote %s/reference.docx (%d bytes)\n", $outDir, $written);

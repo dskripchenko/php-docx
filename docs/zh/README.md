@@ -33,6 +33,7 @@
 - [编程构造器 API](#编程构造器-api)
 - [DOCX → HTML（Reader）](#docx--html-reader)
 - [页眉、页脚与水印](#页眉页脚与水印)
+- [节](#节)
 - [变量检测](#变量检测)
 - [长度辅助函数](#长度辅助函数)
 - [AST 概览](#ast-概览)
@@ -57,6 +58,8 @@
   （`{{x}}`、`${x}`、`%x%`）。
 - **多页眉/页脚** — default / 首页 / 偶数页变体，自动处理
   `<w:titlePg/>` 与 `<w:evenAndOddHeaders/>`。
+- **节** — 一个文档可有多个节，每节有自己的页面设置（标准纸张或任意尺寸）、
+  起始方式（新页、连续、偶数页或奇数页）和页眉/页脚；读取时逐节还原。
 - **往返安全** — 读 DOCX → AST → 写 DOCX 得到有效文档；字节级别的差异
   仅限于空白和顺序。
 - **PHP 8.2+** — `readonly` 值对象、命名参数、构造函数提升、enum。
@@ -502,6 +505,41 @@ DocumentBuilder::new()
 
 ---
 
+## 节
+
+只要页面设置或页眉不在中途改变，文档就只有一个节。`newSection()` 结束当前节并开始
+下一节：之后添加的内容、页眉和页脚都属于新节。
+
+```php
+use Dskripchenko\PhpDocx\Build\DocumentBuilder;
+use Dskripchenko\PhpDocx\Style\Orientation;
+use Dskripchenko\PhpDocx\Style\PageSetup;
+use Dskripchenko\PhpDocx\Style\SectionStart;
+
+DocumentBuilder::new()
+    ->header(fn ($h) => $h->paragraph('Report'))
+    ->paragraph('Portrait pages')
+    ->newSection(new PageSetup(orientation: Orientation::Landscape))
+    ->header(fn ($h) => $h->paragraph('Appendix'))
+    ->paragraph('A wide table on landscape pages')
+    ->newSection(new PageSetup(widthTwips: 8391, heightTwips: 11906), SectionStart::OddPage)
+    ->paragraph('A custom page size (A5 here), starting on an odd page')
+    ->toFile('sections.docx');
+```
+
+- 新节在未指定时沿用页面设置，在未指定 `SectionStart`（`Continuous`、`EvenPage`、
+  `OddPage`）时从新页开始。
+- 节在设置自己的页眉页脚之前显示上一节的（Word 的规则）：空列表表示“继承”，
+  而不是“空白”。
+- `PageSetup(widthTwips:, heightTwips:)` 可设置任意页面尺寸；宽大于高时为横向。
+- 不用构造器：`new Document($first, followingSections: [$second, …])`；
+  `Document::sections()` 返回所有节。
+- 除最后一节外，每节以其 `<w:sectPr>` 结束，写在该节最后一个段落的属性中（若该节以
+  表格结束，则添加一个段落）。`DocxReader` 逐节读回内容、页面设置、起始方式和页眉；
+  HTML 序列化器依次输出各节内容，并在每个从新页开始的节之前加分页符。
+
+---
+
 ## 变量检测
 
 扫描已导入的 DOCX，查找三种变量：
@@ -552,8 +590,8 @@ foreach ($variables as $v) {
 
 | 元素 | 类型 | 备注 |
 |---|---|---|
-| `Document` | root | `{ section: Section, watermarkText: ?string }` |
-| `Section` | container | `{ body, header, footer, pageSetup, firstHeader, firstFooter, evenHeader, evenFooter }` |
+| `Document` | root | `{ section: Section, watermarkText: ?string, coreProperties: ?CoreProperties, followingSections: Section[] }` |
+| `Section` | container | `{ body, header, footer, pageSetup, firstHeader, firstFooter, evenHeader, evenFooter, start: SectionStart }` |
 | `Paragraph` | BlockElement | `{ children: InlineElement[], style, headingLevel: ?int, styleId: ?string }` |
 | `Run` | InlineElement | `{ text: string, style: RunStyle }` |
 | `Hyperlink` | InlineElement | `{ href: ?string, anchor: ?string, children }` |

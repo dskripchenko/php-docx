@@ -8,6 +8,7 @@ use Dskripchenko\PhpDocx\Document;
 use Dskripchenko\PhpDocx\Section;
 use Dskripchenko\PhpDocx\Style\CoreProperties;
 use Dskripchenko\PhpDocx\Style\PageSetup;
+use Dskripchenko\PhpDocx\Style\SectionStart;
 use Dskripchenko\PhpDocx\Style\StyleRegistry;
 use Dskripchenko\PhpDocx\Writer\Word2007Writer;
 
@@ -65,6 +66,11 @@ final class DocumentBuilder
 
     /** @var list<\Dskripchenko\PhpDocx\Element\BlockElement> */
     private array $evenFooterBlocks = [];
+
+    private SectionStart $start = SectionStart::NextPage;
+
+    /** @var list<Section> sections closed by newSection(), in order */
+    private array $closedSections = [];
 
     private function __construct()
     {
@@ -199,21 +205,49 @@ final class DocumentBuilder
         return $this;
     }
 
+    /**
+     * Ends the current section and starts a new one: the content, headers and
+     * footers added from here on belong to it. It keeps the page setup unless
+     * given one, and shows the previous section's headers and footers until it
+     * sets its own (Word's rule).
+     */
+    public function newSection(?PageSetup $pageSetup = null, SectionStart $start = SectionStart::NextPage): self
+    {
+        $this->closedSections[] = $this->currentSection();
+        $this->blocks = [];
+        $this->headerBlocks = $this->footerBlocks = [];
+        $this->firstHeaderBlocks = $this->firstFooterBlocks = [];
+        $this->evenHeaderBlocks = $this->evenFooterBlocks = [];
+        $this->pageSetup = $pageSetup ?? $this->pageSetup;
+        $this->start = $start;
+
+        return $this;
+    }
+
     public function build(): Document
     {
+        $sections = [...$this->closedSections, $this->currentSection()];
+
         return new Document(
-            section: new Section(
-                body: $this->buildBlocks(),
-                header: $this->headerBlocks,
-                footer: $this->footerBlocks,
-                pageSetup: $this->pageSetup,
-                firstHeader: $this->firstHeaderBlocks,
-                firstFooter: $this->firstFooterBlocks,
-                evenHeader: $this->evenHeaderBlocks,
-                evenFooter: $this->evenFooterBlocks,
-            ),
+            section: $sections[0],
             watermarkText: $this->watermarkText,
             coreProperties: $this->coreProperties,
+            followingSections: array_slice($sections, 1),
+        );
+    }
+
+    private function currentSection(): Section
+    {
+        return new Section(
+            body: $this->buildBlocks(),
+            header: $this->headerBlocks,
+            footer: $this->footerBlocks,
+            pageSetup: $this->pageSetup,
+            firstHeader: $this->firstHeaderBlocks,
+            firstFooter: $this->firstFooterBlocks,
+            evenHeader: $this->evenHeaderBlocks,
+            evenFooter: $this->evenFooterBlocks,
+            start: $this->start,
         );
     }
 

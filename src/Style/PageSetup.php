@@ -21,7 +21,21 @@ final readonly class PageSetup
         public int $marginLeftTwips = 850,    // ~15mm
         public int $headerOffsetTwips = 283,  // ~5mm от верха страницы
         public int $footerOffsetTwips = 283,  // ~5mm от низа страницы
-    ) {}
+        /**
+         * A page size of its own, in twips, instead of `$paperSize`: both or
+         * neither. The page is landscape when it is wider than it is tall;
+         * `$orientation` is not applied to a custom size.
+         */
+        public ?int $widthTwips = null,
+        public ?int $heightTwips = null,
+    ) {
+        if (($widthTwips === null) !== ($heightTwips === null)) {
+            throw new \InvalidArgumentException('A custom page size needs both a width and a height.');
+        }
+        if ($widthTwips !== null && ($widthTwips <= 0 || $heightTwips <= 0)) {
+            throw new \InvalidArgumentException('A custom page size must be positive.');
+        }
+    }
 
     public static function fromMm(
         PaperSize $paperSize = PaperSize::A4,
@@ -48,10 +62,30 @@ final readonly class PageSetup
      */
     public function contentWidthTwips(): int
     {
-        [$pageWidth, ] = $this->orientation === Orientation::Portrait
-            ? [$this->paperSize->widthTwips(), $this->paperSize->heightTwips()]
-            : [$this->paperSize->heightTwips(), $this->paperSize->widthTwips()];
+        return $this->pageWidthTwips() - $this->marginLeftTwips - $this->marginRightTwips;
+    }
 
-        return $pageWidth - $this->marginLeftTwips - $this->marginRightTwips;
+    /** The page's width as laid out: the custom size, else the paper turned by the orientation. */
+    public function pageWidthTwips(): int
+    {
+        return $this->widthTwips ?? ($this->orientation === Orientation::Portrait
+            ? $this->paperSize->widthTwips()
+            : $this->paperSize->heightTwips());
+    }
+
+    /** The page's height as laid out; see pageWidthTwips(). */
+    public function pageHeightTwips(): int
+    {
+        return $this->heightTwips ?? ($this->orientation === Orientation::Portrait
+            ? $this->paperSize->heightTwips()
+            : $this->paperSize->widthTwips());
+    }
+
+    /** What `w:orient` says: landscape when the page is wider than it is tall. */
+    public function effectiveOrientation(): Orientation
+    {
+        return $this->widthTwips === null
+            ? $this->orientation
+            : ($this->widthTwips > (int) $this->heightTwips ? Orientation::Landscape : Orientation::Portrait);
     }
 }

@@ -6,8 +6,8 @@ namespace Dskripchenko\PhpDocx\Writer;
 
 use Dskripchenko\PhpDocx\Document;
 use Dskripchenko\PhpDocx\Exception\DocxException;
-use Dskripchenko\PhpDocx\Style\Orientation;
-use Dskripchenko\PhpDocx\Style\PageSetup;
+use Dskripchenko\PhpDocx\Section;
+use Dskripchenko\PhpDocx\Style\SectionStart;
 use Dskripchenko\PhpDocx\Style\StyleRegistry;
 
 /**
@@ -36,62 +36,81 @@ final class Word2007Writer
 
     public function write(Document $document): string
     {
-        $section = $document->section;
+        $sections = $document->sections();
+        $last = count($sections) - 1;
         // When the caller passed an empty registry we use the defaults
         // (Heading1..6 plus ListParagraph) so that the DOCX is self-contained.
         $styles = $this->styles->isEmpty() ? StyleRegistry::defaults() : $this->styles;
         $rels = new RelationshipManager;
         $numbering = new NumberingXmlBuilder;
         $builder = new BodyXmlBuilder($rels, $numbering);
-        $bodyXml = $builder->render($section->body);
+        // Every section but the last ends with its <w:sectPr> in the pPr of
+        // its last paragraph. The bodies are rendered first, as for a single
+        // section, so the relationship ids come out in the same order; each
+        // sectPr is filled in once the header and footer parts have their ids.
+        $bodyXml = '';
+        foreach ($sections as $i => $section) {
+            $bodyXml .= $builder->render($section->body, $i < $last ? self::sectPrSlot($i) : '');
+        }
 
         // Multiple headers and footers: we gather every kind
-        // (default/first/even). The watermark goes ONLY onto the default header
-        // (when there is no default one we create an empty one with the
-        // watermark prefix).
+        // (default/first/even) of every section. The watermark goes ONLY onto
+        // default headers (when the first section has no default one we create
+        // an empty one with the watermark prefix; later sections inherit it).
         $watermarkXml = ($document->watermarkText !== null && $document->watermarkText !== '')
             ? $this->watermarkXml($document->watermarkText)
             : '';
 
-        $headers = $section->allHeaders(); // type → blocks
-        $footers = $section->allFooters();
-
-        if ($watermarkXml !== '' && ! isset($headers['default'])) {
-            // The watermark needs a default header — we create an empty one.
-            $headers['default'] = [];
-        }
-
         /** @var array<string, array{rId:string, xml:string, partName:string}> $headerParts */
         $headerParts = [];
-        $headerCounter = 0;
-        foreach ($headers as $type => $blocks) {
-            $headerCounter++;
-            $partName = 'header'.$headerCounter.'.xml';
-            $prefix = $type === 'default' ? $watermarkXml : '';
-            $xml = $rels->forPart(
-                $partName,
-                fn (): string => $this->renderHeaderFooterXml($blocks, $rels, $numbering, isHeader: true, prefixXml: $prefix),
-            );
-            $rId = $rels->registerHeaderFooter($partName, isHeader: true);
-            $headerParts[$type] = ['rId' => $rId, 'xml' => $xml, 'partName' => $partName];
-        }
-
         /** @var array<string, array{rId:string, xml:string, partName:string}> $footerParts */
         $footerParts = [];
-        $footerCounter = 0;
-        foreach ($footers as $type => $blocks) {
-            $footerCounter++;
-            $partName = 'footer'.$footerCounter.'.xml';
-            $xml = $rels->forPart(
-                $partName,
-                fn (): string => $this->renderHeaderFooterXml($blocks, $rels, $numbering, isHeader: false),
-            );
-            $rId = $rels->registerHeaderFooter($partName, isHeader: false);
-            $footerParts[$type] = ['rId' => $rId, 'xml' => $xml, 'partName' => $partName];
+        /** @var list<array<string, string>> $headerRefs per section: type → rId */
+        $headerRefs = [];
+        /** @var list<array<string, string>> $footerRefs per section: type → rId */
+        $footerRefs = [];
+        foreach ($sections as $i => $section) {
+            $headers = $section->allHeaders(); // type → blocks
+            if ($i === 0 && $watermarkXml !== '' && ! isset($headers['default'])) {
+                // The watermark needs a default header — we create an empty one.
+                $headers['default'] = [];
+            }
+            $headerRefs[$i] = [];
+            foreach ($headers as $type => $blocks) {
+                $partName = 'header'.(count($headerParts) + 1).'.xml';
+                $prefix = $type === 'default' ? $watermarkXml : '';
+                $xml = $rels->forPart(
+                    $partName,
+                    fn (): string => $this->renderHeaderFooterXml($blocks, $rels, $numbering, isHeader: true, prefixXml: $prefix),
+                );
+                $rId = $rels->registerHeaderFooter($partName, isHeader: true);
+                $headerParts[$partName] = ['rId' => $rId, 'xml' => $xml, 'partName' => $partName];
+                $headerRefs[$i][$type] = $rId;
+            }
+        }
+        foreach ($sections as $i => $section) {
+            $footerRefs[$i] = [];
+            foreach ($section->allFooters() as $type => $blocks) {
+                $partName = 'footer'.(count($footerParts) + 1).'.xml';
+                $xml = $rels->forPart(
+                    $partName,
+                    fn (): string => $this->renderHeaderFooterXml($blocks, $rels, $numbering, isHeader: false),
+                );
+                $rId = $rels->registerHeaderFooter($partName, isHeader: false);
+                $footerParts[$partName] = ['rId' => $rId, 'xml' => $xml, 'partName' => $partName];
+                $footerRefs[$i][$type] = $rId;
+            }
         }
 
-        $hasFirstPage = $section->hasFirstPageHeaderOrFooter();
-        $hasEvenPage = $section->hasEvenPageHeaderOrFooter();
+        $hasEvenPage = false;
+        $sectPrs = [];
+        foreach ($sections as $i => $section) {
+            $hasEvenPage = $hasEvenPage || $section->hasEvenPageHeaderOrFooter();
+            $sectPrs[$i] = $this->renderSectPr($section, $headerRefs[$i], $footerRefs[$i], isFirst: $i === 0);
+        }
+        $finalSectPr = $sectPrs[$last];
+        unset($sectPrs[$last]);
+        $bodyXml = strtr($bodyXml, array_combine(array_map(self::sectPrSlot(...), array_keys($sectPrs)), $sectPrs));
 
         // Numbering part (Phase 5b)
         $numberingXml = null;
@@ -143,13 +162,7 @@ final class Word2007Writer
         if ($coreXml !== null) {
             $zip->addFromString('docProps/core.xml', $coreXml);
         }
-        $zip->addFromString('word/document.xml', $this->renderDocumentXml(
-            $section->pageSetup,
-            $bodyXml,
-            headerRefs: array_map(fn ($info) => $info['rId'], $headerParts),
-            footerRefs: array_map(fn ($info) => $info['rId'], $footerParts),
-            hasFirstPage: $hasFirstPage,
-        ));
+        $zip->addFromString('word/document.xml', $this->renderDocumentXml($bodyXml, $finalSectPr));
         $zip->addFromString('word/_rels/document.xml.rels', $this->renderDocumentRels($rels));
 
         foreach ($headerParts as $info) {
@@ -350,40 +363,48 @@ final class Word2007Writer
         return $xml;
     }
 
+    /** A placeholder for a section's sectPr in the body XML, filled in by write(). */
+    private static function sectPrSlot(int $section): string
+    {
+        return '<!--php-docx:sectPr:'.$section.'-->';
+    }
+
     /**
+     * One section's `<w:sectPr>`: its header/footer references, where it
+     * starts, the page size and margins, and the first-page flag.
+     *
      * @param  array<string, string>  $headerRefs  type → rId
      * @param  array<string, string>  $footerRefs  type → rId
      */
-    private function renderDocumentXml(
-        PageSetup $ps,
-        string $bodyXml,
-        array $headerRefs = [],
-        array $footerRefs = [],
-        bool $hasFirstPage = false,
-    ): string {
-        [$w, $h] = $ps->orientation === Orientation::Portrait
-            ? [$ps->paperSize->widthTwips(), $ps->paperSize->heightTwips()]
-            : [$ps->paperSize->heightTwips(), $ps->paperSize->widthTwips()];
-        $orient = $ps->orientation->value;
-
-        $sectPrInner = '';
+    private function renderSectPr(Section $section, array $headerRefs, array $footerRefs, bool $isFirst): string
+    {
+        $ps = $section->pageSetup;
+        $inner = '';
         foreach ($headerRefs as $type => $rId) {
-            $sectPrInner .= '<w:headerReference w:type="'.$type.'" r:id="'.$rId.'"/>';
+            $inner .= '<w:headerReference w:type="'.$type.'" r:id="'.$rId.'"/>';
         }
         foreach ($footerRefs as $type => $rId) {
-            $sectPrInner .= '<w:footerReference w:type="'.$type.'" r:id="'.$rId.'"/>';
+            $inner .= '<w:footerReference w:type="'.$type.'" r:id="'.$rId.'"/>';
         }
-        $sectPrInner .= '<w:pgSz w:w="'.$w.'" w:h="'.$h.'" w:orient="'.$orient.'"/>'
+        // A new page is what a section does without a w:type; the first
+        // section's start means nothing.
+        if (! $isFirst && $section->start !== SectionStart::NextPage) {
+            $inner .= '<w:type w:val="'.$section->start->value.'"/>';
+        }
+        $inner .= '<w:pgSz w:w="'.$ps->pageWidthTwips().'" w:h="'.$ps->pageHeightTwips().'" w:orient="'.$ps->effectiveOrientation()->value.'"/>'
             .'<w:pgMar w:top="'.$ps->marginTopTwips.'" w:right="'.$ps->marginRightTwips.'" w:bottom="'.$ps->marginBottomTwips.'" w:left="'.$ps->marginLeftTwips.'" w:header="'.$ps->headerOffsetTwips.'" w:footer="'.$ps->footerOffsetTwips.'" w:gutter="0"/>';
 
         // Word requires a <w:titlePg/> when a first-page header or footer is
         // set — otherwise the type="first" reference is ignored.
-        if ($hasFirstPage) {
-            $sectPrInner .= '<w:titlePg/>';
+        if ($section->hasFirstPageHeaderOrFooter()) {
+            $inner .= '<w:titlePg/>';
         }
 
-        $sectPr = '<w:sectPr>'.$sectPrInner.'</w:sectPr>';
+        return '<w:sectPr>'.$inner.'</w:sectPr>';
+    }
 
+    private function renderDocumentXml(string $bodyXml, string $sectPr): string
+    {
         return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
             .'<w:document'
             .' xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"'
