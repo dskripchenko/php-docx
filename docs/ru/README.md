@@ -34,6 +34,7 @@ PHP-расширения.
 - [Программный builder API](#программный-builder-api)
 - [DOCX → HTML (Reader)](#docx--html-reader)
 - [Headers, footers и watermark'и](#headers-footers-и-watermarki)
+- [Разделы](#разделы)
 - [Детекция переменных](#детекция-переменных)
 - [Length-хелперы](#length-хелперы)
 - [AST overview](#ast-overview)
@@ -60,6 +61,11 @@ PHP-расширения.
   настраиваемые текстовые паттерны (`{{x}}`, `${x}`, `%x%`).
 - **Multi-header/footer** — default / first-page / even-pages варианты
   с автоматическим `<w:titlePg/>` и `<w:evenAndOddHeaders/>`.
+- **Разделы** — несколько в документе, у каждого свои параметры страницы
+  (стандартный формат или любой размер), начало (новая страница, без разрыва,
+  чётная или нечётная страница) и колонтитулы; читаются обратно по разделам.
+- **Плавающие изображения** — позиция от страницы, поля или абзаца, перед
+  текстом или за ним, с обтеканием; из колонтитула — на каждой странице.
 - **Round-trip safe** — DOCX → AST → DOCX даёт валидный документ;
   байтовые различия ограничены пробелами/порядком атрибутов.
 - **PHP 8.2+** — `readonly` value-objects, named аргументы,
@@ -508,6 +514,87 @@ DocumentBuilder::new()
 
 Рендерится как VML text-shape с rotation 45° на каждой странице.
 
+### Плавающие изображения
+
+`Image` с `position` (объект `ImagePosition`) плавает (`<wp:anchor>`), а не
+стоит в строке текста. По каждой оси оно размещается со смещением в EMU от
+страницы, поля, колонки или символа (по горизонтали) либо абзаца или строки
+(по вертикали), или выравнивается там через `PositionAlign`. Изображение
+рисуется перед текстом, с `behindText` — за ним, а текст обтекает его так,
+как указано в `wrap` (`None`, `Square`, `TopAndBottom`); `zOrder` задаёт
+порядок наложения. Методы builder'а `imageFromBytes()`, `imageFromDataUrl()`
+и `imageFromFile()` принимают `position`.
+
+```php
+use Dskripchenko\PhpDocx\Element\ImageFormat;
+use Dskripchenko\PhpDocx\Style\HorizontalAnchor;
+use Dskripchenko\PhpDocx\Style\ImagePosition;
+use Dskripchenko\PhpDocx\Style\ImageWrap;
+use Dskripchenko\PhpDocx\Style\PositionAlign;
+use Dskripchenko\PhpDocx\Style\VerticalAnchor;
+
+DocumentBuilder::new()
+    // A logo in the top right corner of every page, behind the text.
+    ->header(fn ($h) => $h->paragraph(fn ($p) => $p->imageFromFile('logo.png', 120, 40, 'Logo', new ImagePosition(
+        horizontalFrom: HorizontalAnchor::Page,
+        horizontalAlign: PositionAlign::Right,
+        verticalFrom: VerticalAnchor::Page,
+        yEmu: 360000,           // 1 cm from the top
+        behindText: true,
+    ))))
+    // A photo the text wraps around.
+    ->paragraph(fn ($p) => $p
+        ->imageFromFile('photo.jpg', position: new ImagePosition(wrap: ImageWrap::Square))
+        ->text('Text flows around the photo.'))
+    ->toFile('floating.docx');
+```
+
+Изображение, размещённое на странице из колонтитула, рисуется на каждой
+странице, к которой относится колонтитул: бланки, фон страницы, печати.
+`offsetYEmu` без `position` смещает изображение на столько вниз от начала
+абзаца. `DocxReader` читает позицию обратно.
+
+---
+
+## Разделы
+
+Документ — это один раздел, пока по ходу не меняются параметры страницы или
+колонтитулы. `newSection()` завершает текущий раздел и начинает следующий:
+содержимое и колонтитулы, добавленные после него, относятся к новому.
+
+```php
+use Dskripchenko\PhpDocx\Build\DocumentBuilder;
+use Dskripchenko\PhpDocx\Style\Orientation;
+use Dskripchenko\PhpDocx\Style\PageSetup;
+use Dskripchenko\PhpDocx\Style\SectionStart;
+
+DocumentBuilder::new()
+    ->header(fn ($h) => $h->paragraph('Report'))
+    ->paragraph('Portrait pages')
+    ->newSection(new PageSetup(orientation: Orientation::Landscape))
+    ->header(fn ($h) => $h->paragraph('Appendix'))
+    ->paragraph('A wide table on landscape pages')
+    ->newSection(new PageSetup(widthTwips: 8391, heightTwips: 11906), SectionStart::OddPage)
+    ->paragraph('A custom page size (A5 here), starting on an odd page')
+    ->toFile('sections.docx');
+```
+
+- Новый раздел сохраняет параметры страницы, если не заданы новые, и
+  начинается с новой страницы, если не задан `SectionStart` (`Continuous`,
+  `EvenPage`, `OddPage`).
+- Раздел показывает колонтитулы предыдущего, пока не задаст свои (правило
+  Word): пустой список означает «унаследовать», а не «пусто».
+- `PageSetup(widthTwips:, heightTwips:)` задаёт любой размер страницы;
+  страница альбомная, если она шире, чем выше.
+- Без builder'а: `new Document($first, followingSections: [$second, …])`;
+  `Document::sections()` возвращает все разделы.
+- Каждый раздел, кроме последнего, заканчивается своим `<w:sectPr>` в
+  свойствах последнего абзаца (если раздел заканчивается таблицей,
+  добавляется абзац). `DocxReader` читает каждый раздел с его содержимым,
+  параметрами страницы, началом и колонтитулами; HTML-сериализатор выводит
+  содержимое разделов подряд, с разрывом страницы перед каждым разделом,
+  который начинается с новой страницы.
+
 ---
 
 ## Детекция переменных
@@ -562,13 +649,13 @@ foreach ($variables as $v) {
 
 | Элемент | Тип | Заметки |
 |---|---|---|
-| `Document` | root | `{ section: Section, watermarkText: ?string }` |
-| `Section` | container | `{ body, header, footer, pageSetup, firstHeader, firstFooter, evenHeader, evenFooter }` |
+| `Document` | root | `{ section: Section, watermarkText: ?string, coreProperties: ?CoreProperties, followingSections: Section[] }` |
+| `Section` | container | `{ body, header, footer, pageSetup, firstHeader, firstFooter, evenHeader, evenFooter, start: SectionStart }` |
 | `Paragraph` | BlockElement | `{ children: InlineElement[], style, headingLevel: ?int, styleId: ?string }` |
 | `Run` | InlineElement | `{ text: string, style: RunStyle }` |
 | `Hyperlink` | InlineElement | `{ href: ?string, anchor: ?string, children }` |
 | `Bookmark` | InlineElement | `{ name: string, children }` |
-| `Image` | both | `{ binary, format, widthEmu, heightEmu, altText }` |
+| `Image` | both | `{ binary, format, widthEmu, heightEmu, altText, offsetYEmu, position: ?ImagePosition }` |
 | `Field` | InlineElement | `{ instruction: string, style: RunStyle }` |
 | `LineBreak`, `PageBreak`, `HorizontalRule` | both | marker-элементы |
 | `Table` | BlockElement | `{ rows: TableRow[], style, caption, gridColumnsTwips }` |

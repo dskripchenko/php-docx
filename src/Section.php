@@ -6,6 +6,7 @@ namespace Dskripchenko\PhpDocx;
 
 use Dskripchenko\PhpDocx\Element\BlockElement;
 use Dskripchenko\PhpDocx\Style\PageSetup;
+use Dskripchenko\PhpDocx\Style\SectionStart;
 
 /**
  * Section is a logical section of the document: a set of block elements plus
@@ -23,9 +24,10 @@ use Dskripchenko\PhpDocx\Style\PageSetup;
  * `<w:evenAndOddHeaders/>` in `word/settings.xml` (without it Word ignores
  * the even headers).
  *
- * In the simple case the whole document is a single section. Multi-section
- * documents for a mid-document change of orientation or margins are out of
- * scope for v1.
+ * In the simple case the whole document is a single section; see
+ * `Document::$followingSections` for more. A section with no header or footer
+ * of a kind shows the previous section's (Word's rule), so an empty list here
+ * means "inherit", not "blank".
  */
 final readonly class Section
 {
@@ -52,6 +54,8 @@ final readonly class Section
         public array $firstFooter = [],
         public array $evenHeader = [],
         public array $evenFooter = [],
+        /** Where this section begins; see SectionStart. */
+        public SectionStart $start = SectionStart::NextPage,
     ) {}
 
     /**

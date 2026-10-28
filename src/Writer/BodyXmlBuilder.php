@@ -25,7 +25,9 @@ use Dskripchenko\PhpDocx\Style\Border;
 use Dskripchenko\PhpDocx\Style\BorderSet;
 use Dskripchenko\PhpDocx\Style\BorderStyle;
 use Dskripchenko\PhpDocx\Style\CellStyle;
+use Dskripchenko\PhpDocx\Style\ImageWrap;
 use Dskripchenko\PhpDocx\Style\ParagraphStyle;
+use Dskripchenko\PhpDocx\Style\PositionAlign;
 use Dskripchenko\PhpDocx\Style\RunStyle;
 use Dskripchenko\PhpDocx\Style\TableStyle;
 use Dskripchenko\PhpDocx\Style\VerticalAlign;
@@ -66,12 +68,21 @@ final class BodyXmlBuilder
 
     /**
      * @param  list<BlockElement>  $blocks
+     * @param  string  $sectPr  A section's `<w:sectPr>` to end these blocks with: it
+     *                          goes into the pPr of the last paragraph, or of an
+     *                          empty paragraph added when the blocks end otherwise.
      */
-    public function render(array $blocks): string
+    public function render(array $blocks, string $sectPr = ''): string
     {
+        $last = $sectPr !== '' ? array_key_last($blocks) : null;
         $xml = '';
-        foreach ($blocks as $b) {
-            $xml .= $this->renderBlock($b);
+        foreach ($blocks as $i => $b) {
+            $xml .= $i === $last && $b instanceof Paragraph
+                ? $this->renderParagraph($b, $sectPr)
+                : $this->renderBlock($b);
+        }
+        if ($sectPr !== '' && ($last === null || ! $blocks[$last] instanceof Paragraph)) {
+            $xml .= '<w:p><w:pPr>'.$sectPr.'</w:pPr></w:p>';
         }
 
         return $xml;
@@ -210,9 +221,9 @@ final class BodyXmlBuilder
 
     // ──────────────────────────── Paragraph + Run ────────────────────────────
 
-    private function renderParagraph(Paragraph $p): string
+    private function renderParagraph(Paragraph $p, string $sectPr = ''): string
     {
-        $pPr = $this->renderParagraphProperties($p->style, $p->headingLevel, styleId: $p->styleId);
+        $pPr = $this->renderParagraphProperties($p->style, $p->headingLevel, styleId: $p->styleId, sectPr: $sectPr);
         $children = '';
         foreach ($p->children as $child) {
             $children .= $this->renderInline($child);
@@ -232,6 +243,7 @@ final class BodyXmlBuilder
         ?int $headingLevel,
         string $numPr = '',
         ?string $styleId = null,
+        string $sectPr = '',
     ): string {
         $pPr = '';
 
@@ -309,6 +321,8 @@ final class BodyXmlBuilder
         if ($style->alignment !== Alignment::Start) {
             $pPr .= '<w:jc w:val="'.$style->alignment->value.'"/>';
         }
+        // A section's properties close its last paragraph's (after w:rPr in CT_PPr).
+        $pPr .= $sectPr;
 
         if ($pPr === '') {
             return '';
@@ -806,12 +820,35 @@ final class BodyXmlBuilder
         // number runs through the whole document: Word declares a file corrupt
         // when two pictures share a number.
         $docPrId = $this->rels->nextDrawingId();
+        $position = $img->effectivePosition();
+        if ($position === null) {
+            $open = '<wp:inline distT="0" distB="0" distL="0" distR="0">';
+            $place = '';
+            $wrap = '';
+            $close = '</wp:inline>';
+        } else {
+            // CT_Anchor: its attributes are all required but the distances;
+            // its children are a sequence (simplePos, positionH, positionV,
+            // extent, effectExtent, the wrap, docPr, ...).
+            $open = '<wp:anchor distT="0" distB="0" distL="0" distR="0" simplePos="0"'
+                .' relativeHeight="'.$position->zOrder.'" behindDoc="'.($position->behindText ? '1' : '0').'"'
+                .' locked="0" layoutInCell="1" allowOverlap="1">';
+            $place = '<wp:simplePos x="0" y="0"/>'
+                .self::renderPosition('positionH', $position->horizontalFrom->value, $position->horizontalAlign, $position->xEmu)
+                .self::renderPosition('positionV', $position->verticalFrom->value, $position->verticalAlign, $position->yEmu);
+            $wrap = match ($position->wrap) {
+                ImageWrap::None => '<wp:wrapNone/>',
+                ImageWrap::Square => '<wp:wrapSquare wrapText="bothSides"/>',
+                ImageWrap::TopAndBottom => '<wp:wrapTopAndBottom/>',
+            };
+            $close = '</wp:anchor>';
+        }
 
         return <<<XML
             <w:r><w:drawing>
-                <wp:inline distT="0" distB="0" distL="0" distR="0">
+                {$open}{$place}
                     <wp:extent cx="{$cx}" cy="{$cy}"/>
-                    <wp:effectExtent l="0" t="0" r="0" b="0"/>
+                    <wp:effectExtent l="0" t="0" r="0" b="0"/>{$wrap}
                     <wp:docPr id="{$docPrId}" name="Image" descr="{$alt}"/>
                     <wp:cNvGraphicFramePr><a:graphicFrameLocks xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" noChangeAspect="1"/></wp:cNvGraphicFramePr>
                     <a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
@@ -832,8 +869,18 @@ final class BodyXmlBuilder
                             </pic:pic>
                         </a:graphicData>
                     </a:graphic>
-                </wp:inline>
+                {$close}
             </w:drawing></w:r>
             XML;
+    }
+
+    /** `<wp:positionH>` or `<wp:positionV>`: an alignment, or else an offset in EMU. */
+    private static function renderPosition(string $tag, string $from, ?PositionAlign $align, int $offsetEmu): string
+    {
+        $inner = $align !== null
+            ? '<wp:align>'.$align->value.'</wp:align>'
+            : '<wp:posOffset>'.$offsetEmu.'</wp:posOffset>';
+
+        return '<wp:'.$tag.' relativeFrom="'.$from.'">'.$inner.'</wp:'.$tag.'>';
     }
 }

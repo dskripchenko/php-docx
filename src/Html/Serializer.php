@@ -31,6 +31,7 @@ use Dskripchenko\PhpDocx\Style\BorderStyle;
 use Dskripchenko\PhpDocx\Style\CellStyle;
 use Dskripchenko\PhpDocx\Style\ParagraphStyle;
 use Dskripchenko\PhpDocx\Style\RunStyle;
+use Dskripchenko\PhpDocx\Style\SectionStart;
 use Dskripchenko\PhpDocx\Style\TableStyle;
 use Dskripchenko\PhpDocx\Style\VerticalAlign;
 
@@ -84,7 +85,17 @@ final class Serializer
         $this->mediaCounter = 0;
         $this->markerRules = [];
 
-        $bodyHtml = $this->renderBlocks($document->section->body);
+        // Every section's body, one after another: a section that starts on a
+        // new page is preceded by a page break, as Word lays it out. The
+        // headers, footers and page settings are the first section's.
+        $body = [];
+        foreach ($document->sections() as $i => $section) {
+            if ($i > 0 && $section->start !== SectionStart::Continuous) {
+                $body[] = new PageBreak;
+            }
+            array_push($body, ...$section->body);
+        }
+        $bodyHtml = $this->renderBlocks($body);
         $headerHtml = $document->section->header !== []
             ? $this->renderBlocks($document->section->header)
             : null;

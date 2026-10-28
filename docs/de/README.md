@@ -34,6 +34,7 @@ Abhängigkeiten ausser Standard-PHP-Erweiterungen.
 - [Builder-API](#builder-api)
 - [DOCX → HTML (Reader)](#docx--html-reader)
 - [Kopf-/Fußzeilen & Wasserzeichen](#kopf-fußzeilen--wasserzeichen)
+- [Abschnitte](#abschnitte)
 - [Variablenerkennung](#variablenerkennung)
 - [Längen-Helper](#längen-helper)
 - [AST-Übersicht](#ast-übersicht)
@@ -61,6 +62,12 @@ Abhängigkeiten ausser Standard-PHP-Erweiterungen.
   konfigurierbare Textmuster (`{{x}}`, `${x}`, `%x%`).
 - **Multi-Header/Footer** — default / Titelseite / gerade Seiten,
   inklusive automatischem `<w:titlePg/>` und `<w:evenAndOddHeaders/>`.
+- **Abschnitte** — mehrere pro Dokument, jeder mit eigener Seiteneinrichtung
+  (Papierformat oder beliebige Größe), eigenem Beginn (neue Seite, fortlaufend,
+  gerade oder ungerade Seite) und eigenen Kopf-/Fußzeilen; werden Abschnitt für
+  Abschnitt zurückgelesen.
+- **Schwebende Bilder** — auf Seite, Rand oder Absatz positioniert, vor oder
+  hinter dem Text, mit Umbruch; aus einer Kopfzeile auf jeder Seite.
 - **Round-Trip-sicher** — DOCX lesen → AST → DOCX schreiben liefert ein
   valides Dokument; byteweise Unterschiede beschränken sich auf
   Whitespace und Reihenfolge.
@@ -514,6 +521,87 @@ DocumentBuilder::new()
 
 Wird als um 45° gedrehte VML-Textform auf jeder Seite gerendert.
 
+### Schwebende Bilder
+
+Ein `Image` mit `position` (eine `ImagePosition`) schwebt (`<wp:anchor>`),
+statt in der Textzeile zu stehen. Auf jeder Achse liegt es in einem Abstand
+in EMU von Seite, Rand, Spalte oder Zeichen (waagerecht) bzw. Absatz oder
+Zeile (senkrecht), oder es wird dort mit einer `PositionAlign` ausgerichtet.
+Es liegt vor dem Text, mit `behindText` dahinter, und der Text fließt
+darum, wie `wrap` es angibt (`None`, `Square`, `TopAndBottom`); `zOrder`
+stapelt schwebende Bilder. `imageFromBytes()`, `imageFromDataUrl()` und
+`imageFromFile()` des Builders nehmen eine `position`.
+
+```php
+use Dskripchenko\PhpDocx\Element\ImageFormat;
+use Dskripchenko\PhpDocx\Style\HorizontalAnchor;
+use Dskripchenko\PhpDocx\Style\ImagePosition;
+use Dskripchenko\PhpDocx\Style\ImageWrap;
+use Dskripchenko\PhpDocx\Style\PositionAlign;
+use Dskripchenko\PhpDocx\Style\VerticalAnchor;
+
+DocumentBuilder::new()
+    // A logo in the top right corner of every page, behind the text.
+    ->header(fn ($h) => $h->paragraph(fn ($p) => $p->imageFromFile('logo.png', 120, 40, 'Logo', new ImagePosition(
+        horizontalFrom: HorizontalAnchor::Page,
+        horizontalAlign: PositionAlign::Right,
+        verticalFrom: VerticalAnchor::Page,
+        yEmu: 360000,           // 1 cm from the top
+        behindText: true,
+    ))))
+    // A photo the text wraps around.
+    ->paragraph(fn ($p) => $p
+        ->imageFromFile('photo.jpg', position: new ImagePosition(wrap: ImageWrap::Square))
+        ->text('Text flows around the photo.'))
+    ->toFile('floating.docx');
+```
+
+Ein auf der Seite platziertes Bild aus einer Kopf- oder Fußzeile erscheint
+auf jeder Seite, für die sie gilt: Briefköpfe, Seitenhintergründe, Stempel.
+Ein `offsetYEmu` ohne `position` lässt das Bild so weit unter dem Anfang
+seines Absatzes schweben. `DocxReader` liest die Position zurück.
+
+---
+
+## Abschnitte
+
+Ein Dokument besteht aus einem Abschnitt, solange sich Seiteneinrichtung oder
+Kopfzeilen nicht ändern. `newSection()` beendet den aktuellen Abschnitt und
+beginnt den nächsten: Inhalte, Kopf- und Fußzeilen danach gehören zum neuen.
+
+```php
+use Dskripchenko\PhpDocx\Build\DocumentBuilder;
+use Dskripchenko\PhpDocx\Style\Orientation;
+use Dskripchenko\PhpDocx\Style\PageSetup;
+use Dskripchenko\PhpDocx\Style\SectionStart;
+
+DocumentBuilder::new()
+    ->header(fn ($h) => $h->paragraph('Report'))
+    ->paragraph('Portrait pages')
+    ->newSection(new PageSetup(orientation: Orientation::Landscape))
+    ->header(fn ($h) => $h->paragraph('Appendix'))
+    ->paragraph('A wide table on landscape pages')
+    ->newSection(new PageSetup(widthTwips: 8391, heightTwips: 11906), SectionStart::OddPage)
+    ->paragraph('A custom page size (A5 here), starting on an odd page')
+    ->toFile('sections.docx');
+```
+
+- Ein neuer Abschnitt behält die Seiteneinrichtung, wenn keine angegeben ist,
+  und beginnt auf einer neuen Seite, wenn kein `SectionStart` angegeben ist
+  (`Continuous`, `EvenPage`, `OddPage`).
+- Ein Abschnitt zeigt die Kopf- und Fußzeilen des vorherigen, bis er eigene
+  setzt (Regel von Word): eine leere Liste heißt „übernehmen“, nicht „leer“.
+- `PageSetup(widthTwips:, heightTwips:)` setzt jede Seitengröße; die Seite ist
+  quer, wenn sie breiter als hoch ist.
+- Ohne Builder: `new Document($first, followingSections: [$second, …])`;
+  `Document::sections()` liefert alle.
+- Jeder Abschnitt außer dem letzten endet mit seinem `<w:sectPr>` in den
+  Eigenschaften seines letzten Absatzes (endet er mit einer Tabelle, wird ein
+  Absatz angefügt). `DocxReader` liest jeden Abschnitt mit eigenem Inhalt,
+  eigener Seiteneinrichtung, eigenem Beginn und eigenen Kopfzeilen zurück; der
+  HTML-Serializer setzt die Inhalte hintereinander, mit einem Seitenumbruch vor
+  jedem Abschnitt, der auf einer neuen Seite beginnt.
+
 ---
 
 ## Variablenerkennung
@@ -569,13 +657,13 @@ Alle Elemente leben unter `Dskripchenko\PhpDocx\Element`.
 
 | Element | Typ | Hinweise |
 |---|---|---|
-| `Document` | root | `{ section: Section, watermarkText: ?string }` |
-| `Section` | container | `{ body, header, footer, pageSetup, firstHeader, firstFooter, evenHeader, evenFooter }` |
+| `Document` | root | `{ section: Section, watermarkText: ?string, coreProperties: ?CoreProperties, followingSections: Section[] }` |
+| `Section` | container | `{ body, header, footer, pageSetup, firstHeader, firstFooter, evenHeader, evenFooter, start: SectionStart }` |
 | `Paragraph` | BlockElement | `{ children: InlineElement[], style, headingLevel: ?int, styleId: ?string }` |
 | `Run` | InlineElement | `{ text: string, style: RunStyle }` |
 | `Hyperlink` | InlineElement | `{ href: ?string, anchor: ?string, children }` |
 | `Bookmark` | InlineElement | `{ name: string, children }` |
-| `Image` | beides | `{ binary, format, widthEmu, heightEmu, altText }` |
+| `Image` | beides | `{ binary, format, widthEmu, heightEmu, altText, offsetYEmu, position: ?ImagePosition }` |
 | `Field` | InlineElement | `{ instruction: string, style: RunStyle }` |
 | `LineBreak`, `PageBreak`, `HorizontalRule` | beides | Marker-Elemente |
 | `Table` | BlockElement | `{ rows: TableRow[], style, caption, gridColumnsTwips }` |

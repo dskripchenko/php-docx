@@ -7,20 +7,25 @@ namespace Dskripchenko\PhpDocx\Reader;
 use Dskripchenko\PhpDocx\Style\Orientation;
 use Dskripchenko\PhpDocx\Style\PageSetup;
 use Dskripchenko\PhpDocx\Style\PaperSize;
+use Dskripchenko\PhpDocx\Style\SectionStart;
 
 /**
  * Phase 8 — SectionReader: `<w:sectPr>` → PageSetup.
  *
- * A Word document may have several `<w:sectPr>` (one per section); we take the
- * LAST one in the body (it defines the default for every page up to the next
- * sectPr above). Multi-section documents with differing orientation or margins
- * are out of scope (ADR-015) — warn upstream.
+ * A Word document has one `<w:sectPr>` per section: DocxReader reads each with
+ * fromSectPr(). readPageSetup() takes the LAST one in the body, the final
+ * section's.
  */
 final class SectionReader
 {
     public function readPageSetup(\DOMElement $body): PageSetup
     {
-        $sectPr = $this->findLastSectPr($body);
+        return $this->fromSectPr($this->findLastSectPr($body));
+    }
+
+    /** One section's `<w:sectPr>` → PageSetup (the defaults when null). */
+    public function fromSectPr(?\DOMElement $sectPr): PageSetup
+    {
         if ($sectPr === null) {
             return new PageSetup;
         }
@@ -70,9 +75,11 @@ final class SectionReader
         }
 
         $paperSize = $this->detectPaperSize($widthTwips, $heightTwips, $orientation);
+        // A size no PaperSize matches is kept as it is.
+        $custom = $paperSize === null && $widthTwips !== null && $heightTwips !== null && $widthTwips > 0 && $heightTwips > 0;
 
         return new PageSetup(
-            paperSize: $paperSize,
+            paperSize: $paperSize ?? PaperSize::A4,
             orientation: $orientation,
             marginTopTwips: $marginTop,
             marginRightTwips: $marginRight,
@@ -80,7 +87,17 @@ final class SectionReader
             marginLeftTwips: $marginLeft,
             headerOffsetTwips: $headerOffset,
             footerOffsetTwips: $footerOffset,
+            widthTwips: $custom ? $widthTwips : null,
+            heightTwips: $custom ? $heightTwips : null,
         );
+    }
+
+    /** Where the section starts (`<w:type>`); a new page when absent or unknown. */
+    public function start(?\DOMElement $sectPr): SectionStart
+    {
+        $type = $sectPr === null ? null : OoxmlNs::firstChild($sectPr, OoxmlNs::W, 'type');
+
+        return $type === null ? SectionStart::NextPage : (SectionStart::tryFrom($type->getAttributeNS(OoxmlNs::W, 'val')) ?? SectionStart::NextPage);
     }
 
     private function findLastSectPr(\DOMElement $body): ?\DOMElement
@@ -114,7 +131,7 @@ final class SectionReader
         return $last;
     }
 
-    private function detectPaperSize(?int $w, ?int $h, Orientation $orientation): PaperSize
+    private function detectPaperSize(?int $w, ?int $h, Orientation $orientation): ?PaperSize
     {
         if ($w === null || $h === null) {
             return PaperSize::A4;
@@ -132,6 +149,6 @@ final class SectionReader
             }
         }
 
-        return PaperSize::A4;
+        return null;
     }
 }

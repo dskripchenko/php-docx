@@ -303,4 +303,23 @@ final class SerializerTest extends TestCase
         self::assertSame('<p>H</p>', $imported->headerHtml);
         self::assertSame('<p>F</p>', $imported->footerHtml);
     }
+
+    #[Test]
+    public function every_section_body_is_serialized_with_a_page_break_between(): void
+    {
+        $p = static fn (string $t): Paragraph => new Paragraph([new Run($t)]);
+        $serializer = new \Dskripchenko\PhpDocx\Html\Serializer;
+        $breakHtml = $serializer->serialize(new Document(new Section([new \Dskripchenko\PhpDocx\Element\PageBreak])))->bodyHtml;
+
+        $html = $serializer->serialize(new Document(
+            new Section([$p('one')]),
+            followingSections: [
+                new Section([$p('two')]),
+                new Section([$p('three')], start: \Dskripchenko\PhpDocx\Style\SectionStart::Continuous),
+            ],
+        ))->bodyHtml;
+
+        self::assertSame($serializer->serialize(new Document(new Section([$p('one'), new \Dskripchenko\PhpDocx\Element\PageBreak, $p('two'), $p('three')])))->bodyHtml, $html);
+        self::assertNotSame('', $breakHtml);
+    }
 }

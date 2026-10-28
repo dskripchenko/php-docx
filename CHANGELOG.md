@@ -5,6 +5,46 @@ file. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- Sections: `Document::$followingSections` (after the first section) and
+  `Document::sections()`, `Section::$start` (`SectionStart`: `NextPage`,
+  `Continuous`, `EvenPage`, `OddPage`), and `DocumentBuilder::newSection()`.
+  Each section has its own page setup and header/footer parts; every section
+  but the last ends with its `<w:sectPr>` in the pPr of its last paragraph
+  (one is added when it ends in a table). A section without a header or
+  footer of a kind shows the previous section's, as in Word.
+- `PageSetup::$widthTwips` / `$heightTwips`: any page size, not only a
+  `PaperSize` (landscape when wider than tall), with `pageWidthTwips()`,
+  `pageHeightTwips()` and `effectiveOrientation()`.
+- Floating pictures: `Image::$position` (`ImagePosition`) writes the picture
+  as `<wp:anchor>` instead of `<wp:inline>`. On each axis it sits at an
+  offset in EMU from what it is measured from (`HorizontalAnchor`: page,
+  margin, column, character; `VerticalAnchor`: page, margin, paragraph,
+  line) or is aligned there (`PositionAlign`); `behindText`, `wrap`
+  (`ImageWrap`: none, square, top and bottom) and `zOrder` set how it sits
+  with the text. A picture positioned on the page from a header or footer
+  repeats on every page. `Image::fromPx()` and the builder's
+  `imageFromBytes()`, `imageFromDataUrl()` and `imageFromFile()` take a
+  `position`.
+
+### Changed
+- `DocxReader` reads every section — body, page setup, start, headers and
+  footers — instead of the last section's page setup and the first section's
+  headers for the whole document. **Code that reads only `$document->section`
+  now sees the first section of a multi-section file;** use
+  `$document->sections()` for all of it. A page size no `PaperSize` matches is
+  kept as a custom size instead of becoming A4.
+- The HTML serializer writes every section's body, with a page break before
+  each section that starts on a new page.
+- An `Image` with a non-zero `offsetYEmu` and no `position` is now written
+  floating that far below the top of its paragraph, as the property always
+  described; the writer used to ignore it and write the picture inline.
+- `DocxReader` reads an anchored picture's position into `Image::$position`
+  (it still fills `offsetYEmu`, which the HTML serializer uses), so writing a
+  read document keeps its floating pictures where they were.
+
 ## [1.17.0] — 2026-10-27
 
 ### Added
