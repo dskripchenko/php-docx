@@ -64,6 +64,8 @@ PHP-расширения.
 - **Разделы** — несколько в документе, у каждого свои параметры страницы
   (стандартный формат или любой размер), начало (новая страница, без разрыва,
   чётная или нечётная страница) и колонтитулы; читаются обратно по разделам.
+- **Плавающие изображения** — позиция от страницы, поля или абзаца, перед
+  текстом или за ним, с обтеканием; из колонтитула — на каждой странице.
 - **Round-trip safe** — DOCX → AST → DOCX даёт валидный документ;
   байтовые различия ограничены пробелами/порядком атрибутов.
 - **PHP 8.2+** — `readonly` value-objects, named аргументы,
@@ -512,6 +514,46 @@ DocumentBuilder::new()
 
 Рендерится как VML text-shape с rotation 45° на каждой странице.
 
+### Плавающие изображения
+
+`Image` с `position` (объект `ImagePosition`) плавает (`<wp:anchor>`), а не
+стоит в строке текста. По каждой оси оно размещается со смещением в EMU от
+страницы, поля, колонки или символа (по горизонтали) либо абзаца или строки
+(по вертикали), или выравнивается там через `PositionAlign`. Изображение
+рисуется перед текстом, с `behindText` — за ним, а текст обтекает его так,
+как указано в `wrap` (`None`, `Square`, `TopAndBottom`); `zOrder` задаёт
+порядок наложения. Методы builder'а `imageFromBytes()`, `imageFromDataUrl()`
+и `imageFromFile()` принимают `position`.
+
+```php
+use Dskripchenko\PhpDocx\Element\ImageFormat;
+use Dskripchenko\PhpDocx\Style\HorizontalAnchor;
+use Dskripchenko\PhpDocx\Style\ImagePosition;
+use Dskripchenko\PhpDocx\Style\ImageWrap;
+use Dskripchenko\PhpDocx\Style\PositionAlign;
+use Dskripchenko\PhpDocx\Style\VerticalAnchor;
+
+DocumentBuilder::new()
+    // A logo in the top right corner of every page, behind the text.
+    ->header(fn ($h) => $h->paragraph(fn ($p) => $p->imageFromFile('logo.png', 120, 40, 'Logo', new ImagePosition(
+        horizontalFrom: HorizontalAnchor::Page,
+        horizontalAlign: PositionAlign::Right,
+        verticalFrom: VerticalAnchor::Page,
+        yEmu: 360000,           // 1 cm from the top
+        behindText: true,
+    ))))
+    // A photo the text wraps around.
+    ->paragraph(fn ($p) => $p
+        ->imageFromFile('photo.jpg', position: new ImagePosition(wrap: ImageWrap::Square))
+        ->text('Text flows around the photo.'))
+    ->toFile('floating.docx');
+```
+
+Изображение, размещённое на странице из колонтитула, рисуется на каждой
+странице, к которой относится колонтитул: бланки, фон страницы, печати.
+`offsetYEmu` без `position` смещает изображение на столько вниз от начала
+абзаца. `DocxReader` читает позицию обратно.
+
 ---
 
 ## Разделы
@@ -613,7 +655,7 @@ foreach ($variables as $v) {
 | `Run` | InlineElement | `{ text: string, style: RunStyle }` |
 | `Hyperlink` | InlineElement | `{ href: ?string, anchor: ?string, children }` |
 | `Bookmark` | InlineElement | `{ name: string, children }` |
-| `Image` | both | `{ binary, format, widthEmu, heightEmu, altText }` |
+| `Image` | both | `{ binary, format, widthEmu, heightEmu, altText, offsetYEmu, position: ?ImagePosition }` |
 | `Field` | InlineElement | `{ instruction: string, style: RunStyle }` |
 | `LineBreak`, `PageBreak`, `HorizontalRule` | both | marker-элементы |
 | `Table` | BlockElement | `{ rows: TableRow[], style, caption, gridColumnsTwips }` |

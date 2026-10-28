@@ -12,6 +12,7 @@ use Dskripchenko\PhpDocx\Element\ImageFormat;
 use Dskripchenko\PhpDocx\Element\InlineElement;
 use Dskripchenko\PhpDocx\Element\LineBreak;
 use Dskripchenko\PhpDocx\Element\Run;
+use Dskripchenko\PhpDocx\Style\ImagePosition;
 use Dskripchenko\PhpDocx\Style\RunStyle;
 
 /**
@@ -209,8 +210,9 @@ trait AddsInlineContent
         int $widthPx,
         int $heightPx,
         ?string $altText = null,
+        ?ImagePosition $position = null,
     ): self {
-        $this->children[] = Image::fromPx($binary, $format, $widthPx, $heightPx, $altText);
+        $this->children[] = Image::fromPx($binary, $format, $widthPx, $heightPx, $altText, $position);
 
         return $this;
     }
@@ -223,6 +225,7 @@ trait AddsInlineContent
         ?int $widthPx = null,
         ?int $heightPx = null,
         ?string $altText = null,
+        ?ImagePosition $position = null,
     ): self {
         if (preg_match('/^data:image\/(\w+);base64,(.+)$/s', $dataUrl, $m) !== 1) {
             return $this; // silently skip
@@ -242,7 +245,7 @@ trait AddsInlineContent
             return $this;
         }
 
-        return $this->ingestImage($binary, $format, $widthPx, $heightPx, $altText);
+        return $this->ingestImage($binary, $format, $widthPx, $heightPx, $altText, $position);
     }
 
     /**
@@ -254,6 +257,7 @@ trait AddsInlineContent
         ?int $widthPx = null,
         ?int $heightPx = null,
         ?string $altText = null,
+        ?ImagePosition $position = null,
     ): self {
         if (! is_readable($path)) {
             throw new \InvalidArgumentException('Image file not readable: '.$path);
@@ -264,7 +268,7 @@ trait AddsInlineContent
             throw new \InvalidArgumentException('Unsupported image format: '.$path);
         }
 
-        return $this->ingestImage($binary, $format, $widthPx, $heightPx, $altText);
+        return $this->ingestImage($binary, $format, $widthPx, $heightPx, $altText, $position);
     }
 
     /**
@@ -276,6 +280,7 @@ trait AddsInlineContent
         ?int $widthPx,
         ?int $heightPx,
         ?string $altText,
+        ?ImagePosition $position = null,
     ): self {
         if ($widthPx === null || $heightPx === null) {
             $info = @getimagesizefromstring($binary);
@@ -286,7 +291,7 @@ trait AddsInlineContent
         }
         $widthPx = max(1, $widthPx ?? 100);
         $heightPx = max(1, $heightPx ?? 100);
-        $this->children[] = Image::fromPx($binary, $format, $widthPx, $heightPx, $altText);
+        $this->children[] = Image::fromPx($binary, $format, $widthPx, $heightPx, $altText, $position);
 
         return $this;
     }

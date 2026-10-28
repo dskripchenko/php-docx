@@ -60,6 +60,8 @@
   `<w:titlePg/>` 与 `<w:evenAndOddHeaders/>`。
 - **节** — 一个文档可有多个节，每节有自己的页面设置（标准纸张或任意尺寸）、
   起始方式（新页、连续、偶数页或奇数页）和页眉/页脚；读取时逐节还原。
+- **浮动图片** — 相对于页面、页边距或段落定位，位于文字前或后，可设置环绕；
+  放在页眉中则每页重复。
 - **往返安全** — 读 DOCX → AST → 写 DOCX 得到有效文档；字节级别的差异
   仅限于空白和顺序。
 - **PHP 8.2+** — `readonly` 值对象、命名参数、构造函数提升、enum。
@@ -503,6 +505,43 @@ DocumentBuilder::new()
 
 呈现为旋转 45° 的 VML 文本形状，出现在每一页。
 
+### 浮动图片
+
+带有 `position`（`ImagePosition`）的 `Image` 会浮动（`<wp:anchor>`），而不是位于文本行中。
+每个方向上，它都可以相对于页面、页边距、栏或字符（水平方向），或段落、行（垂直方向）
+以 EMU 偏移放置，或用 `PositionAlign` 对齐。图片绘制在文字前面，设置 `behindText`
+则在文字后面；文字按 `wrap`（`None`、`Square`、`TopAndBottom`）环绕；`zOrder` 决定
+浮动图片的叠放顺序。构造器的 `imageFromBytes()`、`imageFromDataUrl()` 和
+`imageFromFile()` 都接受 `position`。
+
+```php
+use Dskripchenko\PhpDocx\Element\ImageFormat;
+use Dskripchenko\PhpDocx\Style\HorizontalAnchor;
+use Dskripchenko\PhpDocx\Style\ImagePosition;
+use Dskripchenko\PhpDocx\Style\ImageWrap;
+use Dskripchenko\PhpDocx\Style\PositionAlign;
+use Dskripchenko\PhpDocx\Style\VerticalAnchor;
+
+DocumentBuilder::new()
+    // A logo in the top right corner of every page, behind the text.
+    ->header(fn ($h) => $h->paragraph(fn ($p) => $p->imageFromFile('logo.png', 120, 40, 'Logo', new ImagePosition(
+        horizontalFrom: HorizontalAnchor::Page,
+        horizontalAlign: PositionAlign::Right,
+        verticalFrom: VerticalAnchor::Page,
+        yEmu: 360000,           // 1 cm from the top
+        behindText: true,
+    ))))
+    // A photo the text wraps around.
+    ->paragraph(fn ($p) => $p
+        ->imageFromFile('photo.jpg', position: new ImagePosition(wrap: ImageWrap::Square))
+        ->text('Text flows around the photo.'))
+    ->toFile('floating.docx');
+```
+
+从页眉或页脚放置在页面上的图片会出现在该页眉所管辖的每一页上：信笺抬头、页面背景、
+印章。没有 `position` 的 `offsetYEmu` 会让图片浮动在其段落顶部下方相应距离处。
+`DocxReader` 会读回位置。
+
 ---
 
 ## 节
@@ -596,7 +635,7 @@ foreach ($variables as $v) {
 | `Run` | InlineElement | `{ text: string, style: RunStyle }` |
 | `Hyperlink` | InlineElement | `{ href: ?string, anchor: ?string, children }` |
 | `Bookmark` | InlineElement | `{ name: string, children }` |
-| `Image` | 两者 | `{ binary, format, widthEmu, heightEmu, altText }` |
+| `Image` | 两者 | `{ binary, format, widthEmu, heightEmu, altText, offsetYEmu, position: ?ImagePosition }` |
 | `Field` | InlineElement | `{ instruction: string, style: RunStyle }` |
 | `LineBreak`、`PageBreak`、`HorizontalRule` | 两者 | 标记元素 |
 | `Table` | BlockElement | `{ rows: TableRow[], style, caption, gridColumnsTwips }` |

@@ -69,6 +69,9 @@ external dependencies beyond standard PHP extensions.
 - **Sections** — several per document, each with its own page setup
   (a preset paper size or any custom size), start (new page, continuous,
   even or odd page) and headers/footers; read back section by section.
+- **Floating pictures** — positioned on the page, margin or paragraph, in
+  front of or behind the text, with wrapping; from a header they repeat on
+  every page.
 - **Round-trip safe** — read DOCX → AST → write DOCX produces a valid
   document; bytes-level differences are limited to whitespace/ordering.
 - **PHP 8.2+** — `readonly` value-objects, named arguments,
@@ -596,6 +599,47 @@ DocumentBuilder::new()
 
 Renders as a 45°-rotated VML text shape on every page.
 
+### Floating pictures
+
+An `Image` with a `position` (an `ImagePosition`) floats (`<wp:anchor>`)
+instead of sitting in the line of text. On each axis it is placed at an
+offset in EMU from the page, the margin, the column or character
+(horizontally), or the paragraph or line (vertically), or aligned there with
+a `PositionAlign`. It is drawn in front of the text, or behind it with
+`behindText`, and the text flows around it as `wrap` says (`None`, `Square`,
+`TopAndBottom`); `zOrder` stacks floating pictures. The builder's
+`imageFromBytes()`, `imageFromDataUrl()` and `imageFromFile()` take a
+`position`.
+
+```php
+use Dskripchenko\PhpDocx\Element\ImageFormat;
+use Dskripchenko\PhpDocx\Style\HorizontalAnchor;
+use Dskripchenko\PhpDocx\Style\ImagePosition;
+use Dskripchenko\PhpDocx\Style\ImageWrap;
+use Dskripchenko\PhpDocx\Style\PositionAlign;
+use Dskripchenko\PhpDocx\Style\VerticalAnchor;
+
+DocumentBuilder::new()
+    // A logo in the top right corner of every page, behind the text.
+    ->header(fn ($h) => $h->paragraph(fn ($p) => $p->imageFromFile('logo.png', 120, 40, 'Logo', new ImagePosition(
+        horizontalFrom: HorizontalAnchor::Page,
+        horizontalAlign: PositionAlign::Right,
+        verticalFrom: VerticalAnchor::Page,
+        yEmu: 360000,           // 1 cm from the top
+        behindText: true,
+    ))))
+    // A photo the text wraps around.
+    ->paragraph(fn ($p) => $p
+        ->imageFromFile('photo.jpg', position: new ImagePosition(wrap: ImageWrap::Square))
+        ->text('Text flows around the photo.'))
+    ->toFile('floating.docx');
+```
+
+A picture placed on the page from a header or footer is drawn on every page
+that header governs: letterheads, page backgrounds, stamps. An `offsetYEmu`
+without a `position` floats the picture that far below the top of its
+paragraph. `DocxReader` reads the position back.
+
 ---
 
 ## Sections
@@ -695,7 +739,7 @@ All elements live under `Dskripchenko\PhpDocx\Element` namespace.
 | `Run` | InlineElement | `{ text: string, style: RunStyle }` |
 | `Hyperlink` | InlineElement | `{ href: ?string, anchor: ?string, children: InlineElement[] }` |
 | `Bookmark` | InlineElement | `{ name: string, children: InlineElement[] }` |
-| `Image` | both | `{ binary, format, widthEmu, heightEmu, altText }` |
+| `Image` | both | `{ binary, format, widthEmu, heightEmu, altText, offsetYEmu, position: ?ImagePosition }` |
 | `Field` | InlineElement | `{ instruction: string, style: RunStyle }` |
 | `LineBreak`, `PageBreak`, `HorizontalRule` | both | marker elements |
 | `Table` | BlockElement | `{ rows: TableRow[], style, caption, gridColumnsTwips }` |

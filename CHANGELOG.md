@@ -18,6 +18,16 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `PageSetup::$widthTwips` / `$heightTwips`: any page size, not only a
   `PaperSize` (landscape when wider than tall), with `pageWidthTwips()`,
   `pageHeightTwips()` and `effectiveOrientation()`.
+- Floating pictures: `Image::$position` (`ImagePosition`) writes the picture
+  as `<wp:anchor>` instead of `<wp:inline>`. On each axis it sits at an
+  offset in EMU from what it is measured from (`HorizontalAnchor`: page,
+  margin, column, character; `VerticalAnchor`: page, margin, paragraph,
+  line) or is aligned there (`PositionAlign`); `behindText`, `wrap`
+  (`ImageWrap`: none, square, top and bottom) and `zOrder` set how it sits
+  with the text. A picture positioned on the page from a header or footer
+  repeats on every page. `Image::fromPx()` and the builder's
+  `imageFromBytes()`, `imageFromDataUrl()` and `imageFromFile()` take a
+  `position`.
 
 ### Changed
 - `DocxReader` reads every section — body, page setup, start, headers and
@@ -28,6 +38,12 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   kept as a custom size instead of becoming A4.
 - The HTML serializer writes every section's body, with a page break before
   each section that starts on a new page.
+- An `Image` with a non-zero `offsetYEmu` and no `position` is now written
+  floating that far below the top of its paragraph, as the property always
+  described; the writer used to ignore it and write the picture inline.
+- `DocxReader` reads an anchored picture's position into `Image::$position`
+  (it still fills `offsetYEmu`, which the HTML serializer uses), so writing a
+  read document keeps its floating pictures where they were.
 
 ## [1.17.0] — 2026-10-27
 

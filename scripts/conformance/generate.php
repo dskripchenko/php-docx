@@ -7,8 +7,10 @@ declare(strict_types=1);
  * writer feature at once: headings, justified paragraphs with spacing and
  * indents, tables with header rows, nested ordered lists, multi-part
  * headers/footers with page-number fields, bookmarks, hyperlinks, a text
- * watermark, and a second section (landscape, its own header, a custom page
- * size) whose first section ends in a table. Validated by:
+ * watermark, a second section (landscape, its own header, a custom page
+ * size) whose first section ends in a table, and floating pictures (one
+ * behind the text on every page from the header, one in the body with text
+ * wrapped around it). Validated by:
  *
  *   scripts/conformance/xsd-check.sh       — ECMA-376 Transitional XSD
  *   scripts/conformance/consumer-smoke.sh  — LibreOffice + python-docx
@@ -18,11 +20,17 @@ declare(strict_types=1);
  */
 
 use Dskripchenko\PhpDocx\Build\DocumentBuilder;
+use Dskripchenko\PhpDocx\Element\ImageFormat;
 use Dskripchenko\PhpDocx\Element\ListFormat;
 use Dskripchenko\PhpDocx\Style\Alignment;
+use Dskripchenko\PhpDocx\Style\HorizontalAnchor;
+use Dskripchenko\PhpDocx\Style\ImagePosition;
+use Dskripchenko\PhpDocx\Style\ImageWrap;
 use Dskripchenko\PhpDocx\Style\Orientation;
 use Dskripchenko\PhpDocx\Style\PageSetup;
+use Dskripchenko\PhpDocx\Style\PositionAlign;
 use Dskripchenko\PhpDocx\Style\SectionStart;
+use Dskripchenko\PhpDocx\Style\VerticalAnchor;
 
 require dirname(__DIR__, 2).'/vendor/autoload.php';
 
@@ -32,9 +40,20 @@ if (! is_dir($outDir) && ! mkdir($outDir, 0777, true)) {
     exit(1);
 }
 
+// A 2×2 PNG for the floating pictures.
+$png = (string) base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAFklEQVR4nGP8z8DAwMDAxMDAwMDAAAANHQEDK+mmyAAAAABJRU5ErkJggg==', true);
+
 $written = DocumentBuilder::new()
     ->watermark('CONFORMANCE')
-    ->header(fn ($h) => $h->paragraph('ACME Inc. — conformance reference'))
+    ->header(fn ($h) => $h
+        ->paragraph('ACME Inc. — conformance reference')
+        ->paragraph(fn ($p) => $p->imageFromBytes($png, ImageFormat::Png, 96, 96, 'page mark', new ImagePosition(
+            horizontalFrom: HorizontalAnchor::Page,
+            horizontalAlign: PositionAlign::Right,
+            verticalFrom: VerticalAnchor::Page,
+            yEmu: 360000,
+            behindText: true,
+        ))))
     ->footer(fn ($f) => $f->paragraph(fn ($p) => $p
         ->text('Page ')->pageNumber()->text(' of ')->totalPages()))
     ->heading(1, 'php-docx conformance reference')
@@ -57,6 +76,9 @@ $written = DocumentBuilder::new()
         ->item('schema validation')
         ->item('LibreOffice conversion')
         ->item('python-docx extraction'))
+    ->paragraph(fn ($p) => $p
+        ->imageFromBytes($png, ImageFormat::Png, 48, 48, 'wrapped', new ImagePosition(wrap: ImageWrap::Square, zOrder: 1))
+        ->text('A floating picture with the text wrapped around it.'))
     ->paragraph(fn ($p) => $p
         ->text('Link: ')
         ->link('https://github.com/dskripchenko/php-docx', 'repository'))

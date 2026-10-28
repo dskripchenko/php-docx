@@ -6,6 +6,11 @@ namespace Dskripchenko\PhpDocx\Reader;
 
 use Dskripchenko\PhpDocx\Element\Image;
 use Dskripchenko\PhpDocx\Element\ImageFormat;
+use Dskripchenko\PhpDocx\Style\HorizontalAnchor;
+use Dskripchenko\PhpDocx\Style\ImagePosition;
+use Dskripchenko\PhpDocx\Style\ImageWrap;
+use Dskripchenko\PhpDocx\Style\PositionAlign;
+use Dskripchenko\PhpDocx\Style\VerticalAnchor;
 
 /**
  * Phase 6 — ImageReader.
@@ -20,8 +25,9 @@ use Dskripchenko\PhpDocx\Element\ImageFormat;
  *  - the rel does not resolve
  *  - the binary is missing or its format is unsupported
  *
- * An anchored picture (`<wp:anchor>`) is treated as inline — a reader in an
- * HTML context has no notion of a float position.
+ * An anchored picture (`<wp:anchor>`) keeps its position (Image::$position)
+ * and, as before, its vertical offset in `offsetYEmu`, which is all the HTML
+ * serializer uses of it.
  */
 final class ImageReader
 {
@@ -63,6 +69,7 @@ final class ImageReader
             }
         }
 
+        $position = $container->localName === 'anchor' ? self::position($container) : null;
         $docPr = OoxmlNs::firstChild($container, OoxmlNs::WP, 'docPr');
         $altText = null;
         if ($docPr !== null) {
@@ -133,6 +140,59 @@ final class ImageReader
             heightEmu: $heightEmu,
             altText: $altText,
             offsetYEmu: $offsetYEmu,
+            position: $position,
+        );
+    }
+
+    /**
+     * A `<wp:anchor>`'s position. What the model has no word for is read as
+     * the nearest it has: a `*Margin` origin as the margin, a tight or
+     * through wrap as square.
+     */
+    private static function position(\DOMElement $anchor): ImagePosition
+    {
+        $axis = static function (string $tag) use ($anchor): array {
+            $el = OoxmlNs::firstChild($anchor, OoxmlNs::WP, $tag);
+            if ($el === null) {
+                return ['', null, 0];
+            }
+            $align = OoxmlNs::firstChild($el, OoxmlNs::WP, 'align');
+            $offset = OoxmlNs::firstChild($el, OoxmlNs::WP, 'posOffset');
+            $value = $offset === null ? '' : trim($offset->textContent);
+
+            return [
+                $el->getAttribute('relativeFrom'),
+                $align === null ? null : PositionAlign::tryFrom(trim($align->textContent)),
+                preg_match('/^-?\d+$/', $value) === 1 ? (int) $value : 0,
+            ];
+        };
+        [$hFrom, $hAlign, $x] = $axis('positionH');
+        [$vFrom, $vAlign, $y] = $axis('positionV');
+        $margin = static fn (string $from): bool => str_ends_with($from, 'Margin');
+
+        $wrap = ImageWrap::None;
+        foreach ($anchor->childNodes as $child) {
+            if ($child instanceof \DOMElement && $child->namespaceURI === OoxmlNs::WP) {
+                $wrap = match ($child->localName) {
+                    'wrapSquare', 'wrapTight', 'wrapThrough' => ImageWrap::Square,
+                    'wrapTopAndBottom' => ImageWrap::TopAndBottom,
+                    default => $wrap,
+                };
+            }
+        }
+        $height = $anchor->getAttribute('relativeHeight');
+        $behind = strtolower($anchor->getAttribute('behindDoc'));
+
+        return new ImagePosition(
+            horizontalFrom: HorizontalAnchor::tryFrom($hFrom) ?? ($margin($hFrom) ? HorizontalAnchor::Margin : HorizontalAnchor::Column),
+            xEmu: $x,
+            verticalFrom: VerticalAnchor::tryFrom($vFrom) ?? ($margin($vFrom) ? VerticalAnchor::Margin : VerticalAnchor::Paragraph),
+            yEmu: $y,
+            horizontalAlign: $hAlign === PositionAlign::Top || $hAlign === PositionAlign::Bottom ? null : $hAlign,
+            verticalAlign: $vAlign === PositionAlign::Left || $vAlign === PositionAlign::Right ? null : $vAlign,
+            behindText: $behind === '1' || $behind === 'true' || $behind === 'on',
+            wrap: $wrap,
+            zOrder: ctype_digit($height) ? (int) $height : 0,
         );
     }
 

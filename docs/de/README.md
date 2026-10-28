@@ -66,6 +66,8 @@ Abhängigkeiten ausser Standard-PHP-Erweiterungen.
   (Papierformat oder beliebige Größe), eigenem Beginn (neue Seite, fortlaufend,
   gerade oder ungerade Seite) und eigenen Kopf-/Fußzeilen; werden Abschnitt für
   Abschnitt zurückgelesen.
+- **Schwebende Bilder** — auf Seite, Rand oder Absatz positioniert, vor oder
+  hinter dem Text, mit Umbruch; aus einer Kopfzeile auf jeder Seite.
 - **Round-Trip-sicher** — DOCX lesen → AST → DOCX schreiben liefert ein
   valides Dokument; byteweise Unterschiede beschränken sich auf
   Whitespace und Reihenfolge.
@@ -519,6 +521,46 @@ DocumentBuilder::new()
 
 Wird als um 45° gedrehte VML-Textform auf jeder Seite gerendert.
 
+### Schwebende Bilder
+
+Ein `Image` mit `position` (eine `ImagePosition`) schwebt (`<wp:anchor>`),
+statt in der Textzeile zu stehen. Auf jeder Achse liegt es in einem Abstand
+in EMU von Seite, Rand, Spalte oder Zeichen (waagerecht) bzw. Absatz oder
+Zeile (senkrecht), oder es wird dort mit einer `PositionAlign` ausgerichtet.
+Es liegt vor dem Text, mit `behindText` dahinter, und der Text fließt
+darum, wie `wrap` es angibt (`None`, `Square`, `TopAndBottom`); `zOrder`
+stapelt schwebende Bilder. `imageFromBytes()`, `imageFromDataUrl()` und
+`imageFromFile()` des Builders nehmen eine `position`.
+
+```php
+use Dskripchenko\PhpDocx\Element\ImageFormat;
+use Dskripchenko\PhpDocx\Style\HorizontalAnchor;
+use Dskripchenko\PhpDocx\Style\ImagePosition;
+use Dskripchenko\PhpDocx\Style\ImageWrap;
+use Dskripchenko\PhpDocx\Style\PositionAlign;
+use Dskripchenko\PhpDocx\Style\VerticalAnchor;
+
+DocumentBuilder::new()
+    // A logo in the top right corner of every page, behind the text.
+    ->header(fn ($h) => $h->paragraph(fn ($p) => $p->imageFromFile('logo.png', 120, 40, 'Logo', new ImagePosition(
+        horizontalFrom: HorizontalAnchor::Page,
+        horizontalAlign: PositionAlign::Right,
+        verticalFrom: VerticalAnchor::Page,
+        yEmu: 360000,           // 1 cm from the top
+        behindText: true,
+    ))))
+    // A photo the text wraps around.
+    ->paragraph(fn ($p) => $p
+        ->imageFromFile('photo.jpg', position: new ImagePosition(wrap: ImageWrap::Square))
+        ->text('Text flows around the photo.'))
+    ->toFile('floating.docx');
+```
+
+Ein auf der Seite platziertes Bild aus einer Kopf- oder Fußzeile erscheint
+auf jeder Seite, für die sie gilt: Briefköpfe, Seitenhintergründe, Stempel.
+Ein `offsetYEmu` ohne `position` lässt das Bild so weit unter dem Anfang
+seines Absatzes schweben. `DocxReader` liest die Position zurück.
+
 ---
 
 ## Abschnitte
@@ -621,7 +663,7 @@ Alle Elemente leben unter `Dskripchenko\PhpDocx\Element`.
 | `Run` | InlineElement | `{ text: string, style: RunStyle }` |
 | `Hyperlink` | InlineElement | `{ href: ?string, anchor: ?string, children }` |
 | `Bookmark` | InlineElement | `{ name: string, children }` |
-| `Image` | beides | `{ binary, format, widthEmu, heightEmu, altText }` |
+| `Image` | beides | `{ binary, format, widthEmu, heightEmu, altText, offsetYEmu, position: ?ImagePosition }` |
 | `Field` | InlineElement | `{ instruction: string, style: RunStyle }` |
 | `LineBreak`, `PageBreak`, `HorizontalRule` | beides | Marker-Elemente |
 | `Table` | BlockElement | `{ rows: TableRow[], style, caption, gridColumnsTwips }` |
