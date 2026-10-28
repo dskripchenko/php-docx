@@ -24,7 +24,7 @@ use PHPUnit\Framework\TestCase;
 final class FloatingImageTest extends TestCase
 {
     // 1×1 transparent PNG
-    private const string PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+    private const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
 
     private static function image(?ImagePosition $position = null, int $offsetYEmu = 0): Image
     {
