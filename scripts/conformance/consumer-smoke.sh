@@ -2,7 +2,8 @@
 # Consumer smoke: the reference DOCX must survive two independent
 # real-world consumers —
 #   * LibreOffice headless converts it to PDF without errors;
-#   * python-docx opens it and extracts the expected content markers.
+#   * python-docx opens it and extracts the expected content markers
+#     and sections.
 #
 # Usage: scripts/conformance/consumer-smoke.sh [docx-file]
 #   default: build/conformance/reference.docx
@@ -55,10 +56,14 @@ text = "\n".join(p.text for p in d.paragraphs)
 assert "php-docx conformance reference" in text, "heading missing"
 assert "Justified paragraph" in text, "body paragraph missing"
 assert "кириллица" in text, "cyrillic text missing"
-assert len(d.tables) == 1, f"expected 1 table, got {len(d.tables)}"
+assert len(d.tables) == 2, f"expected 2 tables, got {len(d.tables)}"
 assert d.tables[0].rows[0].cells[0].text == "Feature", "table header cell mismatch"
+# Three sections: portrait A4, landscape A4, then a custom size.
+assert len(d.sections) == 3, f"expected 3 sections, got {len(d.sections)}"
+assert d.sections[1].page_width > d.sections[1].page_height, "second section is not landscape"
+assert d.sections[2].page_width == 8391 * 635, "custom page width lost"
 print(f"PASS python-docx {docx.__version__ if hasattr(docx, '__version__') else ''}: "
-      f"{len(d.paragraphs)} paragraphs, {len(d.tables)} table")
+      f"{len(d.paragraphs)} paragraphs, {len(d.tables)} tables, {len(d.sections)} sections")
 PY
 then
     echo "| python-docx | open + content markers | ✅ |" >> "$summary"
