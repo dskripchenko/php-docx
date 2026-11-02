@@ -595,6 +595,13 @@ DocumentBuilder::new()
   quer, wenn sie breiter als hoch ist.
 - Ohne Builder: `new Document($first, followingSections: [$second, …])`;
   `Document::sections()` liefert alle.
+- `columns(new Columns(count: 2, separator: true))` setzt die Textspalten des
+  aktuellen Abschnitts (`newSection(columns: …)` die des nächsten; sonst ist
+  ein neuer Abschnitt einspaltig). `Columns` nimmt die Spaltenzahl `count`,
+  den Abstand `spaceTwips` und eine Trennlinie `separator`; `widthsTwips`
+  (eine Breite je Spalte) und `spacesTwips` (ein Abstand je Zwischenraum)
+  machen die Spalten ungleich breit. Geschrieben als `<w:cols>`, von
+  `DocxReader` zurückgelesen.
 - Jeder Abschnitt außer dem letzten endet mit seinem `<w:sectPr>` in den
   Eigenschaften seines letzten Absatzes (endet er mit einer Tabelle, wird ein
   Absatz angefügt). `DocxReader` liest jeden Abschnitt mit eigenem Inhalt,
@@ -658,7 +665,7 @@ Alle Elemente leben unter `Dskripchenko\PhpDocx\Element`.
 | Element | Typ | Hinweise |
 |---|---|---|
 | `Document` | root | `{ section: Section, watermarkText: ?string, coreProperties: ?CoreProperties, followingSections: Section[] }` |
-| `Section` | container | `{ body, header, footer, pageSetup, firstHeader, firstFooter, evenHeader, evenFooter, start: SectionStart }` |
+| `Section` | container | `{ body, header, footer, pageSetup, firstHeader, firstFooter, evenHeader, evenFooter, start: SectionStart, columns: ?Columns }` |
 | `Paragraph` | BlockElement | `{ children: InlineElement[], style, headingLevel: ?int, styleId: ?string }` |
 | `Run` | InlineElement | `{ text: string, style: RunStyle }` |
 | `Hyperlink` | InlineElement | `{ href: ?string, anchor: ?string, children }` |

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Dskripchenko\PhpDocx;
 
 use Dskripchenko\PhpDocx\Element\BlockElement;
+use Dskripchenko\PhpDocx\Style\Columns;
 use Dskripchenko\PhpDocx\Style\PageSetup;
 use Dskripchenko\PhpDocx\Style\SectionStart;
 
@@ -56,6 +57,8 @@ final readonly class Section
         public array $evenFooter = [],
         /** Where this section begins; see SectionStart. */
         public SectionStart $start = SectionStart::NextPage,
+        /** Text columns; null is a single column. */
+        public ?Columns $columns = null,
     ) {}
 
     /**

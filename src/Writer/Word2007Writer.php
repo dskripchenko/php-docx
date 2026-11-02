@@ -7,6 +7,7 @@ namespace Dskripchenko\PhpDocx\Writer;
 use Dskripchenko\PhpDocx\Document;
 use Dskripchenko\PhpDocx\Exception\DocxException;
 use Dskripchenko\PhpDocx\Section;
+use Dskripchenko\PhpDocx\Style\Columns;
 use Dskripchenko\PhpDocx\Style\SectionStart;
 use Dskripchenko\PhpDocx\Style\StyleRegistry;
 
@@ -394,6 +395,10 @@ final class Word2007Writer
         $inner .= '<w:pgSz w:w="'.$ps->pageWidthTwips().'" w:h="'.$ps->pageHeightTwips().'" w:orient="'.$ps->effectiveOrientation()->value.'"/>'
             .'<w:pgMar w:top="'.$ps->marginTopTwips.'" w:right="'.$ps->marginRightTwips.'" w:bottom="'.$ps->marginBottomTwips.'" w:left="'.$ps->marginLeftTwips.'" w:header="'.$ps->headerOffsetTwips.'" w:footer="'.$ps->footerOffsetTwips.'" w:gutter="0"/>';
 
+        if ($section->columns !== null) {
+            $inner .= $this->renderCols($section->columns);
+        }
+
         // Word requires a <w:titlePg/> when a first-page header or footer is
         // set — otherwise the type="first" reference is ignored.
         if ($section->hasFirstPageHeaderOrFooter()) {
@@ -401,6 +406,20 @@ final class Word2007Writer
         }
 
         return '<w:sectPr>'.$inner.'</w:sectPr>';
+    }
+
+    private function renderCols(Columns $columns): string
+    {
+        $sep = $columns->separator ? ' w:sep="1"' : '';
+        if ($columns->widthsTwips === null) {
+            return '<w:cols w:num="'.$columns->count.'" w:space="'.$columns->spaceTwips.'"'.$sep.'/>';
+        }
+        $cols = '';
+        foreach ($columns->widthsTwips as $i => $width) {
+            $cols .= '<w:col w:w="'.$width.'"'.($i < $columns->count - 1 ? ' w:space="'.$columns->spaceAfter($i).'"' : '').'/>';
+        }
+
+        return '<w:cols w:num="'.$columns->count.'" w:space="'.$columns->spaceTwips.'" w:equalWidth="0"'.$sep.'>'.$cols.'</w:cols>';
     }
 
     private function renderDocumentXml(string $bodyXml, string $sectPr): string

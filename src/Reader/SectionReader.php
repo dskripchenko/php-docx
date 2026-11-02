@@ -4,13 +4,14 @@ declare(strict_types=1);
 
 namespace Dskripchenko\PhpDocx\Reader;
 
+use Dskripchenko\PhpDocx\Style\Columns;
 use Dskripchenko\PhpDocx\Style\Orientation;
 use Dskripchenko\PhpDocx\Style\PageSetup;
 use Dskripchenko\PhpDocx\Style\PaperSize;
 use Dskripchenko\PhpDocx\Style\SectionStart;
 
 /**
- * Phase 8 — SectionReader: `<w:sectPr>` → PageSetup.
+ * Phase 8 — SectionReader: `<w:sectPr>` → PageSetup, SectionStart and Columns.
  *
  * A Word document has one `<w:sectPr>` per section: DocxReader reads each with
  * fromSectPr(). readPageSetup() takes the LAST one in the body, the final
@@ -98,6 +99,52 @@ final class SectionReader
         $type = $sectPr === null ? null : OoxmlNs::firstChild($sectPr, OoxmlNs::W, 'type');
 
         return $type === null ? SectionStart::NextPage : (SectionStart::tryFrom($type->getAttributeNS(OoxmlNs::W, 'val')) ?? SectionStart::NextPage);
+    }
+
+    /** The section's `<w:cols>`; null when it has none (a single column). */
+    public function columns(?\DOMElement $sectPr): ?Columns
+    {
+        $cols = $sectPr === null ? null : OoxmlNs::firstChild($sectPr, OoxmlNs::W, 'cols');
+        if ($cols === null) {
+            return null;
+        }
+        $twips = static function (\DOMElement $el, string $attr): ?int {
+            $v = $el->getAttributeNS(OoxmlNs::W, $attr);
+
+            return ctype_digit($v) ? (int) $v : null;
+        };
+        $separator = in_array($cols->getAttributeNS(OoxmlNs::W, 'sep'), ['1', 'true', 'on'], true);
+        $space = $twips($cols, 'space') ?? 720;
+
+        $widths = [];
+        $spaces = [];
+        if (! in_array($cols->getAttributeNS(OoxmlNs::W, 'equalWidth'), ['0', 'false', 'off'], true)) {
+            $widths = null;
+        } else {
+            foreach ($cols->childNodes as $col) {
+                if ($col instanceof \DOMElement && $col->namespaceURI === OoxmlNs::W && $col->localName === 'col') {
+                    $widths[] = $twips($col, 'w') ?? 0;
+                    $spaces[] = $twips($col, 'space') ?? $space;
+                }
+            }
+            // Unequal columns without a usable list read as equal ones.
+            if ($widths === [] || min($widths) <= 0) {
+                $widths = null;
+            } else {
+                array_pop($spaces);
+            }
+        }
+
+        $num = $twips($cols, 'num');
+        $count = $widths !== null ? count($widths) : max(1, $num ?? 1);
+
+        // Word writes a bare <w:cols w:space="720"/> in ordinary documents:
+        // that is a single column, which is null here.
+        if ($widths === null && $count === 1 && ! $separator) {
+            return null;
+        }
+
+        return new Columns($count, $space, $separator, $widths, $widths !== null ? $spaces : null);
     }
 
     private function findLastSectPr(\DOMElement $body): ?\DOMElement

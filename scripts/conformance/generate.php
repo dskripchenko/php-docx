@@ -7,8 +7,8 @@ declare(strict_types=1);
  * writer feature at once: headings, justified paragraphs with spacing and
  * indents, tables with header rows, nested ordered lists, multi-part
  * headers/footers with page-number fields, bookmarks, hyperlinks, a text
- * watermark, a second section (landscape, its own header, a custom page
- * size) whose first section ends in a table, and floating pictures (one
+ * watermark, a second section (landscape, its own header, two unequal
+ * columns with a separator, a custom page size) whose first section ends in a table, and floating pictures (one
  * behind the text on every page from the header, one in the body with text
  * wrapped around it). Validated by:
  *
@@ -23,6 +23,7 @@ use Dskripchenko\PhpDocx\Build\DocumentBuilder;
 use Dskripchenko\PhpDocx\Element\ImageFormat;
 use Dskripchenko\PhpDocx\Element\ListFormat;
 use Dskripchenko\PhpDocx\Style\Alignment;
+use Dskripchenko\PhpDocx\Style\Columns;
 use Dskripchenko\PhpDocx\Style\HorizontalAnchor;
 use Dskripchenko\PhpDocx\Style\ImagePosition;
 use Dskripchenko\PhpDocx\Style\ImageWrap;
@@ -83,10 +84,10 @@ $written = DocumentBuilder::new()
         ->text('Link: ')
         ->link('https://github.com/dskripchenko/php-docx', 'repository'))
     ->table(fn ($t) => $t->row(['A section that ends in a table', 'w:sectPr in an added paragraph']))
-    ->newSection(new PageSetup(orientation: Orientation::Landscape))
+    ->newSection(new PageSetup(orientation: Orientation::Landscape), columns: new Columns(count: 2, separator: true, widthsTwips: [5000, 9418], spacesTwips: [720]))
     ->header(fn ($h) => $h->paragraph('Landscape section header'))
     ->heading(2, 'Sections')
-    ->paragraph('A landscape section with a header of its own.')
+    ->paragraph('A landscape section with a header of its own, in two unequal columns with a separator.')
     ->newSection(new PageSetup(widthTwips: 8391, heightTwips: 11906), SectionStart::OddPage)
     ->paragraph('A custom page size, starting on an odd page; it inherits the header.')
     ->toFile($outDir.'/reference.docx');

@@ -7,6 +7,7 @@ namespace Dskripchenko\PhpDocx\Build;
 use Dskripchenko\PhpDocx\Document;
 use Dskripchenko\PhpDocx\Section;
 use Dskripchenko\PhpDocx\Style\CoreProperties;
+use Dskripchenko\PhpDocx\Style\Columns;
 use Dskripchenko\PhpDocx\Style\PageSetup;
 use Dskripchenko\PhpDocx\Style\SectionStart;
 use Dskripchenko\PhpDocx\Style\StyleRegistry;
@@ -68,6 +69,8 @@ final class DocumentBuilder
     private array $evenFooterBlocks = [];
 
     private SectionStart $start = SectionStart::NextPage;
+
+    private ?Columns $columns = null;
 
     /** @var list<Section> sections closed by newSection(), in order */
     private array $closedSections = [];
@@ -209,9 +212,10 @@ final class DocumentBuilder
      * Ends the current section and starts a new one: the content, headers and
      * footers added from here on belong to it. It keeps the page setup unless
      * given one, and shows the previous section's headers and footers until it
-     * sets its own (Word's rule).
+     * sets its own (Word's rule). Columns are not kept: a new section is
+     * single-column unless given `$columns`.
      */
-    public function newSection(?PageSetup $pageSetup = null, SectionStart $start = SectionStart::NextPage): self
+    public function newSection(?PageSetup $pageSetup = null, SectionStart $start = SectionStart::NextPage, ?Columns $columns = null): self
     {
         $this->closedSections[] = $this->currentSection();
         $this->blocks = [];
@@ -220,6 +224,15 @@ final class DocumentBuilder
         $this->evenHeaderBlocks = $this->evenFooterBlocks = [];
         $this->pageSetup = $pageSetup ?? $this->pageSetup;
         $this->start = $start;
+        $this->columns = $columns;
+
+        return $this;
+    }
+
+    /** Sets the current section's text columns; null for a single column. */
+    public function columns(?Columns $columns): self
+    {
+        $this->columns = $columns;
 
         return $this;
     }
@@ -248,6 +261,7 @@ final class DocumentBuilder
             evenHeader: $this->evenHeaderBlocks,
             evenFooter: $this->evenFooterBlocks,
             start: $this->start,
+            columns: $this->columns,
         );
     }
 

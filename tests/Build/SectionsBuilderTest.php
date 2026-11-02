@@ -6,6 +6,7 @@ namespace Dskripchenko\PhpDocx\Tests\Build;
 
 use Dskripchenko\PhpDocx\Build\DocumentBuilder;
 use Dskripchenko\PhpDocx\Element\Paragraph;
+use Dskripchenko\PhpDocx\Style\Columns;
 use Dskripchenko\PhpDocx\Style\Orientation;
 use Dskripchenko\PhpDocx\Style\PageSetup;
 use Dskripchenko\PhpDocx\Style\SectionStart;
@@ -57,5 +58,24 @@ final class SectionsBuilderTest extends TestCase
     public function without_new_section_there_is_one(): void
     {
         self::assertCount(1, DocumentBuilder::new()->paragraph('x')->build()->sections());
+    }
+
+    #[Test]
+    public function columns_belong_to_the_section_they_are_set_in(): void
+    {
+        $two = new Columns(count: 2, separator: true);
+        $doc = DocumentBuilder::new()
+            ->columns($two)
+            ->paragraph('one')
+            ->newSection(start: SectionStart::Continuous)
+            ->paragraph('two')
+            ->newSection(columns: new Columns(count: 3))
+            ->paragraph('three')
+            ->build();
+
+        [$a, $b, $c] = $doc->sections();
+        self::assertSame($two, $a->columns);
+        self::assertNull($b->columns, 'a new section starts single-column');
+        self::assertEquals(new Columns(count: 3), $c->columns);
     }
 }

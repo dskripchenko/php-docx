@@ -99,6 +99,7 @@ final class DocxReader
                 evenHeader: $usesEven ? $headersBy['even'] : [],
                 evenFooter: $usesEven ? $footersBy['even'] : [],
                 start: $sectionReader->start($sectPr),
+                columns: $sectionReader->columns($sectPr),
             );
         }
 
