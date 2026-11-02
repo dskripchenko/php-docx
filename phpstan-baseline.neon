@@ -55,6 +55,12 @@ parameters:
 			path: src/Html/StyleApplier/RunStyleApplier.php
 
 		-
+			message: '#^Instanceof between Dskripchenko\\PhpDocx\\Element\\InlineElement and Dskripchenko\\PhpDocx\\Element\\ColumnBreak will always evaluate to false\.$#'
+			identifier: instanceof.alwaysFalse
+			count: 2
+			path: src/Reader/BodyReader.php
+
+		-
 			message: '#^Instanceof between Dskripchenko\\PhpDocx\\Element\\InlineElement and Dskripchenko\\PhpDocx\\Element\\PageBreak will always evaluate to false\.$#'
 			identifier: instanceof.alwaysFalse
 			count: 2
@@ -67,7 +73,7 @@ parameters:
 			path: src/Reader/BodyReader.php
 
 		-
-			message: '#^Method Dskripchenko\\PhpDocx\\Reader\\BodyReader\:\:readRunWithFieldState\(\) should return array\{inlines\: list\<Dskripchenko\\PhpDocx\\Element\\InlineElement\>, state\: string\|null, instr\: string, style\: Dskripchenko\\PhpDocx\\Style\\RunStyle, default\: string, valueSeen\: bool\} but returns array\{inlines\: list\<Dskripchenko\\PhpDocx\\Element\\Field\|Dskripchenko\\PhpDocx\\Element\\Footnote\|Dskripchenko\\PhpDocx\\Element\\Image\|Dskripchenko\\PhpDocx\\Element\\LineBreak\|Dskripchenko\\PhpDocx\\Element\\PageBreak\|Dskripchenko\\PhpDocx\\Element\\Run\>, state\: string\|null, instr\: string, style\: Dskripchenko\\PhpDocx\\Style\\RunStyle, default\: string, valueSeen\: bool\}\.$#'
+			message: '#^Method Dskripchenko\\PhpDocx\\Reader\\BodyReader\:\:readRunWithFieldState\(\) should return array\{inlines\: list\<Dskripchenko\\PhpDocx\\Element\\InlineElement\>, state\: string\|null, instr\: string, style\: Dskripchenko\\PhpDocx\\Style\\RunStyle, default\: string, valueSeen\: bool\} but returns array\{inlines\: list\<Dskripchenko\\PhpDocx\\Element\\ColumnBreak\|Dskripchenko\\PhpDocx\\Element\\Field\|Dskripchenko\\PhpDocx\\Element\\Footnote\|Dskripchenko\\PhpDocx\\Element\\Image\|Dskripchenko\\PhpDocx\\Element\\LineBreak\|Dskripchenko\\PhpDocx\\Element\\PageBreak\|Dskripchenko\\PhpDocx\\Element\\Run\>, state\: string\|null, instr\: string, style\: Dskripchenko\\PhpDocx\\Style\\RunStyle, default\: string, valueSeen\: bool\}\.$#'
 			identifier: return.type
 			count: 1
 			path: src/Reader/BodyReader.php
@@ -75,6 +81,12 @@ parameters:
 		-
 			message: '#^Parameter \#1 \$array \(list\<Dskripchenko\\PhpDocx\\Element\\InlineElement\>\) of array_values is already a list, call has no effect\.$#'
 			identifier: arrayValues.list
+			count: 1
+			path: src/Reader/BodyReader.php
+
+		-
+			message: '#^Result of \|\| is always false\.$#'
+			identifier: booleanOr.alwaysFalse
 			count: 1
 			path: src/Reader/BodyReader.php
 

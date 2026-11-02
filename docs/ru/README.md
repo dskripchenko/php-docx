@@ -588,6 +588,14 @@ DocumentBuilder::new()
   страница альбомная, если она шире, чем выше.
 - Без builder'а: `new Document($first, followingSections: [$second, …])`;
   `Document::sections()` возвращает все разделы.
+- `columns(new Columns(count: 2, separator: true))` задаёт колонки текста
+  текущего раздела (`newSection(columns: …)` — следующего; иначе новый раздел
+  одноколоночный). `Columns` принимает число колонок `count`, промежуток
+  `spaceTwips` и разделительную линию `separator`; `widthsTwips` (по одной
+  ширине на колонку) и `spacesTwips` (по одному промежутку) делают колонки
+  неравными. Пишется как `<w:cols>`, `DocxReader` читает обратно.
+- `columnBreak()` (блок `ColumnBreak`) переносит следующий за ним текст в
+  начало следующей колонки; `DocxReader` читает разрыв колонки Word обратно.
 - Каждый раздел, кроме последнего, заканчивается своим `<w:sectPr>` в
   свойствах последнего абзаца (если раздел заканчивается таблицей,
   добавляется абзац). `DocxReader` читает каждый раздел с его содержимым,
@@ -650,14 +658,14 @@ foreach ($variables as $v) {
 | Элемент | Тип | Заметки |
 |---|---|---|
 | `Document` | root | `{ section: Section, watermarkText: ?string, coreProperties: ?CoreProperties, followingSections: Section[] }` |
-| `Section` | container | `{ body, header, footer, pageSetup, firstHeader, firstFooter, evenHeader, evenFooter, start: SectionStart }` |
+| `Section` | container | `{ body, header, footer, pageSetup, firstHeader, firstFooter, evenHeader, evenFooter, start: SectionStart, columns: ?Columns }` |
 | `Paragraph` | BlockElement | `{ children: InlineElement[], style, headingLevel: ?int, styleId: ?string }` |
 | `Run` | InlineElement | `{ text: string, style: RunStyle }` |
 | `Hyperlink` | InlineElement | `{ href: ?string, anchor: ?string, children }` |
 | `Bookmark` | InlineElement | `{ name: string, children }` |
 | `Image` | both | `{ binary, format, widthEmu, heightEmu, altText, offsetYEmu, position: ?ImagePosition }` |
 | `Field` | InlineElement | `{ instruction: string, style: RunStyle }` |
-| `LineBreak`, `PageBreak`, `HorizontalRule` | both | marker-элементы |
+| `LineBreak`, `PageBreak`, `ColumnBreak`, `HorizontalRule` | both | marker-элементы; `ColumnBreak` — `<w:br w:type="column"/>`, в HTML его нет |
 | `Table` | BlockElement | `{ rows: TableRow[], style, caption, gridColumnsTwips }` |
 | `TableRow` | element | `{ cells: TableCell[], isHeader, heightTwips, cantSplit, heightRule }` |
 | `TableCell` | element | `{ children: BlockElement[], style: CellStyle }` |

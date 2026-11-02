@@ -14,6 +14,7 @@ use Dskripchenko\PhpDocx\Element\InlineElement;
 use Dskripchenko\PhpDocx\Element\LineBreak;
 use Dskripchenko\PhpDocx\Element\ListItem;
 use Dskripchenko\PhpDocx\Element\ListNode;
+use Dskripchenko\PhpDocx\Element\ColumnBreak;
 use Dskripchenko\PhpDocx\Element\PageBreak;
 use Dskripchenko\PhpDocx\Element\Paragraph;
 use Dskripchenko\PhpDocx\Element\Run;
@@ -33,6 +34,7 @@ use Dskripchenko\PhpDocx\Style\RunStyle;
  *  - `<w:t>` → the text
  *  - `<w:br w:type="page">` → a PageBreak (a split: everything after it goes
  *    into a new paragraph)
+ *  - `<w:br w:type="column">` → a ColumnBreak (split the same way)
  *  - `<w:br/>` → a LineBreak
  *  - `<w:tab/>` → a "\t" in the text
  *  - `<w:hyperlink>` — proxied as inline children for now (phase 7 replaces it
@@ -150,7 +152,7 @@ final class BodyReader
         // items; when they are there we flatten them as an ordinary inline).
         $cleanInlines = array_values(array_filter(
             $inlines,
-            fn ($i) => ! $i instanceof PageBreak,
+            fn ($i) => ! $i instanceof PageBreak && ! $i instanceof ColumnBreak,
         ));
 
         return [
@@ -302,7 +304,7 @@ final class BodyReader
     }
 
     /**
-     * Parses a `<w:p>` into one or more blocks (a PageBreak may split it).
+     * Parses a `<w:p>` into one or more blocks (a PageBreak or ColumnBreak may split it).
      *
      * @return list<BlockElement>
      */
@@ -577,7 +579,11 @@ final class BodyReader
                     $flushText();
                     if ($state !== 'value') {
                         $type = $child->getAttributeNS(OoxmlNs::W, 'type');
-                        $emitted[] = $type === 'page' ? new PageBreak : new LineBreak;
+                        $emitted[] = match ($type) {
+                            'page' => new PageBreak,
+                            'column' => new ColumnBreak,
+                            default => new LineBreak,
+                        };
                     }
                     break;
                 case 'footnoteReference':
@@ -616,7 +622,7 @@ final class BodyReader
     }
 
     /**
-     * Splits an inline list into paragraphs at the page breaks.
+     * Splits an inline list into paragraphs at the page and column breaks.
      *
      * @param  list<InlineElement>  $inlines
      * @return list<BlockElement>
@@ -626,7 +632,7 @@ final class BodyReader
         $blocks = [];
         $current = [];
         foreach ($inlines as $i) {
-            if ($i instanceof PageBreak) {
+            if ($i instanceof PageBreak || $i instanceof ColumnBreak) {
                 if ($current !== []) {
                     $blocks[] = new Paragraph($current, $style, $headingLevel);
                     $current = [];

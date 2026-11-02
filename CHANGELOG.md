@@ -5,6 +5,18 @@ file. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- Section columns: `Section::$columns` (`Columns`: `count`, `spaceTwips`,
+  `separator`, and for unequal columns `widthsTwips` and `spacesTwips`) is
+  written as `<w:cols>` in the section's `<w:sectPr>` and read back by
+  `DocxReader`. `DocumentBuilder::columns()` sets the current section's
+  columns, and `newSection()` takes them too.
+- `ColumnBreak` (`<w:br w:type="column"/>`) and the builder's `columnBreak()`:
+  the text after it starts in the next column. `DocxReader` reads it back,
+  splitting the paragraph around it as it does for a page break.
+
 ## [1.18.0] — 2026-10-28
 
 ### Added

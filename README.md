@@ -673,6 +673,14 @@ DocumentBuilder::new()
   landscape when it is wider than it is tall.
 - Without the builder: `new Document($first, followingSections: [$second, …])`;
   `Document::sections()` lists them all.
+- `columns(new Columns(count: 2, separator: true))` sets the current section's
+  text columns (`newSection(columns: …)` sets the next one's; a new section is
+  single-column otherwise). `Columns` takes a `count`, the `spaceTwips`
+  between columns and a `separator` line; `widthsTwips` (one per column) and
+  `spacesTwips` (one per gap) make the columns unequal. Written as
+  `<w:cols>`, read back by `DocxReader`.
+- `columnBreak()` (a `ColumnBreak` block) moves the text after it to the top
+  of the next column; `DocxReader` reads Word's column break back as one.
 - Every section but the last ends with its `<w:sectPr>` in the properties
   of its last paragraph (a paragraph is added when the section ends in a
   table). `DocxReader` reads each section back with its own body, page
@@ -734,14 +742,14 @@ All elements live under `Dskripchenko\PhpDocx\Element` namespace.
 | Element | Type | Notes |
 |---|---|---|
 | `Document` | root | `{ section: Section, watermarkText: ?string, coreProperties: ?CoreProperties, followingSections: Section[] }` |
-| `Section` | container | `{ body, header, footer, pageSetup, firstHeader, firstFooter, evenHeader, evenFooter, start: SectionStart }` |
+| `Section` | container | `{ body, header, footer, pageSetup, firstHeader, firstFooter, evenHeader, evenFooter, start: SectionStart, columns: ?Columns }` |
 | `Paragraph` | BlockElement | `{ children: InlineElement[], style: ParagraphStyle, headingLevel: ?int, styleId: ?string }` |
 | `Run` | InlineElement | `{ text: string, style: RunStyle }` |
 | `Hyperlink` | InlineElement | `{ href: ?string, anchor: ?string, children: InlineElement[] }` |
 | `Bookmark` | InlineElement | `{ name: string, children: InlineElement[] }` |
 | `Image` | both | `{ binary, format, widthEmu, heightEmu, altText, offsetYEmu, position: ?ImagePosition }` |
 | `Field` | InlineElement | `{ instruction: string, style: RunStyle }` |
-| `LineBreak`, `PageBreak`, `HorizontalRule` | both | marker elements |
+| `LineBreak`, `PageBreak`, `ColumnBreak`, `HorizontalRule` | both | marker elements; `ColumnBreak` is `<w:br w:type="column"/>` and has no HTML form |
 | `Table` | BlockElement | `{ rows: TableRow[], style, caption, gridColumnsTwips }` |
 | `TableRow` | element | `{ cells: TableCell[], isHeader, heightTwips, cantSplit, heightRule }` |
 | `TableCell` | element | `{ children: BlockElement[], style: CellStyle }` |

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Dskripchenko\PhpDocx\Tests\Reader;
 
 use Dskripchenko\PhpDocx\Element\LineBreak;
+use Dskripchenko\PhpDocx\Element\ColumnBreak;
 use Dskripchenko\PhpDocx\Element\PageBreak;
 use Dskripchenko\PhpDocx\Element\Paragraph;
 use Dskripchenko\PhpDocx\Element\Run;
@@ -82,6 +83,31 @@ final class BodyReaderTest extends TestCase
         self::assertSame('A', $p->children[0]->text);
         self::assertInstanceOf(LineBreak::class, $p->children[1]);
         self::assertSame('B', $p->children[2]->text);
+    }
+
+    #[Test]
+    public function column_break_splits_paragraph(): void
+    {
+        $body = $this->loadBody(
+            '<w:p><w:r><w:t>Before</w:t></w:r>'
+            .'<w:r><w:br w:type="column"/></w:r>'
+            .'<w:r><w:t>After</w:t></w:r></w:p>'
+        );
+        $blocks = (new BodyReader)->read($body);
+        self::assertCount(3, $blocks);
+        self::assertInstanceOf(Paragraph::class, $blocks[0]);
+        self::assertInstanceOf(ColumnBreak::class, $blocks[1]);
+        self::assertInstanceOf(Paragraph::class, $blocks[2]);
+        self::assertSame('Before', $blocks[0]->children[0]->text);
+        self::assertSame('After', $blocks[2]->children[0]->text);
+    }
+
+    #[Test]
+    public function a_paragraph_holding_only_a_column_break_reads_as_the_break(): void
+    {
+        $blocks = (new BodyReader)->read($this->loadBody('<w:p><w:r><w:br w:type="column"/></w:r></w:p>'));
+        self::assertCount(1, $blocks);
+        self::assertInstanceOf(ColumnBreak::class, $blocks[0]);
     }
 
     #[Test]

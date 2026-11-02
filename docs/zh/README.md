@@ -573,6 +573,13 @@ DocumentBuilder::new()
 - `PageSetup(widthTwips:, heightTwips:)` 可设置任意页面尺寸；宽大于高时为横向。
 - 不用构造器：`new Document($first, followingSections: [$second, …])`；
   `Document::sections()` 返回所有节。
+- `columns(new Columns(count: 2, separator: true))` 设置当前节的分栏
+  （`newSection(columns: …)` 设置下一节的；否则新节为单栏）。`Columns` 接受栏数
+  `count`、栏间距 `spaceTwips` 和分隔线 `separator`；`widthsTwips`（每栏一个宽度）
+  和 `spacesTwips`（每个栏间距一个值）可使各栏不等宽。写为 `<w:cols>`，由
+  `DocxReader` 读回。
+- `columnBreak()`（`ColumnBreak` 块）使其后的文本从下一栏顶部开始；`DocxReader`
+  会读回 Word 的分栏符。
 - 除最后一节外，每节以其 `<w:sectPr>` 结束，写在该节最后一个段落的属性中（若该节以
   表格结束，则添加一个段落）。`DocxReader` 逐节读回内容、页面设置、起始方式和页眉；
   HTML 序列化器依次输出各节内容，并在每个从新页开始的节之前加分页符。
@@ -630,14 +637,14 @@ foreach ($variables as $v) {
 | 元素 | 类型 | 备注 |
 |---|---|---|
 | `Document` | root | `{ section: Section, watermarkText: ?string, coreProperties: ?CoreProperties, followingSections: Section[] }` |
-| `Section` | container | `{ body, header, footer, pageSetup, firstHeader, firstFooter, evenHeader, evenFooter, start: SectionStart }` |
+| `Section` | container | `{ body, header, footer, pageSetup, firstHeader, firstFooter, evenHeader, evenFooter, start: SectionStart, columns: ?Columns }` |
 | `Paragraph` | BlockElement | `{ children: InlineElement[], style, headingLevel: ?int, styleId: ?string }` |
 | `Run` | InlineElement | `{ text: string, style: RunStyle }` |
 | `Hyperlink` | InlineElement | `{ href: ?string, anchor: ?string, children }` |
 | `Bookmark` | InlineElement | `{ name: string, children }` |
 | `Image` | 两者 | `{ binary, format, widthEmu, heightEmu, altText, offsetYEmu, position: ?ImagePosition }` |
 | `Field` | InlineElement | `{ instruction: string, style: RunStyle }` |
-| `LineBreak`、`PageBreak`、`HorizontalRule` | 两者 | 标记元素 |
+| `LineBreak`、`PageBreak`、`ColumnBreak`、`HorizontalRule` | 两者 | 标记元素；`ColumnBreak` 即 `<w:br w:type="column"/>`，无 HTML 形式 |
 | `Table` | BlockElement | `{ rows: TableRow[], style, caption, gridColumnsTwips }` |
 | `TableRow` | element | `{ cells: TableCell[], isHeader, heightTwips, cantSplit, heightRule }` |
 | `TableCell` | element | `{ children: BlockElement[], style: CellStyle }` |

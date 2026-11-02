@@ -14,6 +14,7 @@ use Dskripchenko\PhpDocx\Element\InlineElement;
 use Dskripchenko\PhpDocx\Element\LineBreak;
 use Dskripchenko\PhpDocx\Element\ListItem;
 use Dskripchenko\PhpDocx\Element\ListNode;
+use Dskripchenko\PhpDocx\Element\ColumnBreak;
 use Dskripchenko\PhpDocx\Element\PageBreak;
 use Dskripchenko\PhpDocx\Element\Paragraph;
 use Dskripchenko\PhpDocx\Element\Run;
@@ -99,6 +100,7 @@ final class BodyXmlBuilder
             $block instanceof Paragraph => $this->renderParagraph($block),
             $block instanceof Table => $this->renderTable($block),
             $block instanceof PageBreak => $this->renderPageBreak(),
+            $block instanceof ColumnBreak => $this->renderColumnBreak(),
             $block instanceof HorizontalRule => $this->renderHr(),
             $block instanceof Image => $this->renderBlockImage($block),
             $block instanceof ListNode => $this->renderListNode($block),
@@ -497,6 +499,11 @@ final class BodyXmlBuilder
     private function renderPageBreak(): string
     {
         return '<w:p><w:r><w:br w:type="page"/></w:r></w:p>';
+    }
+
+    private function renderColumnBreak(): string
+    {
+        return '<w:p><w:r><w:br w:type="column"/></w:r></w:p>';
     }
 
     private function renderHr(): string
