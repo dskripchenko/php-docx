@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Dskripchenko\PhpDocx\Tests\Build;
 
 use Dskripchenko\PhpDocx\Build\DocumentBuilder;
+use Dskripchenko\PhpDocx\Element\ColumnBreak;
 use Dskripchenko\PhpDocx\Element\Paragraph;
 use Dskripchenko\PhpDocx\Style\Columns;
 use Dskripchenko\PhpDocx\Style\Orientation;
@@ -77,5 +78,12 @@ final class SectionsBuilderTest extends TestCase
         self::assertSame($two, $a->columns);
         self::assertNull($b->columns, 'a new section starts single-column');
         self::assertEquals(new Columns(count: 3), $c->columns);
+    }
+
+    #[Test]
+    public function column_break_adds_a_break_block(): void
+    {
+        $doc = DocumentBuilder::new()->columns(new Columns(count: 2))->paragraph('a')->columnBreak()->paragraph('b')->build();
+        self::assertInstanceOf(ColumnBreak::class, $doc->section->body[1]);
     }
 }

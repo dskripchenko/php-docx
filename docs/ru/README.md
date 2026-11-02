@@ -594,6 +594,8 @@ DocumentBuilder::new()
   `spaceTwips` и разделительную линию `separator`; `widthsTwips` (по одной
   ширине на колонку) и `spacesTwips` (по одному промежутку) делают колонки
   неравными. Пишется как `<w:cols>`, `DocxReader` читает обратно.
+- `columnBreak()` (блок `ColumnBreak`) переносит следующий за ним текст в
+  начало следующей колонки; `DocxReader` читает разрыв колонки Word обратно.
 - Каждый раздел, кроме последнего, заканчивается своим `<w:sectPr>` в
   свойствах последнего абзаца (если раздел заканчивается таблицей,
   добавляется абзац). `DocxReader` читает каждый раздел с его содержимым,
@@ -663,7 +665,7 @@ foreach ($variables as $v) {
 | `Bookmark` | InlineElement | `{ name: string, children }` |
 | `Image` | both | `{ binary, format, widthEmu, heightEmu, altText, offsetYEmu, position: ?ImagePosition }` |
 | `Field` | InlineElement | `{ instruction: string, style: RunStyle }` |
-| `LineBreak`, `PageBreak`, `HorizontalRule` | both | marker-элементы |
+| `LineBreak`, `PageBreak`, `ColumnBreak`, `HorizontalRule` | both | marker-элементы; `ColumnBreak` — `<w:br w:type="column"/>`, в HTML его нет |
 | `Table` | BlockElement | `{ rows: TableRow[], style, caption, gridColumnsTwips }` |
 | `TableRow` | element | `{ cells: TableCell[], isHeader, heightTwips, cantSplit, heightRule }` |
 | `TableCell` | element | `{ children: BlockElement[], style: CellStyle }` |

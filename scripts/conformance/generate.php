@@ -88,6 +88,8 @@ $written = DocumentBuilder::new()
     ->header(fn ($h) => $h->paragraph('Landscape section header'))
     ->heading(2, 'Sections')
     ->paragraph('A landscape section with a header of its own, in two unequal columns with a separator.')
+    ->columnBreak()
+    ->paragraph('After a column break: the second column.')
     ->newSection(new PageSetup(widthTwips: 8391, heightTwips: 11906), SectionStart::OddPage)
     ->paragraph('A custom page size, starting on an odd page; it inherits the header.')
     ->toFile($outDir.'/reference.docx');

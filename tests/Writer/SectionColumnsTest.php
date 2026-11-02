@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Dskripchenko\PhpDocx\Tests\Writer;
 
 use Dskripchenko\PhpDocx\Document;
+use Dskripchenko\PhpDocx\Element\ColumnBreak;
 use Dskripchenko\PhpDocx\Element\Paragraph;
 use Dskripchenko\PhpDocx\Element\Run;
 use Dskripchenko\PhpDocx\Reader\DocxReader;
@@ -174,5 +175,18 @@ final class SectionColumnsTest extends TestCase
         self::assertStringContainsString('<w:cols w:space="720"/>', $xml);
         self::assertNull((new DocxReader)->read((string) file_get_contents($tmp))->section->columns);
         unlink($tmp);
+    }
+
+    #[Test]
+    public function a_column_break_survives_a_round_trip(): void
+    {
+        $doc = new Document(new Section(
+            [new Paragraph([new Run('left')]), new ColumnBreak, new Paragraph([new Run('right')])],
+            columns: new Columns(count: 2),
+        ));
+        $read = (new DocxReader)->read((new Word2007Writer)->write($doc))->section;
+        self::assertCount(3, $read->body);
+        self::assertInstanceOf(ColumnBreak::class, $read->body[1]);
+        self::assertEquals(new Columns(count: 2), $read->columns);
     }
 }

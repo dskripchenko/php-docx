@@ -9,6 +9,7 @@ use Dskripchenko\PhpDocx\Element\Hyperlink;
 use Dskripchenko\PhpDocx\Element\LineBreak;
 use Dskripchenko\PhpDocx\Element\ListItem;
 use Dskripchenko\PhpDocx\Element\ListNode;
+use Dskripchenko\PhpDocx\Element\ColumnBreak;
 use Dskripchenko\PhpDocx\Element\PageBreak;
 use Dskripchenko\PhpDocx\Element\Paragraph;
 use Dskripchenko\PhpDocx\Element\Run;
@@ -120,6 +121,13 @@ final class BodyXmlBuilderTest extends TestCase
     {
         $xml = (new BodyXmlBuilder)->render([new PageBreak]);
         self::assertStringContainsString('<w:br w:type="page"/>', $xml);
+    }
+
+    #[Test]
+    public function it_renders_column_break(): void
+    {
+        $xml = (new BodyXmlBuilder)->render([new ColumnBreak]);
+        self::assertStringContainsString('<w:p><w:r><w:br w:type="column"/></w:r></w:p>', $xml);
     }
 
     #[Test]

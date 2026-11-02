@@ -7,6 +7,7 @@ namespace Dskripchenko\PhpDocx\Build;
 use Dskripchenko\PhpDocx\Element\BlockElement;
 use Dskripchenko\PhpDocx\Element\HorizontalRule;
 use Dskripchenko\PhpDocx\Element\Image;
+use Dskripchenko\PhpDocx\Element\ColumnBreak;
 use Dskripchenko\PhpDocx\Element\PageBreak;
 use Dskripchenko\PhpDocx\Element\Paragraph;
 use Dskripchenko\PhpDocx\Element\Run;
@@ -68,6 +69,14 @@ trait AddsBlockContent
     public function pageBreak(): self
     {
         $this->blocks[] = new PageBreak;
+
+        return $this;
+    }
+
+    /** Moves the text after it to the next column of the section. */
+    public function columnBreak(): self
+    {
+        $this->blocks[] = new ColumnBreak;
 
         return $this;
     }

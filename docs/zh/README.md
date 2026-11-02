@@ -578,6 +578,8 @@ DocumentBuilder::new()
   `count`、栏间距 `spaceTwips` 和分隔线 `separator`；`widthsTwips`（每栏一个宽度）
   和 `spacesTwips`（每个栏间距一个值）可使各栏不等宽。写为 `<w:cols>`，由
   `DocxReader` 读回。
+- `columnBreak()`（`ColumnBreak` 块）使其后的文本从下一栏顶部开始；`DocxReader`
+  会读回 Word 的分栏符。
 - 除最后一节外，每节以其 `<w:sectPr>` 结束，写在该节最后一个段落的属性中（若该节以
   表格结束，则添加一个段落）。`DocxReader` 逐节读回内容、页面设置、起始方式和页眉；
   HTML 序列化器依次输出各节内容，并在每个从新页开始的节之前加分页符。
@@ -642,7 +644,7 @@ foreach ($variables as $v) {
 | `Bookmark` | InlineElement | `{ name: string, children }` |
 | `Image` | 两者 | `{ binary, format, widthEmu, heightEmu, altText, offsetYEmu, position: ?ImagePosition }` |
 | `Field` | InlineElement | `{ instruction: string, style: RunStyle }` |
-| `LineBreak`、`PageBreak`、`HorizontalRule` | 两者 | 标记元素 |
+| `LineBreak`、`PageBreak`、`ColumnBreak`、`HorizontalRule` | 两者 | 标记元素；`ColumnBreak` 即 `<w:br w:type="column"/>`，无 HTML 形式 |
 | `Table` | BlockElement | `{ rows: TableRow[], style, caption, gridColumnsTwips }` |
 | `TableRow` | element | `{ cells: TableCell[], isHeader, heightTwips, cantSplit, heightRule }` |
 | `TableCell` | element | `{ children: BlockElement[], style: CellStyle }` |

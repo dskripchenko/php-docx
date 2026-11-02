@@ -6,6 +6,6 @@ namespace Dskripchenko\PhpDocx\Element;
 
 /**
  * A marker interface for the block-level elements of a body, header or footer
- * (Paragraph, Table, PageBreak).
+ * (Paragraph, Table, PageBreak, ColumnBreak).
  */
 interface BlockElement {}

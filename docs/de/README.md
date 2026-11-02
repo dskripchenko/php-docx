@@ -602,6 +602,9 @@ DocumentBuilder::new()
   (eine Breite je Spalte) und `spacesTwips` (ein Abstand je Zwischenraum)
   machen die Spalten ungleich breit. Geschrieben als `<w:cols>`, von
   `DocxReader` zurückgelesen.
+- `columnBreak()` (ein `ColumnBreak`-Block) setzt den folgenden Text an den
+  Anfang der nächsten Spalte; `DocxReader` liest den Spaltenumbruch von Word
+  zurück.
 - Jeder Abschnitt außer dem letzten endet mit seinem `<w:sectPr>` in den
   Eigenschaften seines letzten Absatzes (endet er mit einer Tabelle, wird ein
   Absatz angefügt). `DocxReader` liest jeden Abschnitt mit eigenem Inhalt,
@@ -672,7 +675,7 @@ Alle Elemente leben unter `Dskripchenko\PhpDocx\Element`.
 | `Bookmark` | InlineElement | `{ name: string, children }` |
 | `Image` | beides | `{ binary, format, widthEmu, heightEmu, altText, offsetYEmu, position: ?ImagePosition }` |
 | `Field` | InlineElement | `{ instruction: string, style: RunStyle }` |
-| `LineBreak`, `PageBreak`, `HorizontalRule` | beides | Marker-Elemente |
+| `LineBreak`, `PageBreak`, `ColumnBreak`, `HorizontalRule` | beides | Marker-Elemente; `ColumnBreak` ist `<w:br w:type="column"/>`, ohne HTML-Form |
 | `Table` | BlockElement | `{ rows: TableRow[], style, caption, gridColumnsTwips }` |
 | `TableRow` | element | `{ cells: TableCell[], isHeader, heightTwips, cantSplit, heightRule }` |
 | `TableCell` | element | `{ children: BlockElement[], style: CellStyle }` |
